@@ -12,7 +12,7 @@
 <!-- It serves as the single source of truth for what the project must deliver -->
 <!-- Status values: Draft | Under Review | Approved -->
 
-**Project:** [Project Name - Replace with your project name]  
+**Project:** Orchestrator Agent 
 **Version:** 0.0  
 **Status:** Draft  
 **Last Updated:** [Date]  
@@ -52,7 +52,19 @@
 <!-- Must be specific, observable, and defensible -->
 <!-- Focus on: What is broken? What pain exists? What is the measurable impact? -->
 
-[Describe the problem your project addresses. Focus on the observable problem and measurable impact, not the solution. What is currently broken or missing? What pain does it cause? Who is affected?]
+The project currently consists of multiple AI agents (requirements, planning, orchestration candidates) and supporting invocation scripts that are evolving organically. As functionality grows, agent behavior has become inconsistent, scope boundaries are unclear, and tooling changes frequently exceed intended scope, resulting in bloated scripts, unintended side effects, and manual cleanup.
+
+There is no dedicated planning/orchestrator agent responsible for:
+
+Interpreting project state
+
+Sequencing agent execution
+
+Enforcing lifecycle boundaries
+
+Translating approved requirements into structured execution plans
+
+Without a formal orchestrator, agent interactions are brittle, difficult to reason about, and prone to uncontrolled expansion.
 
 ---
 
@@ -63,16 +75,32 @@
 <!-- What must this project achieve to be considered successful? -->
 <!-- Each goal should be specific and measurable -->
 
-1. [Primary goal 1 - must be specific and measurable]
-2. [Primary goal 2]
+Create a Planning / Orchestrator Agent that reliably translates approved project requirements into an actionable, bounded execution plan without exceeding defined scope or mutating the repository beyond intent.
 
 ### Secondary Goals
 
 <!-- What would be nice to achieve but is not critical? -->
 <!-- These may be deferred if constraints require -->
 
-1. [Secondary goal 1 - nice to have but not critical]
-2. [Secondary goal 2]
+Reduce manual intervention during early project setup
+Enforce clear lifecycle stages between agents
+Prevent uncontrolled script and file sprawl
+Enable repeatable, auditable agent-driven project initialization
+
+In Scope
+A single Planning / Orchestrator Agent
+Supporting logic embedded in an existing invocation script or a clearly bounded new one
+Structured handoff between Requirements Agent → Planning Agent
+Generation of milestones and GitHub issues based on approved requirements
+
+Out of Scope (Non-Goals)
+❌ Implementing the Requirements Agent (already exists)
+❌ Executing development work (no coding, refactoring, or file edits beyond planning artifacts)
+❌ Creating test scripts, README files, diagrams, or supplemental documentation
+❌ Invoking other agents beyond what is explicitly specified
+❌ Reviewing or validating outputs from downstream agents
+❌ Managing CI/CD, deployment, or runtime orchestration
+❌ Making architectural or technical design decisions not present in requirements
 
 ---
 
@@ -110,8 +138,10 @@
 <!-- Testable or falsifiable statements assumed to be true -->
 <!-- Each assumption should be validated before or during implementation -->
 
-1. [Assumption 1 - testable statement assumed to be true]
-2. [Assumption 2]
+Requirements are authoritative once approved
+GitHub is the system of record for issues and milestones
+Human review is expected before execution phases begin
+Early project lifecycle prioritizes clarity over automation cleverness
 
 ---
 
@@ -158,6 +188,75 @@
 
 <!-- Add additional functional requirements as FR-002, FR-003, etc. -->
 
+FR-001: State Detection
+
+The Planning Agent must detect project state based on the requirements document, including at minimum:
+
+Draft
+Under Review
+Approved
+
+The agent must not proceed unless requirements are explicitly marked Approved.
+
+
+FR-002: Controlled Agent Handoff
+
+The Planning Agent must only be invoked:
+
+After a successful Requirements Agent run
+When requirements status transitions to Approved
+No speculative invocation is allowed.
+
+FR-003: Milestone Generation
+
+The Planning Agent must generate a structured list of milestones derived directly from approved requirements, including:
+
+Clear milestone names
+Descriptions tied to requirement IDs or sections
+Logical sequencing
+
+FR-004: Issue Generation
+
+For each milestone, the agent must generate one or more GitHub issues containing:
+
+Clear scope boundaries
+Acceptance criteria
+Explicit non-goals
+References back to requirements sections
+
+FR-005: Scope Enforcement
+
+The Planning Agent must not:
+
+Add requirements
+Modify existing requirements
+Invent features or capabilities
+Expand scope beyond what is explicitly documented
+
+FR-006: Repository Safety
+
+The Planning Agent must:
+
+Only create or modify files explicitly designated for planning output
+Never create new scripts, tests, documentation, or configuration files
+Never modify agent code or invocation logic
+
+FR-007: Deterministic Output
+
+Given the same approved requirements, the Planning Agent should produce materially equivalent output across runs, aside from timestamps or ordering metadata.
+
+FR-008: Explainability
+
+The Planning Agent must clearly explain:
+
+Why each milestone exists
+Which requirements it satisfies
+Why sequencing decisions were made
+Opaque “because it seemed right” planning is not acceptable.
+
+
+
+
 ---
 
 ## 9. Non-Functional Requirements
@@ -171,6 +270,23 @@
 **Description:** [Clear description of the quality attribute or constraint]  
 **Priority:** [High | Medium | Low]  
 **Measurement Criteria:** [How this will be measured or validated]
+
+NFR-001: Predictability
+
+Agent behavior must be predictable and bounded. Novel behavior is a defect, not a feature.
+
+NFR-002: Simplicity
+
+The orchestrator logic must remain minimal. Prefer fewer rules over clever abstractions.
+
+NFR-003: Auditability
+
+All planning outputs must be traceable back to specific requirements.
+
+NFR-004: Failure Safety
+
+If preconditions are not met, the agent must fail cleanly without side effects.
+
 
 **Acceptance Criteria:**
 - [ ] [Specific, measurable criterion 1]
@@ -286,6 +402,12 @@ CANONICAL TABLE SCHEMA (IMMUTABLE):
 | Question ID | Question | Asked By | Date | Answer | Resolution Status |
 |-------------|----------|----------|------|--------|-------------------|
 | - | No questions yet - Requirements Agent will populate this during first review | - | - | - | - |
+
+What constitutes “Approved” status mechanically?
+Should planning artifacts live in-repo or be API-only (GitHub issues)?
+Should re-running the Planning Agent overwrite or diff existing plans?
+How should requirement changes invalidate existing plans?
+Is manual confirmation required before issue creation?
 
 ---
 
