@@ -31,7 +31,7 @@
 | Current Version | 0.0 |
 | Last Modified | [Date] |
 | Modified By | [Author] |
-| Approval Status | Draft |
+| Approval Status | Pending - Revisions Required |
 | Approved By | Pending |
 | Approval Date | Pending |
 
@@ -355,6 +355,20 @@ If preconditions are not met, the agent must fail cleanly without side effects.
 
 ### Open Questions
 
+
+| Question ID | Question | Asked By | Date | Answer | Resolution Status |
+|-------------|----------|----------|------|--------|-------------------|
+| Q-001 | What constitutes "Approved" status mechanically? Who has authority to set it (Product Owner only? Script? Agent recommendation sufficient?), and what is the exact trigger mechanism? | Requirements Agent | 2026-02-06 | | Open |
+| Q-002 | Should planning artifacts (milestones, issues) live in-repo as files (e.g., /planning/milestones.md) or be API-only (GitHub issues)? This affects version control, auditability, and rollback capabilities. | Requirements Agent | 2026-02-06 | | Open |
+| Q-003 | Should re-running the Planning Agent overwrite existing plans, generate diffs, or error if plans already exist? What is the idempotency model? | Requirements Agent | 2026-02-06 | | Open |
+| Q-004 | How should requirement changes invalidate existing plans? Should the Planning Agent detect drift between requirements.md and existing planning artifacts? Is manual re-planning required or automatic? | Requirements Agent | 2026-02-06 | | Open |
+| Q-005 | Is manual confirmation required before GitHub issue creation, or can the Planning Agent autonomously create issues? What is the safety gate? | Requirements Agent | 2026-02-06 | | Open |
+| Q-006 | Are Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) intentionally omitted as "Not Applicable" for this project, or do they need to be populated? If N/A, should sections explicitly state this with justification? | Requirements Agent | 2026-02-06 | | Open |
+| Q-007 | Section 4 (Non-Goals) is placeholder - should this explicitly list items like "not implementing downstream agents", "not executing development work", etc., or are Non-Goals already sufficiently covered in Section 3 Out of Scope? | Requirements Agent | 2026-02-06 | | Open |
+| Q-008 | What measurable criteria define "predictability" (NFR-001)? E.g., "identical output structure across N runs", "deterministic milestone ordering", "reproducible issue IDs"? | Requirements Agent | 2026-02-06 | | Open |
+| Q-009 | What measurable criteria define "simplicity" (NFR-002)? E.g., "orchestrator logic under X lines of code", "fewer than Y decision branches", "zero abstraction layers"? | Requirements Agent | 2026-02-06 | | Open |
+| Q-010 | What measurable criteria define "auditability" (NFR-003)? E.g., "every milestone references at least one FR-XXX ID", "100% of issues trace to requirements sections", "planning log captures all decisions"? | Requirements Agent | 2026-02-06 | | Open |
+| Q-011 | What specific outputs constitute "project success" for Section 13? E.g., "Planning Agent successfully invoked after requirements approval", "X milestones generated", "Y issues created in GitHub", "zero out-of-scope file modifications detected"? | Requirements Agent | 2026-02-06 | | Open |
 <!-- ANSWER INTEGRATION WORKFLOW -->
 <!-- This section captures questions that require clarification before approval -->
 <!-- 
