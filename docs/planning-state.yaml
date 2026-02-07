@@ -1,0 +1,220 @@
+# Machine-Readable Planning State
+# This file is maintained by the Orchestration Agent
+# It provides real-time, machine-readable project state for automation and monitoring
+# Referenced by: project-plan.md, milestone-execution-summary.md
+
+# Plan Metadata
+plan_version: "[X.X]"
+last_updated: "[YYYY-MM-DDTHH:MM:SSZ]"
+source_requirements_version: "[X.X]"
+plan_status: "[draft | active | complete | on_hold]"
+
+# Project Information
+project:
+  name: "[Project Name]"
+  description: "[Brief project description]"
+  start_date: "[YYYY-MM-DD]"
+  target_completion_date: "[YYYY-MM-DD]"
+  current_phase: "[planning | design | implementation | testing | review | deployment]"
+
+# Milestones Array
+# Each milestone represents a major deliverable with 2-4 weeks scope
+milestones:
+  - id: "M1"
+    name: "[Milestone Name]"
+    objective: "[What this milestone achieves]"
+    status: "[planned | in_progress | testing | complete | blocked]"
+    start_date: "[YYYY-MM-DD]"
+    target_end_date: "[YYYY-MM-DD]"
+    actual_end_date: "[YYYY-MM-DD or null]"
+    completion_percentage: [0-100]
+    dependencies: []  # List of milestone IDs this depends on, e.g., ["M0"] or []
+    blocking_issues: []  # List of issue IDs currently blocking this milestone, e.g., ["M1-I3"]
+    completion_criteria:
+      - criterion: "[Specific completion criterion]"
+        status: "[pending | met | failed]"
+    issues: ["M1-I1", "M1-I2", "M1-I3"]  # List of issue IDs in this milestone
+
+  - id: "M2"
+    name: "[Milestone Name]"
+    objective: "[What this milestone achieves]"
+    status: "[planned | in_progress | testing | complete | blocked]"
+    start_date: "[YYYY-MM-DD]"
+    target_end_date: "[YYYY-MM-DD]"
+    actual_end_date: "[YYYY-MM-DD or null]"
+    completion_percentage: [0-100]
+    dependencies: ["M1"]
+    blocking_issues: []
+    completion_criteria:
+      - criterion: "[Specific completion criterion]"
+        status: "[pending | met | failed]"
+    issues: ["M2-I1", "M2-I2"]
+
+# Issues Array
+# Each issue is a discrete, testable unit of work
+issues:
+  - id: "M1-I1"
+    title: "[Issue Title]"
+    description: "[Detailed description of work to be done]"
+    milestone: "M1"
+    status: "[open | in_progress | testing | blocked | resolved | closed]"
+    assigned_agent: "[documentation-agent | orchestration-agent | ui-ux-agent | coding-agent | testing-agent | reporting-agent]"
+    capabilities_required:
+      - "[Capability 1 - e.g., 'UI design']"
+      - "[Capability 2 - e.g., 'React development']"
+    priority: "[high | medium | low]"
+    effort_estimate_hours: [numeric value]
+    requirement_refs:
+      - "FR-001"
+      - "NFR-002"
+    dependencies: []  # List of issue IDs this depends on, e.g., ["M1-I0"]
+    blocking_issues: []  # List of issue IDs blocked by this issue
+    acceptance_criteria:
+      - criterion: "[Specific, testable criterion]"
+        status: "[pending | met | failed]"
+        verified_by: "[Agent name or null]"
+        verification_date: "[YYYY-MM-DDTHH:MM:SSZ or null]"
+    timestamps:
+      created: "[YYYY-MM-DDTHH:MM:SSZ]"
+      started: "[YYYY-MM-DDTHH:MM:SSZ or null]"
+      completed: "[YYYY-MM-DDTHH:MM:SSZ or null]"
+      last_updated: "[YYYY-MM-DDTHH:MM:SSZ]"
+    notes: "[Any special considerations or context]"
+
+  - id: "M1-I2"
+    title: "[Issue Title]"
+    description: "[Detailed description of work to be done]"
+    milestone: "M1"
+    status: "[open | in_progress | testing | blocked | resolved | closed]"
+    assigned_agent: "[agent-name]"
+    capabilities_required:
+      - "[Capability]"
+    priority: "[high | medium | low]"
+    effort_estimate_hours: [numeric value]
+    requirement_refs:
+      - "FR-XXX"
+    dependencies: ["M1-I1"]
+    blocking_issues: []
+    acceptance_criteria:
+      - criterion: "[Specific, testable criterion]"
+        status: "[pending | met | failed]"
+        verified_by: "[Agent name or null]"
+        verification_date: "[YYYY-MM-DDTHH:MM:SSZ or null]"
+    timestamps:
+      created: "[YYYY-MM-DDTHH:MM:SSZ]"
+      started: "[YYYY-MM-DDTHH:MM:SSZ or null]"
+      completed: "[YYYY-MM-DDTHH:MM:SSZ or null]"
+      last_updated: "[YYYY-MM-DDTHH:MM:SSZ]"
+    notes: "[Notes]"
+
+# Dependencies Array
+# Explicit dependency relationships between issues
+dependencies:
+  - from_issue: "M1-I2"
+    to_issue: "M1-I1"
+    type: "[requires_completion | requires_artifact | informational]"
+    reason: "[Why this dependency exists]"
+  
+  - from_issue: "M2-I1"
+    to_issue: "M1-I3"
+    type: "[requires_completion | requires_artifact | informational]"
+    reason: "[Why this dependency exists]"
+
+# Agent Assignments
+# Track what each agent is working on
+agent_assignments:
+  - agent: "documentation-agent"
+    active_issues: []  # Issues currently in progress
+    pending_issues: []  # Issues assigned but not started
+    completed_issues: []  # Issues completed by this agent
+    capacity_status: "[available | at_capacity | overloaded]"
+  
+  - agent: "orchestration-agent"
+    active_issues: []
+    pending_issues: []
+    completed_issues: []
+    capacity_status: "[available | at_capacity | overloaded]"
+  
+  - agent: "ui-ux-agent"
+    active_issues: []
+    pending_issues: []
+    completed_issues: []
+    capacity_status: "[available | at_capacity | overloaded]"
+  
+  - agent: "coding-agent"
+    active_issues: []
+    pending_issues: []
+    completed_issues: []
+    capacity_status: "[available | at_capacity | overloaded]"
+  
+  - agent: "testing-agent"
+    active_issues: []
+    pending_issues: []
+    completed_issues: []
+    capacity_status: "[available | at_capacity | overloaded]"
+  
+  - agent: "reporting-agent"
+    active_issues: []
+    pending_issues: []
+    completed_issues: []
+    capacity_status: "[available | at_capacity | overloaded]"
+
+# Workflow State
+# Current state of the project workflow
+workflow_state:
+  current_phase: "[planning | design | implementation | testing | review | deployment]"
+  previous_phase: "[phase name or null]"
+  phase_start_date: "[YYYY-MM-DDTHH:MM:SSZ]"
+  phase_target_end_date: "[YYYY-MM-DD]"
+  governance_checks_passed: [true | false]
+  approval_pending: [true | false]
+  blockers:
+    - blocker_id: "B-001"
+      description: "[What is blocking progress]"
+      affected_issues: ["M1-I2", "M1-I3"]
+      severity: "[critical | high | medium | low]"
+      raised_date: "[YYYY-MM-DDTHH:MM:SSZ]"
+      owner: "[Who is responsible for resolving]"
+      status: "[active | resolved]"
+
+# Rework Queue
+# Issues that failed validation and need rework
+rework_queue:
+  - issue_id: "M1-I2"
+    original_agent: "[agent-name]"
+    failure_reason: "[Why it failed validation]"
+    attempt_count: [numeric value]
+    last_attempt_date: "[YYYY-MM-DDTHH:MM:SSZ]"
+    reassigned_to: "[agent-name or null]"
+    escalation_required: [true | false]
+    notes: "[Additional context]"
+
+# Audit Log
+# Complete history of significant events
+audit_log:
+  - timestamp: "[YYYY-MM-DDTHH:MM:SSZ]"
+    event_type: "[requirements_approved | planning_approved | issue_assigned | issue_completed | milestone_completed | governance_violation | escalation]"
+    actor: "[Agent or person name]"
+    target: "[What was affected - e.g., 'M1-I1' or 'Requirements.md v1.0']"
+    details: "[Description of what happened]"
+    artifact_ref: "[Path to related artifact if applicable]"
+  
+  - timestamp: "[YYYY-MM-DDTHH:MM:SSZ]"
+    event_type: "[event type]"
+    actor: "[Actor]"
+    target: "[Target]"
+    details: "[Details]"
+    artifact_ref: "[Artifact reference or null]"
+
+# External Dependencies
+# Dependencies on systems or resources outside the project
+external_dependencies:
+  - dependency_id: "EXT-001"
+    name: "[External System/API/Resource Name]"
+    description: "[What we need from it]"
+    owner: "[Team/Vendor/Person]"
+    required_by_issues: ["M2-I1"]
+    status: "[available | pending | blocked | unavailable]"
+    target_availability_date: "[YYYY-MM-DD or null]"
+    risk_level: "[high | medium | low]"
+    mitigation: "[What we do if this is unavailable]"
