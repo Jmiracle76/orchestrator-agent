@@ -57,11 +57,8 @@ The project currently consists of multiple AI agents (requirements, planning, or
 There is no dedicated planning/orchestrator agent responsible for:
 
 Interpreting project state
-
 Sequencing agent execution
-
 Enforcing lifecycle boundaries
-
 Translating approved requirements into structured execution plans
 
 Without a formal orchestrator, agent interactions are brittle, difficult to reason about, and prone to uncontrolled expansion.
@@ -82,6 +79,8 @@ Create a Planning / Orchestrator Agent that reliably translates approved project
 <!-- What would be nice to achieve but is not critical? -->
 <!-- These may be deferred if constraints require -->
 
+Use the existing /agent-profiles/orchestration-agent.md file as the initial starting point for this agent. This file can be edited/changed as necessary.
+A new /tools/invoke_orchestrator_agent.py script is expected to be created to invoke the orchestrator agent once and only once and when and only when the requirements.md file has been marked "Approved".
 Reduce manual intervention during early project setup
 Enforce clear lifecycle stages between agents
 Prevent uncontrolled script and file sprawl
@@ -89,8 +88,8 @@ Enable repeatable, auditable agent-driven project initialization
 
 In Scope
 A single Planning / Orchestrator Agent
-Supporting logic embedded in an existing invocation script or a clearly bounded new one
-Structured handoff between Requirements Agent → Planning Agent
+Supporting logic embedded in a clearly bounded new invocation script
+Structured handoff between Requirements Agent → Planning Agent leveraging existing logic already present in /tools/invoke_requirements_agent.py.
 Generation of milestones and GitHub issues based on approved requirements
 
 Out of Scope (Non-Goals)
