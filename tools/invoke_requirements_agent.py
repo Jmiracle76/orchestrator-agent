@@ -668,6 +668,79 @@ def update_approval_status_to_pending(requirements: str) -> str:
     
     return ''.join(lines)
 
+def revoke_approval_and_commit(requirements: str, reason: str, commit_message: str) -> str:
+    """
+    Revoke approval by updating the document and deleting the state marker.
+    
+    This function:
+    1. Updates approval status to "Pending - Revisions Required"
+    2. Writes updated document to disk
+    3. Deletes planning state marker if it exists
+    4. Commits changes to git
+    
+    Args:
+        requirements: The current requirements document text
+        reason: Human-readable reason for revocation (for logging)
+        commit_message: Git commit message
+    
+    Returns:
+        The updated requirements document text (re-read from disk after commit)
+    """
+    print(f"  ⚠️  Requirements were previously approved")
+    print(f"  → Revoking approval due to {reason}")
+    
+    # Update approval status in document to "Pending"
+    updated_requirements = update_approval_status_to_pending(requirements)
+    REQ_FILE.write_text(updated_requirements, encoding="utf-8")
+    print("  ✓ Approval status updated to 'Pending - Revisions Required'")
+    
+    # Prepare git operations
+    git_add_commands = [
+        ["git", "add", str(REQ_FILE)]
+    ]
+    
+    # Delete planning state marker if it exists
+    marker_deleted = revoke_approval_state()
+    if marker_deleted:
+        print("  ✓ Planning state marker deleted")
+        git_add_commands.append(["git", "add", "-u", ".agent_state/"])
+    
+    # Commit the revocation
+    try:
+        for cmd in git_add_commands:
+            subprocess.check_call(
+                cmd,
+                cwd=REPO_ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        
+        # Check if there are actually changes to commit
+        status = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=REPO_ROOT
+        ).decode().strip()
+        
+        if status:
+            subprocess.check_call(
+                ["git", "commit", "-m", commit_message],
+                cwd=REPO_ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            print("  ✓ Approval revocation committed")
+        else:
+            print("  ℹ️  No changes to commit (approval already pending)")
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ Failed to commit revocation: {e}")
+        # Revert the file write on failure
+        REQ_FILE.write_text(requirements, encoding="utf-8")
+        print("  → Reverted document changes due to commit failure")
+        return requirements
+    
+    # Re-read requirements after successful commit
+    return REQ_FILE.read_text(encoding="utf-8")
+
 # ---------- Agent Instructions ----------
 def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "") -> str:
     """
@@ -1237,82 +1310,11 @@ def main():
         
         # Check if requirements were previously approved
         if is_requirements_approved(requirements):
-            print("  ⚠️  Requirements were previously approved")
-            print("  → Revoking approval due to unresolved answered questions")
-            
-            # Update approval status in document to "Pending"
-            requirements = update_approval_status_to_pending(requirements)
-            REQ_FILE.write_text(requirements, encoding="utf-8")
-            print("  ✓ Approval status updated to 'Pending - Revisions Required'")
-            
-            # Delete planning state marker if it exists
-            if revoke_approval_state():
-                print("  ✓ Planning state marker deleted")
-                
-                # Commit the revocation
-                try:
-                    subprocess.check_call(
-                        ["git", "add", str(REQ_FILE)],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    subprocess.check_call(
-                        ["git", "add", "-u", ".agent_state/"],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    
-                    # Check if there are actually changes to commit
-                    status = subprocess.check_output(
-                        ["git", "diff", "--cached", "--name-only"],
-                        cwd=REPO_ROOT
-                    ).decode().strip()
-                    
-                    if status:
-                        subprocess.check_call(
-                            ["git", "commit", "-m", "revoke: approval invalidated by answered questions pending integration"],
-                            cwd=REPO_ROOT,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
-                        print("  ✓ Approval revocation committed")
-                    else:
-                        print("  ℹ️  No changes to commit (approval already pending)")
-                except subprocess.CalledProcessError as e:
-                    print(f"  ✗ Failed to commit revocation: {e}")
-            else:
-                # No state marker exists, just commit the document change if needed
-                try:
-                    subprocess.check_call(
-                        ["git", "add", str(REQ_FILE)],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    
-                    # Check if there are actually changes to commit
-                    status = subprocess.check_output(
-                        ["git", "diff", "--cached", "--name-only"],
-                        cwd=REPO_ROOT
-                    ).decode().strip()
-                    
-                    if status:
-                        subprocess.check_call(
-                            ["git", "commit", "-m", "revoke: approval status updated to Pending due to pending questions"],
-                            cwd=REPO_ROOT,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
-                        print("  ✓ Approval status change committed")
-                    else:
-                        print("  ℹ️  No changes to commit (approval already pending)")
-                except subprocess.CalledProcessError as e:
-                    print(f"  ✗ Failed to commit status change: {e}")
-        
-            # Re-read requirements after modification
-            requirements = REQ_FILE.read_text(encoding="utf-8")
+            requirements = revoke_approval_and_commit(
+                requirements,
+                "unresolved answered questions",
+                "revoke: approval invalidated by answered questions pending integration"
+            )
     
     # Parse Intake section
     print("\n[Intake] Parsing Intake section...")
@@ -1326,86 +1328,15 @@ def main():
         
         # Check if requirements were previously approved
         if is_requirements_approved(requirements):
-            print("  ⚠️  Requirements were previously approved")
-            print("  → Revoking approval due to new unresolved input")
-            
-            # Update approval status in document to "Pending"
-            requirements = update_approval_status_to_pending(requirements)
-            REQ_FILE.write_text(requirements, encoding="utf-8")
-            print("  ✓ Approval status updated to 'Pending - Revisions Required'")
-            
-            # Delete planning state marker if it exists
-            if revoke_approval_state():
-                print("  ✓ Planning state marker deleted")
-                
-                # Commit the revocation (both document and marker deletion)
-                try:
-                    subprocess.check_call(
-                        ["git", "add", str(REQ_FILE)],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    subprocess.check_call(
-                        ["git", "add", "-u", ".agent_state/"],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    
-                    # Check if there are actually changes to commit
-                    status = subprocess.check_output(
-                        ["git", "diff", "--cached", "--name-only"],
-                        cwd=REPO_ROOT
-                    ).decode().strip()
-                    
-                    if status:
-                        subprocess.check_call(
-                            ["git", "commit", "-m", "revoke: approval invalidated by new human input in Intake section"],
-                            cwd=REPO_ROOT,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
-                        print("  ✓ Approval revocation committed")
-                    else:
-                        print("  ℹ️  No changes to commit (approval already pending)")
-                except subprocess.CalledProcessError as e:
-                    print(f"  ✗ Failed to commit revocation: {e}")
-            else:
-                # No state marker exists, just commit the document change if needed
-                try:
-                    subprocess.check_call(
-                        ["git", "add", str(REQ_FILE)],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    
-                    # Check if there are actually changes to commit
-                    status = subprocess.check_output(
-                        ["git", "diff", "--cached", "--name-only"],
-                        cwd=REPO_ROOT
-                    ).decode().strip()
-                    
-                    if status:
-                        subprocess.check_call(
-                            ["git", "commit", "-m", "revoke: approval status updated to Pending due to new human input"],
-                            cwd=REPO_ROOT,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
-                        print("  ✓ Approval status change committed")
-                    else:
-                        print("  ℹ️  No changes to commit (approval already pending)")
-                except subprocess.CalledProcessError as e:
-                    print(f"  ✗ Failed to commit status change: {e}")
+            requirements = revoke_approval_and_commit(
+                requirements,
+                "new unresolved input",
+                "revoke: approval invalidated by new human input in Intake section"
+            )
         else:
             print("  ✓ Requirements not currently approved - no revocation needed")
         
         print("  → New input will trigger question generation and require re-approval")
-        
-        # Re-read requirements after modification
-        requirements = REQ_FILE.read_text(encoding="utf-8")
     else:
         print("✓ Intake section is empty")
     
