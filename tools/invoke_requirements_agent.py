@@ -441,21 +441,22 @@ In integrate mode, you MUST output ONLY structured patches (NOT a full document)
 
 You must:
 1. Find Open Questions subsections with non-empty Answer fields and Status not "Resolved"
-2. Integrate each answer into the appropriate section
-3. Mark questions as "Resolved" by updating their Status field
-4. Update risks based on integrated answers
-5. Recommend approval status
+2. Integrate each answer into the appropriate section specified in Integration Targets
+3. Update risks based on integrated answers
+4. Recommend approval status
+
+CRITICAL: Do NOT mark questions as "Resolved". Resolution status is derived mechanically by the 
+invocation script based on whether all Integration Targets were successfully updated.
 
 OUTPUT FORMAT (required):
 
 ## INTEGRATION_OUTPUT
 
 ### INTEGRATED_SECTIONS
+For each question being integrated, list:
+- Question ID: <Q-XXX>
 - Section: <exact section heading, e.g., "## 8. Functional Requirements">
 <content to append, with source traceability>
-
-### RESOLVED_QUESTIONS
-<Question IDs that were integrated, e.g., "Q-003, Q-004", or "No questions resolved">
 
 ### RISKS
 <Updated risk rows in markdown table format, or "No risk changes">
@@ -464,10 +465,11 @@ OUTPUT FORMAT (required):
 <Your status recommendation with reasons>
 
 DO NOT output the full document.
+DO NOT include a RESOLVED_QUESTIONS section - resolution is derived automatically.
 """
 
 # ---------- Patch Application ----------
-def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
+def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str, dict]:
     """
     Apply agent patches to requirements document.
     
@@ -475,10 +477,16 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
     1. Extracts patch sections from agent output
     2. Updates corresponding document sections
     3. Updates revision history
+    4. (For integrate mode) Derives resolution status based on successful target integration
     
-    Returns updated document.
+    Returns:
+        tuple: (updated_document, integration_info)
+        integration_info is a dict with keys:
+            - 'resolved': list of question IDs that were resolved
+            - 'unresolved': dict mapping question IDs to list of failed targets
     """
     lines = requirements.split('\n')
+    integration_info = {'resolved': [], 'unresolved': {}}
     
     if mode == "review":
         # Extract review patches
@@ -526,11 +534,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
     else:  # integrate mode
         # Extract integration patches
         integrated_match = re.search(
-            r'### INTEGRATED_SECTIONS\s*\n(.*?)(?=### RESOLVED_QUESTIONS|\Z)',
-            agent_output, re.DOTALL
-        )
-        resolved_match = re.search(
-            r'### RESOLVED_QUESTIONS\s*\n(.*?)(?=### RISKS|\Z)',
+            r'### INTEGRATED_SECTIONS\s*\n(.*?)(?=### RISKS|\Z)',
             agent_output, re.DOTALL
         )
         risks_match = re.search(
@@ -543,42 +547,91 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
         )
         
         integrated_content = integrated_match.group(1).strip() if integrated_match else ""
-        resolved_questions = resolved_match.group(1).strip() if resolved_match else ""
         risks_content = risks_match.group(1).strip() if risks_match else ""
         status_update = status_match.group(1).strip() if status_match else ""
         
-        # Apply integrated sections
+        # Track which questions had their targets successfully integrated
+        # Map: {question_id: {target_section: was_integrated}}
+        integration_tracking = {}
+        
+        # Parse all questions to get their integration targets
+        questions = _parse_open_questions_section('\n'.join(lines))
+        for q in questions:
+            if q['answer'].strip() and not q['status'].lower().startswith('resolved'):
+                # Initialize tracking for this question
+                integration_tracking[q['id']] = {target: False for target in q['targets']}
+        
+        # Apply integrated sections and track successful integrations
         if integrated_content:
-            # Parse section updates
-            section_pattern = re.compile(r'- Section: (.+?)\n(.*?)(?=\n- Section:|\Z)', re.DOTALL)
+            # Parse section updates with question IDs
+            # Updated pattern to match: "- Question ID: Q-XXX\n- Section: ..."
+            section_pattern = re.compile(
+                r'- Question ID:\s*(Q-\d+)\s*\n- Section:\s*(.+?)\n(.*?)(?=\n- Question ID:|\Z)',
+                re.DOTALL
+            )
             for match in section_pattern.finditer(integrated_content):
-                section_heading = match.group(1).strip()
-                content = match.group(2).strip()
+                q_id = match.group(1).strip()
+                section_heading = match.group(2).strip()
+                content = match.group(3).strip()
                 
                 # Find section in document and append content
+                section_found = False
                 for i, line in enumerate(lines):
                     if section_heading in line:
                         # Find next section
                         for j in range(i + 1, len(lines)):
                             if lines[j].strip().startswith('##') and lines[j].strip() != section_heading:
                                 lines.insert(j, "\n" + content + "\n")
+                                section_found = True
                                 break
                         break
+                
+                # Mark this target as integrated if successful
+                if section_found and q_id in integration_tracking:
+                    # Match the target by checking if the section heading appears in any target
+                    # The section heading from agent is "## 8. Functional Requirements"
+                    # The target is "Section 8: Functional Requirements"
+                    # Extract section number and name for precise matching
+                    
+                    # Parse section heading: "## 8. Functional Requirements" -> section_num=8, name="Functional Requirements"
+                    heading_match = re.match(r'##\s*(\d+)\.\s*(.+)', section_heading)
+                    if heading_match:
+                        heading_num = heading_match.group(1)
+                        heading_name = heading_match.group(2).strip()
+                        
+                        for target in integration_tracking[q_id]:
+                            # Parse target: "Section 8: Functional Requirements" -> section_num=8, name="Functional Requirements"
+                            target_match = re.match(r'Section\s+(\d+)[:.]\s*(.+)', target, re.IGNORECASE)
+                            if target_match:
+                                target_num = target_match.group(1)
+                                target_name = target_match.group(2).strip()
+                                
+                                # Match if section numbers are the same and names match (case-insensitive)
+                                if heading_num == target_num and heading_name.lower() == target_name.lower():
+                                    integration_tracking[q_id][target] = True
+                                    break
         
-        # Mark questions as resolved (section-based format)
-        if resolved_questions and "No questions" not in resolved_questions:
-            q_ids = [q.strip() for q in resolved_questions.replace(',', ' ').split() if q.strip()]
-            for q_id in q_ids:
-                # Find the question subsection and update its status
+        # Derive resolution status: mark questions as resolved ONLY if all targets were integrated
+        for q_id, targets in integration_tracking.items():
+            if all(targets.values()) and len(targets) > 0:
+                # All targets were successfully integrated - mark as Resolved
+                integration_info['resolved'].append(q_id)
                 for i, line in enumerate(lines):
                     if line.strip().startswith(f'#### {q_id}:'):
                         # Find the Status line in the next few lines
                         for j in range(i + 1, min(i + 10, len(lines))):
                             if '**Status:**' in lines[j]:
-                                # Update status to Resolved - match complete status value
-                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S.*?(?=\s*\n)', '**Status:** Resolved', lines[j])
+                                # Update status to Resolved
+                                # Match "**Status:** <anything>" and replace with "**Status:** Resolved"
+                                # Use .*? to match the entire status value, then $ to match end of line
+                                lines[j] = re.sub(r'\*\*Status:\*\*\s+.*?$', '**Status:** Resolved', lines[j].rstrip())
                                 break
                         break
+            else:
+                # Not all targets were integrated - track failed targets
+                failed_targets = [t for t, integrated in targets.items() if not integrated]
+                if failed_targets:
+                    integration_info['unresolved'][q_id] = failed_targets
         
         # Update risks
         if risks_content and "No risk changes" not in risks_content:
@@ -625,7 +678,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
                     break
             break
     
-    return '\n'.join(lines)
+    return '\n'.join(lines), integration_info
 
 # ---------- Main ----------
 def main():
@@ -732,7 +785,18 @@ Your output will be parsed and applied as patches.
     
     # Apply patches
     print(f"\n[Patching] Applying {mode} patches...")
-    updated_doc = apply_patches(requirements, agent_output, mode)
+    updated_doc, integration_info = apply_patches(requirements, agent_output, mode)
+    
+    # Log integration resolution results (integrate mode only)
+    if mode == "integrate":
+        if integration_info['resolved']:
+            print(f"\n[Resolution] Questions resolved (all targets integrated):")
+            for q_id in integration_info['resolved']:
+                print(f"  ✓ {q_id}")
+        if integration_info['unresolved']:
+            print(f"\n[Resolution] Questions NOT resolved (missing targets):")
+            for q_id, failed_targets in integration_info['unresolved'].items():
+                print(f"  ✗ {q_id}: Failed to integrate into {', '.join(failed_targets)}")
     
     # Write updated document
     REQ_FILE.write_text(updated_doc, encoding="utf-8")

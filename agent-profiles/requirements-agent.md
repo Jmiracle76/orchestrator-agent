@@ -40,7 +40,7 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 
 **ONLY in integrate mode:**
 - **Integrate human-provided answers from Open Questions into appropriate sections** (Sections 2-11, 13-14)
-- Mark Open Questions as "Resolved" after integrating their answers
+- **IMPORTANT:** Do NOT manually mark questions as "Resolved" - resolution status is derived mechanically by the invocation script based on successful integration of all targets
 - **Downgrade or update Risks** when integrated answers mitigate them (do NOT delete risks)
 - **Add new Risks** when integrated answers introduce them
 - **Update Revision History** to document integration activities
@@ -72,9 +72,9 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 - Output follows REVIEW_OUTPUT patch format
 
 ### Integrate Mode Success:
-- All answered (non-Resolved) Open Questions are integrated into appropriate sections
+- All answered (non-Resolved) Open Questions are integrated into their specified Integration Target sections
 - Integrated content includes source traceability (e.g., "Source: Product Owner (Answer to Q-003)")
-- Resolved questions are marked as "Resolved"
+- Resolution status is derived mechanically by the invocation script based on successful integration of all targets
 - Risks are updated (downgraded or added) based on integration results
 - Revision History documents integration activities
 - Output follows INTEGRATION_OUTPUT patch format
