@@ -29,6 +29,7 @@ import sys
 import argparse
 import subprocess
 import re
+from datetime import date
 from pathlib import Path
 from typing import List
 
@@ -741,6 +742,44 @@ Your output will be parsed and applied as patches.
         for section in missing_sections:
             print(f"  - {section}")
         sys.exit(1)
+
+    document_changed = updated_doc != requirements
+    if document_changed:
+        lines = updated_doc.splitlines()
+        current_version = None
+        for line in lines:
+            if line.startswith("**Version:**"):
+                _, _, version_value = line.partition("**Version:**")
+                current_version = version_value.strip()
+                break
+        if current_version:
+            version_parts = current_version.split(".")
+            try:
+                version_parts[-1] = str(int(version_parts[-1]) + 1)
+            except ValueError:
+                version_parts[-1] = "1"
+            new_version = ".".join(version_parts)
+            for i, line in enumerate(lines):
+                if line.startswith("**Version:**"):
+                    lines[i] = f"**Version:** {new_version}"
+                elif line.startswith("| Current Version |"):
+                    lines[i] = f"| Current Version | {new_version} |"
+            version_row = f"| {new_version} | {date.today().isoformat()} | Requirements Agent | Automated update |"
+            for i, line in enumerate(lines):
+                if line.strip() == "### Version History":
+                    version_table_found = False
+                    for j in range(i + 1, len(lines)):
+                        if lines[j].startswith("| Version |"):
+                            insert_at = j + 1
+                            if insert_at < len(lines) and lines[insert_at].strip().startswith("|---"):
+                                insert_at += 1
+                            lines.insert(insert_at, version_row)
+                            version_table_found = True
+                            break
+                    if not version_table_found:
+                        lines.insert(i + 1, version_row)
+                    break
+            updated_doc = "\n".join(lines)
 
     # Write updated document
     REQ_FILE.write_text(updated_doc, encoding="utf-8")
