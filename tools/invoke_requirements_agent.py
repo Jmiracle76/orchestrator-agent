@@ -259,7 +259,7 @@ def commit_changes(mode: str) -> bool:
     Commit requirements.md changes.
     
     Args:
-        mode: "review" or "integrate"
+        mode: "review", "integrate", or "schema_repair"
     
     Returns:
         True if successful
@@ -282,7 +282,15 @@ def commit_changes(mode: str) -> bool:
 - Updated revision history
 
 Agent mode: integrate"""
-        else:
+        elif mode == "schema_repair":
+            msg = """requirements: schema repair completed
+
+- Restored missing required sections
+- Added placeholder content for review
+- Updated risks and open questions
+
+Agent mode: schema_repair"""
+        else:  # review
             msg = """requirements: review pass completed
 
 - Reviewed document for quality and completeness
@@ -675,11 +683,17 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
         Updated requirements document with missing sections inserted
     """
     def insert_section_at_index(lines_list: list, index: int, section_num: int, section_name: str) -> None:
-        """Helper to insert a section with proper formatting at the given index."""
+        """Helper to insert a section with proper formatting at the given index.
+        
+        Inserts in reverse order so that all content appears at the target index
+        without manual index adjustment. Order: content lines (reversed), separator, empty line.
+        Final result at index: empty line, separator, section content.
+        """
         section_content = get_canonical_section_template(section_num, section_name)
         # Split section_content into individual lines
         section_lines = section_content.split('\n')
         # Insert in reverse order to avoid index shifting issues
+        # Each insert pushes previous inserts down, so we end up with correct order
         for content_line in reversed(section_lines):
             lines_list.insert(index, content_line)
         lines_list.insert(index, "---")
@@ -1688,9 +1702,7 @@ Your output will be parsed and applied as patches.
             # Auto-commit if changes exist
             if not args.no_commit:
                 print("\n[Commit] Committing schema repair...")
-                # Note: Using "review" mode for commit message since schema_repair
-                # operates similarly (adds risks, questions, updates sections)
-                if commit_changes("review"):
+                if commit_changes("schema_repair"):
                     print("✓ Schema repair committed")
                 else:
                     print("✗ Commit failed")
