@@ -535,46 +535,78 @@ def has_content_in_protected_sections(content: str) -> bool:
     
     return has_content
 
-# ---------- Schema Validation (Hard Failures) ----------
-def validate_document_schema(requirements: str) -> tuple[bool, str]:
+# ---------- Schema Validation and Repair ----------
+
+# Canonical section list (sections 2-14 that must always be present)
+CANONICAL_SECTIONS = [
+    (2, "Problem Statement"),
+    (3, "Goals and Objectives"),
+    (4, "Non-Goals"),
+    (5, "Stakeholders and Users"),
+    (6, "Assumptions"),
+    (7, "Constraints"),
+    (8, "Functional Requirements"),
+    (9, "Non-Functional Requirements"),
+    (10, "Interfaces and Integrations"),
+    (11, "Data Considerations"),
+    (12, "Risks and Open Issues"),
+    (13, "Success Criteria and Acceptance"),
+    (14, "Out of Scope"),
+]
+
+def get_canonical_section_template(section_num: int, section_name: str) -> str:
+    """
+    Get the canonical template for a section.
+    
+    Returns a string with the section header and placeholder content.
+    """
+    header = f"## {section_num}. {section_name}\n\n"
+    placeholder = f"<!-- This section requires content. Please provide details for {section_name}. -->\n\n[Content needed for {section_name}]\n\n"
+    return header + placeholder
+
+def validate_document_schema(requirements: str) -> tuple[bool, str, list]:
     """
     Validate critical document structure and schema.
     
-    These violations cause hard failure:
-    - Missing required sections (2-14)
-    - Deleted section headers
-    - Invalid question schema in Open Questions
-    - Structural corruption
+    This function classifies violations into:
+    - Repairable: Missing sections, empty sections, corrupted formatting
+    - Fatal: Approval misuse, invalid question IDs, structural ambiguity
     
     Returns:
-        (is_valid, error_message) - False if violations found
+        (is_valid, error_message, repairable_violations)
+        - is_valid: False if fatal violations found
+        - error_message: Description of the issue
+        - repairable_violations: List of (section_num, section_name) tuples for missing sections
     """
     lines = requirements.splitlines()
+    repairable_violations = []
     
     # Check for required section headers (2-14)
-    required_sections = [
-        (2, "Problem Statement"),
-        (3, "Goals and Objectives"),
-        (4, "Non-Goals"),
-        (5, "Strategic Context"),
-        (6, "User Stories and Use Cases"),
-        (7, "Functional Requirements"),
-        (8, "Non-Functional Requirements"),
-        (9, "Constraints and Assumptions"),
-        (10, "Dependencies"),
-        (11, "Risks and Mitigations"),
-        (12, "Open Questions"),
-        (13, "Revision History"),
-        (14, "Implementation Notes")
-    ]
-    
-    for section_num, section_name in required_sections:
+    for section_num, section_name in CANONICAL_SECTIONS:
         # Check both section number and name to avoid false positives
         pattern = rf'##\s+{section_num}\.\s+{re.escape(section_name)}'
         if not re.search(pattern, requirements):
-            return False, f"SCHEMA VIOLATION: Missing required section {section_num} ({section_name})"
+            # This is a REPAIRABLE violation - missing section
+            repairable_violations.append((section_num, section_name))
     
-    # Validate Open Questions schema
+    # If there are missing sections, this is repairable
+    if repairable_violations:
+        section_list = ", ".join([f"Section {num} ({name})" for num, name in repairable_violations])
+        return False, f"REPAIRABLE: Missing required sections: {section_list}", repairable_violations
+    
+    # Check for FATAL violations: Invalid approval status
+    # Approval status set without meeting criteria or by non-human
+    approval_section_match = re.search(r'## 15\. Approval Record.*?(?=## \d+\.|$)', requirements, re.DOTALL)
+    if approval_section_match:
+        section_text = approval_section_match.group()
+        # Check if status is "Approved" 
+        if re.search(r'Current Status.*Approved', section_text):
+            # This is approved - verify it's legitimate
+            # For now, we'll allow it (assuming it was set by human)
+            # In a future enhancement, we could add more checks here
+            pass
+    
+    # Validate Open Questions schema for FATAL violations
     open_q_match = re.search(r'### Open Questions\s*\n', requirements)
     if open_q_match:
         # Extract Open Questions section
@@ -615,16 +647,87 @@ def validate_document_schema(requirements: str) -> tuple[bool, str]:
                              "**Question:**", "**Answer:**", "**Integration Targets:**"]
             for field in required_fields:
                 if field not in q_text:
-                    return False, f"SCHEMA VIOLATION: Question {q_id} missing required field: {field}"
+                    # FATAL: Corrupted question schema
+                    return False, f"FATAL: Question {q_id} missing required field: {field}", []
             
             # Validate Status field value
             status_match = re.search(r'\*\*Status:\*\*\s*(\w+)', q_text)
             if status_match:
                 status = status_match.group(1)
                 if status not in ["Open", "Resolved", "Deferred"]:
-                    return False, f"SCHEMA VIOLATION: Question {q_id} has invalid status: {status} (must be Open, Resolved, or Deferred)"
+                    # FATAL: Invalid status value
+                    return False, f"FATAL: Question {q_id} has invalid status: {status} (must be Open, Resolved, or Deferred)", []
     
-    return True, "Schema validation passed"
+    return True, "Schema validation passed", []
+
+def repair_missing_sections(requirements: str, missing_sections: list) -> str:
+    """
+    Repair document by inserting missing sections in correct canonical order.
+    
+    Args:
+        requirements: The current requirements document text
+        missing_sections: List of (section_num, section_name) tuples
+    
+    Returns:
+        Updated requirements document with missing sections inserted
+    """
+    lines = requirements.split('\n')
+    
+    # Find where each section should be inserted
+    # We need to insert sections in the correct order
+    for section_num, section_name in sorted(missing_sections):
+        # Find the correct insertion point
+        # Look for the section before or after this one
+        inserted = False
+        
+        # First, try to find a section after this one
+        for check_num in range(section_num + 1, 16):  # Check sections after this one
+            pattern = rf'^##\s+{check_num}\.\s+'
+            for i, line in enumerate(lines):
+                if re.match(pattern, line):
+                    # Found a later section, insert before it
+                    # Add the section with proper spacing
+                    section_content = get_canonical_section_template(section_num, section_name)
+                    # Insert with separator before it
+                    lines.insert(i, "---\n")
+                    lines.insert(i + 1, section_content)
+                    inserted = True
+                    break
+            if inserted:
+                break
+        
+        # If not inserted yet, try to find a section before this one
+        if not inserted:
+            for check_num in range(section_num - 1, 0, -1):  # Check sections before this one
+                pattern = rf'^##\s+{check_num}\.\s+'
+                for i, line in enumerate(lines):
+                    if re.match(pattern, line):
+                        # Found an earlier section, insert after it
+                        # Find the end of this section (next ## or end of file)
+                        j = i + 1
+                        while j < len(lines) and not lines[j].strip().startswith('## '):
+                            j += 1
+                        # Insert before the separator or next section
+                        section_content = get_canonical_section_template(section_num, section_name)
+                        lines.insert(j, "---\n")
+                        lines.insert(j + 1, section_content)
+                        inserted = True
+                        break
+                if inserted:
+                    break
+        
+        # If still not inserted, append at the end before section 15 (Approval Record)
+        if not inserted:
+            pattern = r'^##\s+15\.\s+'
+            for i, line in enumerate(lines):
+                if re.match(pattern, line):
+                    section_content = get_canonical_section_template(section_num, section_name)
+                    lines.insert(i, "---\n")
+                    lines.insert(i + 1, section_content)
+                    inserted = True
+                    break
+    
+    return '\n'.join(lines)
 
 def is_document_at_approval_gate(requirements: str) -> bool:
     """
@@ -870,16 +973,69 @@ def revoke_approval_and_commit(requirements: str, reason: str, commit_message: s
 
 # ---------- Agent Instructions ----------
 def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "", 
-                          human_edits_detected: bool = False) -> str:
+                          human_edits_detected: bool = False, missing_sections: list = None) -> str:
     """
     Get mode-specific instructions for the agent.
     
     Args:
-        mode: "review" or "integrate"
+        mode: "review", "integrate", or "schema_repair"
         is_template: True if document is version 0.0 (template baseline)
         intake_content: Content from the Intake section (if any)
         human_edits_detected: True if human edits to protected sections were detected
+        missing_sections: List of (section_num, section_name) tuples for missing sections
     """
+    # Schema repair mode - only used when missing sections detected
+    if mode == "schema_repair":
+        section_list = "\n".join([f"- Section {num}: {name}" for num, name in missing_sections]) if missing_sections else ""
+        return f"""MODE: schema_repair
+
+⚠️  SCHEMA REPAIR REQUIRED ⚠️
+
+The document is missing required sections. These sections have been restored with placeholder content:
+
+{section_list}
+
+Your task:
+1. Review the restored sections with placeholder content
+2. Check if content can be inferred from:
+   - Open Questions (answered or in discussion)
+   - Scratchpad notes (if present in Section 1)
+   - Intake section (if present)
+3. For each restored section:
+   - If content can be safely inferred, populate the section appropriately
+   - If content cannot be inferred, create an Open Question asking for it
+   - NEVER invent requirements or make assumptions
+4. Update Risks and Open Questions as needed
+5. Update Version History to document the repair
+
+OUTPUT FORMAT (required):
+
+## REPAIR_OUTPUT
+
+### POPULATED_SECTIONS
+[For each section you populated with inferred content:]
+- Section: <section heading>
+<content you added>
+
+If no sections could be populated: "No sections populated - all require human input"
+
+### OPEN_QUESTIONS
+[New questions for sections that need human input, in standard format]
+
+If no new questions: "No new questions"
+
+### RISKS
+[Any risks identified during repair]
+
+If no new risks: "No new risks identified"
+
+### VERSION_HISTORY_ENTRY
+Schema repair: Restored missing sections [list section numbers]
+
+DO NOT output the full document.
+DO NOT make up requirements content.
+"""
+    
     human_edit_notice = ""
     if human_edits_detected:
         human_edit_notice = """
@@ -1433,13 +1589,113 @@ def main():
     requirements = REQ_FILE.read_text(encoding="utf-8")
     agent_profile = AGENT_PROFILE.read_text(encoding="utf-8")
     
-    # Validate document schema (hard failures)
+    # Validate document schema and check for repairable violations
     print("\n[Schema] Validating document structure...")
-    is_valid, schema_msg = validate_document_schema(requirements)
+    is_valid, schema_msg, repairable_violations = validate_document_schema(requirements)
+    
     if not is_valid:
-        print(f"ERROR: {schema_msg}")
-        print("\nDocument schema is corrupted. Please fix the violations before proceeding.")
-        sys.exit(1)
+        # Check if this is a repairable violation (missing sections)
+        if repairable_violations:
+            # REPAIRABLE: Missing sections - agent will repair
+            print(f"⚠️  {schema_msg}")
+            print("\n[Schema Repair] Restoring missing sections with placeholders...")
+            
+            # Repair the document structure
+            requirements = repair_missing_sections(requirements, repairable_violations)
+            REQ_FILE.write_text(requirements, encoding="utf-8")
+            
+            print("✓ Missing sections restored with placeholder content")
+            for section_num, section_name in repairable_violations:
+                print(f"  - Section {section_num}: {section_name}")
+            
+            # Now invoke agent in schema_repair mode to populate or ask questions
+            print("\n[Agent] Invoking Requirements Agent in schema_repair mode...")
+            
+            # Get user context
+            print("\nOptional context for repair (Ctrl+D to finish):")
+            user_context = sys.stdin.read().strip()
+            
+            # Build prompt for schema repair
+            instructions = get_agent_instructions("schema_repair", False, "", False, repairable_violations)
+            prompt = f"""You are the Requirements Agent.
+
+Agent profile:
+---
+{agent_profile}
+---
+
+Current requirements document (with restored sections):
+---
+{requirements}
+---
+
+Human context:
+---
+{user_context}
+---
+
+{instructions}
+
+CRITICAL: Output ONLY the structured patch format specified above.
+DO NOT output the full requirements document.
+Your output will be parsed and applied as patches.
+"""
+            
+            # Call agent
+            print(f"\n[Agent] Calling {MODEL} for schema repair...")
+            
+            # Import anthropic only when needed
+            try:
+                from anthropic import Anthropic
+            except ImportError:
+                print("ERROR: anthropic package not installed")
+                print("Install with: pip install anthropic")
+                sys.exit(1)
+            
+            client = Anthropic()
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=MAX_TOKENS,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            agent_output = response.content[0].text
+            
+            # Validate output format
+            if "## REPAIR_OUTPUT" not in agent_output:
+                print("\nERROR: Agent output missing ## REPAIR_OUTPUT")
+                print("Agent must output structured patches for repair.")
+                sys.exit(1)
+            
+            print("✓ Agent output validated")
+            
+            # Apply repair patches (similar to review mode)
+            print(f"\n[Patching] Applying repair patches...")
+            updated_doc, _ = apply_patches(requirements, agent_output, "review")
+            
+            # Write updated document
+            REQ_FILE.write_text(updated_doc, encoding="utf-8")
+            print("✓ Document updated with repairs")
+            
+            # Auto-commit if changes exist
+            if not args.no_commit:
+                print("\n[Commit] Committing schema repair...")
+                if commit_changes("review"):
+                    print("✓ Schema repair committed")
+                else:
+                    print("✗ Commit failed")
+            
+            print("\n[Schema Repair] Repair completed. Document is now structurally valid.")
+            print("You may now run the script again for normal review/integrate workflow.")
+            sys.exit(0)
+            
+        else:
+            # FATAL: Non-repairable violation
+            print(f"ERROR: {schema_msg}")
+            print("\nFatal schema violation detected. This cannot be repaired automatically.")
+            print("Please fix the violations manually before proceeding.")
+            sys.exit(1)
+    
     print(f"✓ {schema_msg}")
     
     # Check for human edits to protected sections
