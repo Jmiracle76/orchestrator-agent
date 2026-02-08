@@ -410,12 +410,12 @@ def is_last_commit_by_agent(file_path: Path) -> bool:
     # Check for agent signature in commit message
     return "Agent mode:" in msg
 
-def has_unauthorized_human_edits_to_protected_sections() -> tuple[bool, str]:
+def detect_human_edits_to_protected_sections() -> tuple[bool, str]:
     """
     Detect if humans have directly edited protected sections (2-14) of requirements.md.
     
-    Protected sections are "agent-owned" and humans must not edit them directly
-    once requirements development begins (i.e., after the first agent commit).
+    Protected sections are "agent-owned". When humans edit them, the agent will
+    normalize/refactor the edits rather than blocking execution.
     
     Detection logic:
     1. Check if requirements.md exists and has commit history
@@ -423,7 +423,7 @@ def has_unauthorized_human_edits_to_protected_sections() -> tuple[bool, str]:
     3. If human edit detected, check if protected sections (2-14) were modified
     
     Returns:
-        (has_violations, message)
+        (has_edits, message) - True if human edits detected in protected sections
     """
     if not REQ_FILE.exists():
         return False, "Requirements file does not exist yet"
@@ -534,6 +534,118 @@ def has_content_in_protected_sections(content: str) -> bool:
                 break
     
     return has_content
+
+# ---------- Schema Validation (Hard Failures) ----------
+def validate_document_schema(requirements: str) -> tuple[bool, str]:
+    """
+    Validate critical document structure and schema.
+    
+    These violations cause hard failure:
+    - Missing required sections (2-14)
+    - Deleted section headers
+    - Invalid question schema in Open Questions
+    - Structural corruption
+    
+    Returns:
+        (is_valid, error_message) - False if violations found
+    """
+    lines = requirements.splitlines()
+    
+    # Check for required section headers (2-14)
+    required_sections = [
+        (2, "Problem Statement"),
+        (3, "Goals and Objectives"),
+        (4, "Non-Goals"),
+        (5, "Strategic Context"),
+        (6, "User Stories and Use Cases"),
+        (7, "Functional Requirements"),
+        (8, "Non-Functional Requirements"),
+        (9, "Constraints and Assumptions"),
+        (10, "Dependencies"),
+        (11, "Risks and Mitigations"),
+        (12, "Open Questions"),
+        (13, "Revision History"),
+        (14, "Implementation Notes")
+    ]
+    
+    for section_num, section_name in required_sections:
+        pattern = rf'##\s+{section_num}\.\s+'
+        if not re.search(pattern, requirements):
+            return False, f"SCHEMA VIOLATION: Missing required section {section_num} ({section_name})"
+    
+    # Validate Open Questions schema
+    open_q_match = re.search(r'### Open Questions\n', requirements)
+    if open_q_match:
+        # Extract Open Questions section
+        start_pos = open_q_match.end()
+        rest = requirements[start_pos:]
+        
+        # Find end of section
+        end_pattern = r'\n---\n\n###'
+        end_match = re.search(end_pattern, rest)
+        if end_match:
+            section_content = rest[:end_match.start()]
+        else:
+            next_section = re.search(r'\n---\n\n## \d+\.', rest)
+            section_content = rest[:next_section.start()] if next_section else rest
+        
+        # Find all question blocks
+        question_blocks = re.finditer(r'####\s+(Q-\d+):', section_content)
+        for q_match in question_blocks:
+            q_id = q_match.group(1)
+            # Extract question block (until next #### or ---)
+            q_start = q_match.start()
+            next_q = re.search(r'\n####\s+Q-\d+:', section_content[q_start + 1:])
+            next_sep = re.search(r'\n---\n', section_content[q_start + 1:])
+            
+            if next_q and next_sep:
+                q_end = min(next_q.start(), next_sep.start()) + q_start + 1
+            elif next_q:
+                q_end = next_q.start() + q_start + 1
+            elif next_sep:
+                q_end = next_sep.start() + q_start + 1
+            else:
+                q_end = len(section_content)
+            
+            q_text = section_content[q_start:q_end]
+            
+            # Validate required fields exist
+            required_fields = ["**Status:**", "**Asked by:**", "**Date:**", 
+                             "**Question:**", "**Answer:**", "**Integration Targets:**"]
+            for field in required_fields:
+                if field not in q_text:
+                    return False, f"SCHEMA VIOLATION: Question {q_id} missing required field: {field}"
+            
+            # Validate Status field value
+            status_match = re.search(r'\*\*Status:\*\*\s*(\w+)', q_text)
+            if status_match:
+                status = status_match.group(1)
+                if status not in ["Open", "Resolved", "Deferred"]:
+                    return False, f"SCHEMA VIOLATION: Question {q_id} has invalid status: {status} (must be Open, Resolved, or Deferred)"
+    
+    return True, "Schema validation passed"
+
+def is_document_at_approval_gate(requirements: str) -> bool:
+    """
+    Check if document is at approval gate (Ready for Approval or Approved).
+    
+    At this stage, human edits to agent-controlled sections must be rejected.
+    
+    Returns:
+        True if document is Ready for Approval or Approved
+    """
+    # Check Document Control table for approval status
+    approval_status_match = re.search(r'\|\s*Approval Status\s*\|\s*([^|]+)\s*\|', requirements)
+    if approval_status_match:
+        status = approval_status_match.group(1).strip()
+        if "Ready for Approval" in status or "Approved" in status:
+            return True
+    
+    # Also check Section 15 (Approval Record)
+    if is_requirements_approved(requirements):
+        return True
+    
+    return False
 
 # ---------- Mode Determination ----------
 def determine_mode(requirements: str) -> str:
@@ -754,7 +866,8 @@ def revoke_approval_and_commit(requirements: str, reason: str, commit_message: s
     return REQ_FILE.read_text(encoding="utf-8")
 
 # ---------- Agent Instructions ----------
-def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "") -> str:
+def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "", 
+                          human_edits_detected: bool = False) -> str:
     """
     Get mode-specific instructions for the agent.
     
@@ -762,7 +875,39 @@ def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "
         mode: "review" or "integrate"
         is_template: True if document is version 0.0 (template baseline)
         intake_content: Content from the Intake section (if any)
+        human_edits_detected: True if human edits to protected sections were detected
     """
+    human_edit_notice = ""
+    if human_edits_detected:
+        human_edit_notice = """
+⚠️  HUMAN EDITS DETECTED IN AGENT-CONTROLLED SECTIONS ⚠️
+
+Human edits have been detected in sections 2-14 (agent-controlled).
+
+You MUST normalize and refactor these edits:
+1. Validate structural schema (section headers, question format)
+2. Restore canonical formatting
+3. Extract valuable content and integrate appropriately
+4. Convert ambiguous or unclear edits into Open Questions
+5. Discard edits that violate schema or add no value
+
+CRITICAL RULES:
+- Human edits DO NOT mark questions as resolved
+- Human edits DO NOT satisfy acceptance criteria  
+- Human edits DO NOT advance approval status
+- Human edits DO NOT update version numbers
+- Only YOU may reconcile edits into structured requirements
+- Only YOU may update version fields
+- Only YOU may resolve questions (mechanically, based on integration)
+- Only YOU may recommend approval
+
+If an edit is unclear, partial, or ambiguous:
+- Extract it into a new Open Question
+- Do NOT integrate it directly into requirements
+- Ask for clarification
+
+"""
+    
     intake_notice = ""
     if intake_content:
         intake_notice = f"""
@@ -805,7 +950,7 @@ This is a template baseline document. Special safeguards apply:
 - Process Intake section: Convert unstructured notes into formal Open Questions
 - Clear the Intake section after processing
 """
-        return f"""{intake_notice}{template_warning}MODE: review
+        return f"""{human_edit_notice}{intake_notice}{template_warning}MODE: review
 
 In review mode, you MUST output ONLY structured patches (NOT a full document).
 
@@ -851,8 +996,7 @@ For each new question, use this format:
 DO NOT output the full document.
 """
     else:  # integrate
-        return """
-MODE: integrate
+        return f"""{human_edit_notice}MODE: integrate
 
 In integrate mode, you MUST output ONLY structured patches (NOT a full document).
 
@@ -1282,30 +1426,49 @@ def main():
         sys.exit(1)
     print("✓ Working tree is clean")
     
-    # Check for unauthorized human edits to protected sections
-    print("\n[Protection] Checking for direct human edits to agent-owned sections...")
-    has_violations, violation_msg = has_unauthorized_human_edits_to_protected_sections()
-    if has_violations:
-        print("ERROR: Direct human edits to protected sections detected")
-        print(f"\n{violation_msg}")
-        print("\nSections 2-14 are agent-owned and must not be edited directly by humans.")
-        print("To make changes to these sections:")
-        print("  1. Add questions to Section 1 (Document Control) Open Questions")
-        print("  2. Provide answers to those questions")
-        print("  3. Run this script to let the agent integrate the changes")
-        print("\nHuman edits are only allowed in:")
-        print("  - Section 1 (Document Control)")
-        print("  - Section 15 (Approval Record)")
+    # Read files first (needed for schema validation)
+    requirements = REQ_FILE.read_text(encoding="utf-8")
+    agent_profile = AGENT_PROFILE.read_text(encoding="utf-8")
+    
+    # Validate document schema (hard failures)
+    print("\n[Schema] Validating document structure...")
+    is_valid, schema_msg = validate_document_schema(requirements)
+    if not is_valid:
+        print(f"ERROR: {schema_msg}")
+        print("\nDocument schema is corrupted. Please fix the violations before proceeding.")
         sys.exit(1)
-    print(f"✓ {violation_msg}")
+    print(f"✓ {schema_msg}")
+    
+    # Check for human edits to protected sections
+    print("\n[Edit Detection] Checking for human edits to agent-owned sections...")
+    has_edits, edit_msg = detect_human_edits_to_protected_sections()
+    
+    # If at approval gate, reject human edits
+    if has_edits and is_document_at_approval_gate(requirements):
+        print("ERROR: Document is at approval gate - human edits rejected")
+        print(f"\n{edit_msg}")
+        print("\nOnce a document reaches 'Ready for Approval' or 'Approved' status,")
+        print("human edits to agent-controlled sections are not allowed.")
+        print("\nTo make changes at this stage:")
+        print("  1. Add notes to Scratchpad (Section 1)")
+        print("  2. Convert them to Open Questions via the agent")
+        print("  3. Provide answers")
+        print("  4. Run this script for agent integration")
+        print("  5. Go through a fresh review cycle")
+        sys.exit(1)
+    
+    # Human edits detected but not at approval gate - will be normalized
+    human_edits_detected = False
+    if has_edits:
+        print(f"⚠️  {edit_msg}")
+        print("  → Agent will normalize and refactor these edits")
+        human_edits_detected = True
+    else:
+        print(f"✓ {edit_msg}")
     
     # Get user context
     print("\nOptional context (Ctrl+D to finish):")
     user_context = sys.stdin.read().strip()
-    
-    # Read files
-    requirements = REQ_FILE.read_text(encoding="utf-8")
-    agent_profile = AGENT_PROFILE.read_text(encoding="utf-8")
     
     # Parse Open Questions to validate format
     print("\n[Format] Parsing Open Questions section...")
@@ -1364,7 +1527,7 @@ def main():
     print(f"\n[Mode] Running in {mode} mode")
     
     # Build prompt
-    instructions = get_agent_instructions(mode, is_template, intake_content)
+    instructions = get_agent_instructions(mode, is_template, intake_content, human_edits_detected)
     prompt = f"""You are the Requirements Agent.
 
 Agent profile:
