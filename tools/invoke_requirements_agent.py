@@ -383,7 +383,7 @@ INTAKE_PLACEHOLDER = (
     "to formal Open Questions by the Requirements Agent.]"
 )
 
-SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\n##\s|\Z)'
+SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\Z)'
 
 
 def missing_required_sections(content: str) -> list[str]:
@@ -405,7 +405,7 @@ def has_answered_questions(content: str) -> bool:
         "[tbd]",
     }
     answer_pattern = re.compile(
-        r'\*\*Answer:\*\*\s*\n(.*?)(?=\n\*\*Integration Targets:\*\*|\n####|\n###|\n---|\Z)',
+        r'\*\*Answer:\*\*\s*\n(.*?)(?=\n\*\*Integration Targets:\*\*|\Z)',
         re.DOTALL
     )
     for match in answer_pattern.finditer(content):
@@ -576,11 +576,11 @@ def _apply_integrated_sections(lines: list[str], integrated_content: str) -> Non
     if not integrated_content:
         return
     # Expected format per block:
-    # - Question ID: Q-XXX (optional)
+    # - Question ID: Q-XXX
     # - Section: ## N. Section Title
     # <content to append>
     section_pattern = re.compile(
-        r'(?:- Question ID:[^\n]*\n)?- Section:\s*(.+?)\n(.*?)(?=\n\s*(?:- Question ID:|- Section:)|\Z)',
+        r'- Question ID:[^\n]*\n- Section:\s*(.+?)\n(.*?)(?=\n\s*(?:- Question ID:|- Section:)|\Z)',
         re.DOTALL
     )
     for match in section_pattern.finditer(integrated_content):
@@ -724,8 +724,8 @@ Your output will be parsed and applied as patches.
         has_changes = subprocess.call(
             ["git", "diff", "--quiet", "--", "docs/requirements.md"],
             cwd=REPO_ROOT
-        )
-        if has_changes == 0:
+        ) != 0
+        if not has_changes:
             print("\n[Commit] No changes detected; skipping commit")
         else:
             print("\n[Commit] Staging requirements changes...")

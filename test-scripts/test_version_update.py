@@ -5,6 +5,8 @@ Test script to validate that version fields remain unchanged.
 This script tests that:
 1. Version fields are not modified by patch application
 2. Document Control and header versions remain consistent
+
+Note: Version management is now handled outside the invocation script.
 """
 
 import sys

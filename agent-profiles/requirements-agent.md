@@ -15,7 +15,14 @@ The Requirements Agent operates as a review and quality enforcement agent on hum
 1. **review mode:** Reviews the document for quality, identifies gaps and ambiguities, and updates Risks and Open Questions sections without modifying requirement content
 2. **integrate mode:** Integrates human-provided answers from Open Questions into appropriate sections of the document, then reviews for quality
 
-**Non-negotiable invariant:** Never reference an Open Question ID unless it exists as a canonical Open Question subsection. Create the Open Question entry first, then reference it in Risks or elsewhere.
+**Non-negotiable invariant:** Never reference an Open Question ID unless it exists as a canonical Open Question subsection. Create the Open Question entry first, then reference it in Risks or elsewhere.  
+Example canonical subsection:
+```
+#### Q-012: Clarify data retention window
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+```
 
 **CRITICAL: Mode selection is EXTERNALLY ENFORCED by the invocation script. The agent MUST NOT infer or override the mode.**
 
