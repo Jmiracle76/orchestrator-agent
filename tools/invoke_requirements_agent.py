@@ -749,7 +749,8 @@ Your output will be parsed and applied as patches.
         current_version = None
         for line in lines:
             if line.startswith("**Version:**"):
-                current_version = line.split("**Version:**", 1)[1].strip()
+                _, _, version_value = line.partition("**Version:**")
+                current_version = version_value.strip()
                 break
         if current_version:
             version_parts = current_version.split(".")
@@ -766,15 +767,17 @@ Your output will be parsed and applied as patches.
             version_row = f"| {new_version} | {date.today().isoformat()} | Requirements Agent | Automated update |"
             for i, line in enumerate(lines):
                 if line.strip() == "### Version History":
-                    insert_at = None
+                    version_table_found = False
                     for j in range(i + 1, len(lines)):
                         if lines[j].startswith("| Version |"):
-                            insert_at = j + 2
+                            insert_at = j + 1
+                            if insert_at < len(lines) and lines[insert_at].strip().startswith("|---"):
+                                insert_at += 1
+                            lines.insert(insert_at, version_row)
+                            version_table_found = True
                             break
-                    if insert_at is not None:
-                        while insert_at < len(lines) and lines[insert_at].startswith("|"):
-                            insert_at += 1
-                        lines.insert(insert_at, version_row)
+                    if not version_table_found:
+                        lines.insert(i + 1, version_row)
                     break
             updated_doc = "\n".join(lines)
 
