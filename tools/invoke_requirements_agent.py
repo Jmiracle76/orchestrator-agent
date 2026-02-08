@@ -460,8 +460,8 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
                         # Find the Status line in the next few lines
                         for j in range(i + 1, min(i + 10, len(lines))):
                             if '**Status:**' in lines[j]:
-                                # Update status to Resolved
-                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S+', '**Status:** Resolved', lines[j])
+                                # Update status to Resolved - match complete status value
+                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S.*?(?=\s*\n)', '**Status:** Resolved', lines[j])
                                 break
                         break
         

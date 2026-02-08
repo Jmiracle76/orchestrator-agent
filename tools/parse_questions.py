@@ -71,9 +71,9 @@ def parse_open_questions_section(content: str) -> List[Dict[str, str]]:
         asked_by_match = re.search(r'\*\*Asked by:\*\*\s+(.+?)\s*\n', block)
         date_match = re.search(r'\*\*Date:\*\*\s+(.+?)\s*\n', block)
         
-        question_match = re.search(r'\*\*Question:\*\*\s*\n(.+?)\n\s*\n\*\*Answer:\*\*', block, re.DOTALL)
-        answer_match = re.search(r'\*\*Answer:\*\*\s*\n(.+?)\n\s*\n\*\*Integration Targets:\*\*', block, re.DOTALL)
-        targets_match = re.search(r'\*\*Integration Targets:\*\*\s*\n((?:-.+?\n?)+)', block)
+        question_match = re.search(r'\*\*Question:\*\*\s*\n(.+?)\s*\n\*\*Answer:\*\*', block, re.DOTALL)
+        answer_match = re.search(r'\*\*Answer:\*\*\s*\n(.+?)\s*\n\*\*Integration Targets:\*\*', block, re.DOTALL)
+        targets_match = re.search(r'\*\*Integration Targets:\*\*\s*\n((?:- .+\n?)+)', block)
         
         if not all([status_match, asked_by_match, date_match, question_match, targets_match]):
             continue
@@ -89,8 +89,10 @@ def parse_open_questions_section(content: str) -> List[Dict[str, str]]:
         targets = []
         for line in targets_text.split('\n'):
             line = line.strip()
-            if line.startswith('-'):
-                targets.append(line[1:].strip())
+            if line.startswith('- '):
+                target = line[2:].strip()
+                if target:  # Only add non-empty targets
+                    targets.append(target)
         
         questions.append({
             'id': q_id,
@@ -104,11 +106,6 @@ def parse_open_questions_section(content: str) -> List[Dict[str, str]]:
         })
     
     return questions
-
-
-def _process_question(heading: str, content_block: str, questions: List[Dict[str, str]]):
-    """Helper to process a single question block - DEPRECATED."""
-    pass
 
 
 def has_pending_answers_section_based(content: str) -> bool:
