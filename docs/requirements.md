@@ -1,4 +1,4 @@
-"""# Requirements Document
+# Requirements Document
 
 <!-- ============================================================================ -->
 <!-- TEMPLATE BASELINE - Reusable Requirements Template                          -->
@@ -13,10 +13,15 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** [Project Name]
+
 **Version:** 0.0
+
 **Status:** Draft
+
 **Last Updated:** [Date]
+
 **Approved By:** Pending
+
 **Approval Date:** Pending
 
 ---
@@ -317,4 +322,3 @@ For the Requirements Agent to recommend "Ready for Approval", ALL of the followi
 8. [ ] Document is internally consistent
 
 ---
-"""
