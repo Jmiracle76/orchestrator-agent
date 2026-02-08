@@ -651,6 +651,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     # Add revision history entry (simplified version increment)
     today = datetime.now().strftime("%Y-%m-%d")
     change_desc = f"{mode.capitalize()} pass by Requirements Agent"
+    version_to_use = "0.1"  # Default fallback if no previous version found
     
     for i, line in enumerate(lines):
         if '### Version History' in line:
@@ -658,9 +659,11 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
             for j in range(i + 1, len(lines)):
                 if '|---' in lines[j]:
                     continue
+                # Skip header row (contains "Version | Date | Author | Changes")
+                if 'Version' in lines[j] and 'Date' in lines[j] and 'Author' in lines[j]:
+                    continue
                 if lines[j].strip().startswith('|') and lines[j].count('|') >= 4:
                     parts = lines[j].split('|')
-                    version_to_use = "0.1"
                     if len(parts) >= 2:
                         prev_ver = parts[1].strip()
                         # Simple increment: if it's "X.Y", make it "X.Y+1"
@@ -672,6 +675,29 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                             pass
                     lines.insert(j, f"| {version_to_use} | {today} | Requirements Agent | {change_desc} |")
                     break
+            break
+    
+    # Update Document Control table fields atomically
+    # Track which fields have been updated to avoid redundant iterations
+    fields_updated = 0
+    for i, line in enumerate(lines):
+        if '| Current Version |' in line:
+            lines[i] = f'| Current Version | {version_to_use} |'
+            fields_updated += 1
+        elif '| Last Modified |' in line:
+            lines[i] = f'| Last Modified | {today} |'
+            fields_updated += 1
+        elif '| Modified By |' in line:
+            lines[i] = f'| Modified By | Requirements Agent |'
+            fields_updated += 1
+        # Break early if all three fields have been found and updated
+        if fields_updated >= 3:
+            break
+    
+    # Update header version field
+    for i, line in enumerate(lines):
+        if line.startswith('**Version:**'):
+            lines[i] = f'**Version:** {version_to_use}'
             break
     
     return '\n'.join(lines), integration_info
