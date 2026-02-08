@@ -977,7 +977,8 @@ SCHEMA AND CONSISTENCY RESPONSIBILITIES:
 
 You own all document understanding and repair. You MUST:
 1. Detect and repair missing or malformed sections
-2. Detect ghost question references (Q-IDs referenced but not defined) and create entries for them
+2. Detect ghost question references (Q-IDs referenced but not defined) and create canonical
+   Open Question entries for them using the standard format (#### Q-XXX: [Title], Status, etc.)
 3. Validate cross-references between Risks and Open Questions
 4. Ensure internal consistency across all sections
 5. Maintain canonical formatting for all sections
@@ -985,6 +986,7 @@ You own all document understanding and repair. You MUST:
 If you find structural issues, repair them in your output.
 Do NOT create Risks that reference non-existent Open Questions.
 Every Q-ID referenced anywhere in the document MUST have a canonical Open Questions entry.
+If a referenced Q-ID has no entry, create one with Status: Open and ask for clarification.
 """
     
     if mode == "review":
