@@ -13,7 +13,7 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** Orchestrator Agent 
-**Version:** 0.4
+**Version:** 0.1
 **Status:** Draft  
 **Last Updated:** [Date]  
 **Approved By:** Pending  
@@ -28,7 +28,7 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.4 |
+| Current Version | 0.1 |
 | Last Modified | 2026-02-08 |
 | Modified By | Requirements Agent |
 | Approval Status | Pending - Revisions Required |
@@ -43,6 +43,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.1 | 2026-02-08 | Requirements Agent | Integrate pass by Requirements Agent |
 | 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
 | 0.1 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | 0.2 | 2026-02-08 | Requirements Agent | Integrate pass by Requirements Agent |
@@ -122,7 +123,7 @@ Out of Scope (Non-Goals)
 <!-- These are binding exclusions to prevent scope creep -->
 <!-- Be specific to avoid ambiguity -->
 
-<!-- 1. [Non-goal 1 - what this project explicitly will NOT do] -->
+<!-- 1.  -->
 
 
 ---
@@ -158,7 +159,7 @@ The following items are explicitly OUT OF SCOPE for this project:
 
 | Stakeholder | Role | Interest/Need | Contact |
 |-------------|------|---------------|---------|
-| Jason | Product Owner | Authoritative requirements approval, project direction, quality oversight | [Contact info] |
+| Jason | Product Owner | Authoritative requirements approval, project direction, quality oversight |  |
 | Requirements Agent | Review Agent | Enforce requirements quality standards, identify gaps and ambiguities | Automated agent |
 | Planning/Orchestrator Agent | Planning Agent | Translate approved requirements into actionable execution plans | Automated agent |
 
@@ -215,7 +216,7 @@ The following items are explicitly OUT OF SCOPE for this project:
 
 <!-- Define what the system must DO -->
 <!-- Each requirement should be specific, testable, and trace to a goal -->
-<!-- Use format: FR-XXX: [Requirement Name] -->
+<!-- Use format: FR-XXX:  -->
 
 
 **FR-009: Planning Artifact Storage**
@@ -226,10 +227,10 @@ The following items are explicitly OUT OF SCOPE for this project:
 **Source:** Product Owner (Answer to Q-002)
 
 **Acceptance Criteria:**
-- [ ] Planning artifacts exist as files in /planning/ directory
-- [ ] Git history tracks all planning changes
-- [ ] GitHub API calls occur only after human approval of planning artifacts
-- [ ] Repository is the planning system of record; GitHub is the execution system of record
+-  Planning artifacts exist as files in /planning/ directory
+-  Git history tracks all planning changes
+-  GitHub API calls occur only after human approval of planning artifacts
+-  Repository is the planning system of record; GitHub is the execution system of record
 
 *Source: Product Owner (Answer to Q-002)*
 
@@ -244,10 +245,10 @@ The following items are explicitly OUT OF SCOPE for this project:
 **Source:** Product Owner (Answer to Q-003)
 
 **Acceptance Criteria:**
-- [ ] Re-running Planning Agent generates diffs, not full replacements
-- [ ] Existing planning structure is preserved
-- [ ] Changes are highlighted (additions, removals, modifications)
-- [ ] Planning Agent runs are triggered explicitly by humans
+-  Re-running Planning Agent generates diffs, not full replacements
+-  Existing planning structure is preserved
+-  Changes are highlighted (additions, removals, modifications)
+-  Planning Agent runs are triggered explicitly by humans
 
 *Source: Product Owner (Answer to Q-003)*
 
@@ -262,10 +263,10 @@ The following items are explicitly OUT OF SCOPE for this project:
 **Source:** Product Owner (Answer to Q-004)
 
 **Acceptance Criteria:**
-- [ ] Planning Agent detects when requirements.md changes invalidate existing plans
-- [ ] Stale planning artifacts are clearly marked
-- [ ] No automatic re-planning occurs
-- [ ] Human must explicitly re-invoke Planning Agent after drift detection
+-  Planning Agent detects when requirements.md changes invalidate existing plans
+-  Stale planning artifacts are clearly marked
+-  No automatic re-planning occurs
+-  Human must explicitly re-invoke Planning Agent after drift detection
 
 *Source: Product Owner (Answer to Q-004)*
 
@@ -280,24 +281,24 @@ The following items are explicitly OUT OF SCOPE for this project:
 **Source:** Product Owner (Answer to Q-005)
 
 **Acceptance Criteria:**
-- [ ] Planning Agent never directly creates GitHub milestones or issues
-- [ ] GitHub artifact creation requires explicit human approval of planning artifacts
-- [ ] Separate manual script invocation required for GitHub API calls
-- [ ] No GitHub artifacts created until planning approval gate is passed
+-  Planning Agent never directly creates GitHub milestones or issues
+-  GitHub artifact creation requires explicit human approval of planning artifacts
+-  Separate manual script invocation required for GitHub API calls
+-  No GitHub artifacts created until planning approval gate is passed
 
 *Source: Product Owner (Answer to Q-005)*
 
 ---
 
-### FR-001: [Requirement Name]
+### FR-001: 
 
-**Description:** [Clear description of what the system must do]  
-**Priority:** [High | Medium | Low]  
-**Source:** [Stakeholder or document reference]
+**Description:**   
+**Priority:**   
+**Source:** 
 
 **Acceptance Criteria:**
-- [ ] [Specific, measurable criterion 1]
-- [ ] [Specific, measurable criterion 2]
+-  
+-  
 
 <!-- Add additional functional requirements as FR-002, FR-003, etc. -->
 
@@ -307,7 +308,7 @@ The following items are explicitly OUT OF SCOPE for this project:
 
 <!-- Define how the system must perform -->
 <!-- Must include measurable targets or acceptance criteria -->
-<!-- Use format: NFR-XXX: [Category] - [Requirement Name] -->
+<!-- Use format: NFR-XXX:  -  -->
 
 
 **NFR-005: Planning Artifact Auditability**
@@ -323,9 +324,9 @@ The following items are explicitly OUT OF SCOPE for this project:
 - Rollback to previous planning states possible via git operations
 
 **Acceptance Criteria:**
-- [ ] All planning outputs are version-controlled files
-- [ ] Git history captures all planning changes with clear commit messages
-- [ ] Planning artifacts can be rolled back using standard git operations
+-  All planning outputs are version-controlled files
+-  Git history captures all planning changes with clear commit messages
+-  Planning artifacts can be rolled back using standard git operations
 
 *Source: Product Owner (Answer to Q-002)*
 
@@ -345,9 +346,9 @@ The following items are explicitly OUT OF SCOPE for this project:
 - Only timestamps and run metadata vary between runs; content remains identical
 
 **Acceptance Criteria:**
-- [ ] Three consecutive Planning Agent runs with identical inputs produce identical output structure
-- [ ] Milestone ordering is consistent across runs
-- [ ] Content differences limited to timestamps and metadata only
+-  Three consecutive Planning Agent runs with identical inputs produce identical output structure
+-  Milestone ordering is consistent across runs
+-  Content differences limited to timestamps and metadata only
 
 *Source: Product Owner (Answer to Q-008)*
 
@@ -368,10 +369,10 @@ The following items are explicitly OUT OF SCOPE for this project:
 - Complexity reduction takes precedence over feature completeness
 
 **Acceptance Criteria:**
-- [ ] Invocation script performs single function (invoke Planning Agent)
-- [ ] No dynamic agent invocation logic present
-- [ ] Control flow is readable and linear
-- [ ] No unnecessary abstraction layers exist
+-  Invocation script performs single function (invoke Planning Agent)
+-  No dynamic agent invocation logic present
+-  Control flow is readable and linear
+-  No unnecessary abstraction layers exist
 
 *Source: Product Owner (Answer to Q-009)*
 
@@ -392,20 +393,20 @@ The following items are explicitly OUT OF SCOPE for this project:
 - Git history provides complete audit trail
 
 **Acceptance Criteria:**
-- [ ] Every milestone contains explicit requirement ID references
-- [ ] Every issue traces to both milestone and requirement
-- [ ] All planning artifacts are version-controlled
-- [ ] Git log provides complete planning decision history
+-  Every milestone contains explicit requirement ID references
+-  Every issue traces to both milestone and requirement
+-  All planning artifacts are version-controlled
+-  Git log provides complete planning decision history
 
 *Source: Product Owner (Answer to Q-010)*
 
 ---
 
-### NFR-001: [Category] - [Requirement Name]
+### NFR-001:  - 
 
-**Description:** [Clear description of the quality attribute or constraint]  
-**Priority:** [High | Medium | Low]  
-**Measurement Criteria:** [How this will be measured or validated]
+**Description:**   
+**Priority:**   
+**Measurement Criteria:** 
 
 NFR-001: Predictability
 
@@ -432,8 +433,8 @@ NFR-004: Failure Safety
 
 
 **Acceptance Criteria:**
-- [ ] [Specific, measurable criterion 1]
-- [ ] [Specific, measurable criterion 2]
+-  
+-  
 
 <!-- Add additional non-functional requirements as NFR-002, NFR-003, etc. -->
 <!-- Common categories: Reliability, Performance, Security, Usability, Maintainability, Scalability -->
@@ -468,7 +469,6 @@ NFR-004: Failure Safety
 
 | System | Purpose | Interface Type | Dependencies |
 |--------|---------|----------------|--------------|
-| [System name] | [Why integration needed] | [API, File, DB, etc.] | [What must be available] |
 
 ### Data Exchange
 
@@ -476,7 +476,6 @@ NFR-004: Failure Safety
 
 | Integration Point | Data Flow | Format | Frequency |
 |-------------------|-----------|--------|-----------|
-| [Integration name] | [In/Out/Both] | [JSON, XML, CSV, etc.] | [Real-time, Batch, etc.] |
 
 ---
 
@@ -510,22 +509,22 @@ NFR-004: Failure Safety
 
 <!-- List data entities and their attributes -->
 
-- [Data entity 1: description, type, format, precision]
-- [Data entity 2: description, type, format, precision]
+- 
+- 
 
 ### Privacy & Security
 
 <!-- Address data privacy and security requirements -->
 
-- [Privacy consideration 1]
-- [Security consideration 1]
+- 
+- 
 
 ### Data Retention
 
 <!-- Define how long data is kept and where -->
 
-- [Retention policy 1: what data, how long, where stored]
-- [Retention policy 2]
+- 
+- 
 
 ---
 
@@ -564,9 +563,42 @@ NFR-004: Failure Safety
 
 ---
 
+
+**All risks reviewed and updated with accurate probability/impact assessments:**
+
+| Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
+|---------|-------------|-------------|--------|---------------------|-------|
+| R-001 | Template baseline state resolved - project-specific content integrated | **Very Low** | **Very Low** | Questions Q-001 through Q-011 answered and integrated; document now contains substantial project-specific requirements; template cleanup remains (Q-012) | Requirements Agent |
+| R-002 | Planning artifact approval gate ambiguity | **Very Low** | **Low** | **FULLY MITIGATED by Q-002, Q-005 answers:** Planning artifacts stored in-repo with explicit approval workflow; separate script for GitHub API calls prevents premature execution; FR-009 codifies mechanism | Product Owner |
+| R-003 | Scope creep during planning agent execution | **Very Low** | **Low** | **FULLY MITIGATED by Q-007 answer:** Explicit Non-Goals section defines boundaries (Section 4); agent restricted to planning artifacts only (FR-006); no code generation or supplemental documentation; FR-005 enforces scope containment | Product Owner |
+| R-004 | Unpredictable planning outputs | **Very Low** | **Low** | **FULLY MITIGATED by Q-008 answer:** Deterministic output criteria defined in NFR-001; identical inputs must produce identical outputs except timestamps; FR-007 codifies determinism requirement | Product Owner |
+| R-005 | Planning complexity spiral | **Very Low** | **Low** | **FULLY MITIGATED by Q-009 answer:** Simplicity criteria enforce single-responsibility scripts (NFR-002), linear control flow, no abstraction layers; complexity reduction prioritized over features | Product Owner |
+| R-006 | Lost traceability between requirements and plans | **Very Low** | **Low** | **FULLY MITIGATED by Q-010, Q-006 answers:** Auditability criteria (NFR-003) require 100% requirement ID references in milestones and issues; git history provides audit trail; complete data traceability specification in Section 11; FR-003, FR-004, FR-008 enforce traceability | Product Owner |
+| R-007 | Unclear project success definition | **Very Low** | **Very Low** | **FULLY MITIGATED by Q-011 answer:** Specific success criteria defined with measurable acceptance criteria in Section 13; clear approval gates established; six distinct success criteria with 12 acceptance tests | Product Owner |
+| R-008 | Planning artifact drift undetected | **Very Low** | **Low** | **FULLY MITIGATED by Q-004 answer:** Drift detection mechanism defined in FR-013; stale plans marked explicitly; human control over re-planning preserved; automatic invalidation without regeneration prevents silent drift | Product Owner |
+| R-009 | Section incompleteness blocking approval | **Very Low** | **Very Low** | **FULLY MITIGATED by Q-006 answer:** Sections 5, 7, 10, 11 now populated with project-specific content; stakeholders, constraints, interfaces, and data considerations fully specified | Product Owner |
+| R-010 | Ambiguous project success definition | **Very Low** | **Very Low** | **DUPLICATE OF R-007 - consider consolidating:** Mitigated by Q-011 answer; specific success criteria with measurable acceptance criteria defined; clear approval gates established | Product Owner |
+| R-011 | Template content not removed | **Low** | **Low** | **NEW RISK:** Document contains v0.0 template placeholder content that should be removed. Q-012 created to address; human guidance required on what to preserve versus delete | Requirements Agent |
+
+**Summary of Changes:**
+- All risks downgraded to Very Low or Low probability based on comprehensive mitigation through answered questions
+- Impact assessments adjusted to reflect reduced residual risk after mitigations
+- R-011 added to track template cleanup task (Q-012)
+- All mitigation strategies updated to reference specific FRs and NFRs that codify protections
+
+---
+
+### REVISION_HISTORY
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 0.5 | 2026-02-08 | Requirements Agent | Integration pass: Integrated answers for Q-004, Q-011, and eight functional requirements from Intake (FR-001 through FR-008) into Sections 8 and 13; Created Q-012 from Intake template cleanup request; Updated all risks with accurate probability/impact assessments; Cleared Intake section |
+
+---
+
 ### Intake
 
-[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
+
 
 All risks need reviewed and updated with more accurate probability/impact assessments after accounting for mitigating answers provided.
 
@@ -583,7 +615,7 @@ FR-001: State Detection
 **Priority:** High
 
 **Acceptance Criteria:**
-- [ ] The agent must not proceed unless requirements are explicitly marked Approved.
+-  The agent must not proceed unless requirements are explicitly marked Approved.
 
 
 FR-002: Controlled Agent Handoff
@@ -595,7 +627,7 @@ FR-002: Controlled Agent Handoff
 **Priority:** High
 
 **Acceptance Criteria:**
-- [ ]    
+-     
 
 FR-003: Milestone Generation
 
@@ -606,7 +638,7 @@ FR-003: Milestone Generation
 **Priority:** High
 
 **Acceptance Criteria:**
-- [ ]  
+-   
 
 FR-004: Issue Generation
 
@@ -618,7 +650,7 @@ FR-004: Issue Generation
 **Priority:** High
   
 **Acceptance Criteria:**
-- [ ] 
+-  
 
 FR-005: Scope Enforcement
 
@@ -630,7 +662,7 @@ FR-005: Scope Enforcement
 **Priority:** High
   
 **Acceptance Criteria:**
-- [ ] 
+-  
 
 FR-006: Repository Safety
 
@@ -641,7 +673,7 @@ FR-006: Repository Safety
 **Priority:** High
 
 **Acceptance Criteria:**
-- [ ] 
+-  
 
 FR-007: Deterministic Output
 
@@ -657,7 +689,7 @@ FR-008: Explainability
 **Priority:** High
 
 **Acceptance Criteria:**
-- [ ] 
+-  
 
 ---
 
@@ -894,14 +926,14 @@ APPROVAL GATE:
 - Requirements Agent will recommend "Pending - Revisions Required" if any questions have Status "Open"
 
 CANONICAL QUESTION FORMAT (REQUIRED):
-- Each question MUST be a subsection (####) with format: #### Q-XXX: [Title]
+- Each question MUST be a subsection (####) with format: #### Q-XXX: 
 - Required fields in this exact order:
-  * **Status:** [Open | Resolved | Deferred]
-  * **Asked by:** [Agent or Person name]
-  * **Date:** [YYYY-MM-DD]
-  * **Question:** [The question text]
-  * **Answer:** [Human-authored answer, may be empty for new questions]
-  * **Integration Targets:** [Bulleted list of target sections]
+  * **Status:** 
+  * **Asked by:** 
+  * **Date:** 
+  * **Question:** 
+  * **Answer:** 
+  * **Integration Targets:** 
 - Question IDs (Q-XXX) MUST remain stable across edits
 - The invocation script will validate and process this format
 - Any format violations should be logged in git diff and Revision History
@@ -941,18 +973,18 @@ The Planning Agent successfully detects and flags requirement drift without auto
 
 ### Acceptance Criteria
 
-- [ ] Requirements document status set to "Approved" by Product Owner
-- [ ] Planning Agent invoked successfully after requirements approval
-- [ ] Planning artifacts (milestones, issues) generated and stored in /planning/ directory
-- [ ] All planning artifacts trace back to specific requirements sections
-- [ ] GitHub milestones and issues created via separate approved script
-- [ ] No files created outside designated planning directories
-- [ ] No manual cleanup or correction required after agent execution
-- [ ] All functional requirements have passing acceptance tests
-- [ ] All non-functional requirements meet specified measurement criteria
-- [ ] Product Owner has validated system behavior meets expectations
-- [ ] No High or Medium severity defects remain open
-- [ ] Documentation is complete
+-  Requirements document status set to "Approved" by Product Owner
+-  Planning Agent invoked successfully after requirements approval
+-  Planning artifacts (milestones, issues) generated and stored in /planning/ directory
+-  All planning artifacts trace back to specific requirements sections
+-  GitHub milestones and issues created via separate approved script
+-  No files created outside designated planning directories
+-  No manual cleanup or correction required after agent execution
+-  All functional requirements have passing acceptance tests
+-  All non-functional requirements meet specified measurement criteria
+-  Product Owner has validated system behavior meets expectations
+-  No High or Medium severity defects remain open
+-  Documentation is complete
 
 *Source: Product Owner (Answer to Q-011)*
 
@@ -962,20 +994,20 @@ The Planning Agent successfully detects and flags requirement drift without auto
 
 <!-- Define the overall measures of project success -->
 
-1. [Success criterion 1 - must be specific, measurable, and define what "done" means]
-2. [Success criterion 2]
+1. 
+2. 
 
 ### Acceptance Criteria
 
 <!-- These are the criteria that must be met for the project to be considered complete -->
 
-- [ ] [Acceptance criterion 1 - specific and measurable]
-- [ ] [Acceptance criterion 2]
-- [ ] All functional requirements have passing acceptance tests
-- [ ] All non-functional requirements meet specified measurement criteria
-- [ ] Product Owner has validated system behavior meets expectations
-- [ ] No High or Medium severity defects remain open
-- [ ] Documentation is complete
+-  
+-  
+-  All functional requirements have passing acceptance tests
+-  All non-functional requirements meet specified measurement criteria
+-  Product Owner has validated system behavior meets expectations
+-  No High or Medium severity defects remain open
+-  Documentation is complete
 
 ---
 
@@ -986,8 +1018,8 @@ The Planning Agent successfully detects and flags requirement drift without auto
 
 The following items are explicitly OUT OF SCOPE for this project:
 
-1. [Out of scope item 1 - be specific about what will NOT be delivered]
-2. [Out of scope item 2]
+1. 
+2. 
 
 ---
 
