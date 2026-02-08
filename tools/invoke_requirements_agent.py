@@ -388,19 +388,38 @@ SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\n##\s|\Z)'
 
 def missing_required_sections(content: str) -> list[str]:
     """Return a list of missing required top-level sections."""
-    return [section for section in REQUIRED_SECTIONS if section not in content]
+    missing = []
+    for section in REQUIRED_SECTIONS:
+        pattern = rf'^{re.escape(section)}\s*$'
+        if not re.search(pattern, content, re.MULTILINE):
+            missing.append(section)
+    return missing
 
 
 def has_answered_questions(content: str) -> bool:
     """Detect answered questions by checking Answer blocks for non-placeholder content."""
+    placeholder_answers = {
+        "[awaiting response]",
+        "[awaiting answer]",
+        "[pending]",
+        "[tbd]",
+    }
     answer_pattern = re.compile(
         r'\*\*Answer:\*\*\s*\n(.*?)(?=\n\*\*Integration Targets:\*\*|\n####|\n###|\n---|\Z)',
         re.DOTALL
     )
     for match in answer_pattern.finditer(content):
         answer = match.group(1).strip()
-        if answer and not answer.startswith('['):
-            return True
+        normalized = " ".join(answer.split()).lower()
+        if not normalized:
+            continue
+        if normalized in placeholder_answers:
+            continue
+        if normalized.startswith('[') and normalized.endswith(']') and any(
+            token in normalized for token in ("awaiting", "pending", "tbd")
+        ):
+            continue
+        return True
     return False
 
 
@@ -465,7 +484,11 @@ OUTPUT FORMAT:
 
 # ---------- Patch Application Helpers ----------
 def _extract_patch_section(agent_output: str, section: str) -> str:
-    match = re.search(rf'### {section}\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+    match = re.search(
+        rf'### {re.escape(section)}\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
+        agent_output,
+        re.DOTALL
+    )
     return match.group(1).strip() if match else ""
 
 
@@ -486,8 +509,6 @@ def _update_status(lines: list[str], status_update: str) -> None:
             in_header = False
         if in_header and line.startswith("**Status:**"):
             lines[i] = f"**Status:** {status_value}"
-        elif "| Document Status |" in line:
-            lines[i] = f"| Document Status | {status_value} |"
         elif "| Approval Status |" in line:
             lines[i] = f"| Approval Status | {status_value} |"
         elif "| Current Status |" in line:
@@ -505,8 +526,9 @@ def _replace_subsection(lines: list[str], header: str, content: str) -> bool:
     if not content:
         return False
     content_lines = [line.rstrip() for line in content.strip().splitlines()]
+    header_text = header.strip()
     for i, line in enumerate(lines):
-        if line.strip() == header:
+        if line.strip() == header_text:
             start = i + 1
             end = None
             for j in range(start, len(lines)):
@@ -519,8 +541,15 @@ def _replace_subsection(lines: list[str], header: str, content: str) -> bool:
             if end is None:
                 end = len(lines)
             replace_start = start
-            while replace_start < end and lines[replace_start].strip().startswith("<!--"):
+            while replace_start < end and "<!--" in lines[replace_start]:
+                if "-->" in lines[replace_start]:
+                    replace_start += 1
+                    continue
                 replace_start += 1
+                while replace_start < end and "-->" not in lines[replace_start]:
+                    replace_start += 1
+                if replace_start < end:
+                    replace_start += 1
             replacement = [""] + content_lines + [""]
             lines[replace_start:end] = replacement
             return True
@@ -546,6 +575,10 @@ def _append_to_section(lines: list[str], section_heading: str, content: str) -> 
 def _apply_integrated_sections(lines: list[str], integrated_content: str) -> None:
     if not integrated_content:
         return
+    # Expected format per block:
+    # - Question ID: Q-XXX (optional)
+    # - Section: ## N. Section Title
+    # <content to append>
     section_pattern = re.compile(
         r'(?:- Question ID:[^\n]*\n)?- Section:\s*(.+?)\n(.*?)(?=\n\s*(?:- Question ID:|- Section:)|\Z)',
         re.DOTALL
@@ -688,7 +721,11 @@ Your output will be parsed and applied as patches.
         sys.exit(1)
 
     if not args.no_commit:
-        if updated_doc == requirements:
+        has_changes = subprocess.call(
+            ["git", "diff", "--quiet", "--", "docs/requirements.md"],
+            cwd=REPO_ROOT
+        )
+        if has_changes == 0:
             print("\n[Commit] No changes detected; skipping commit")
         else:
             print("\n[Commit] Staging requirements changes...")

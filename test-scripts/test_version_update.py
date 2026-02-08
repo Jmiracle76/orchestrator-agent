@@ -54,6 +54,8 @@ No new questions
 
     assert "| 0.0 |" in updated_doc, "Version History should remain unchanged"
     assert "| Current Version | 0.0 |" in updated_doc, "Current Version should remain unchanged"
+    assert "| Last Modified | 2026-01-01 |" in updated_doc, "Last Modified should remain unchanged"
+    assert "| Modified By | Template |" in updated_doc, "Modified By should remain unchanged"
     assert "**Version:** 0.0" in updated_doc, "Header version should remain unchanged"
 
     print("✓ Review mode version unchanged test passed")
@@ -94,6 +96,8 @@ No updates
 
     assert "| 0.5 |" in updated_doc, "Version History should remain unchanged"
     assert "| Current Version | 0.5 |" in updated_doc, "Current Version should remain unchanged"
+    assert "| Last Modified | 2026-01-01 |" in updated_doc, "Last Modified should remain unchanged"
+    assert "| Modified By | Previous Agent |" in updated_doc, "Modified By should remain unchanged"
     assert "**Version:** 0.5" in updated_doc, "Header version should remain unchanged"
 
     print("✓ Integrate mode version unchanged test passed")
