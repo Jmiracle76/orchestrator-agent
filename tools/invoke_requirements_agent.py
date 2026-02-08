@@ -671,6 +671,17 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
     Returns:
         Updated requirements document with missing sections inserted
     """
+    def insert_section_at_index(lines_list: list, index: int, section_num: int, section_name: str) -> None:
+        """Helper to insert a section with proper formatting at the given index."""
+        section_content = get_canonical_section_template(section_num, section_name)
+        # Split section_content into individual lines
+        section_lines = section_content.split('\n')
+        # Insert in reverse order to avoid index shifting issues
+        for content_line in reversed(section_lines):
+            lines_list.insert(index, content_line)
+        lines_list.insert(index, "---")
+        lines_list.insert(index, "")  # Empty line before separator
+    
     lines = requirements.split('\n')
     
     # Find where each section should be inserted
@@ -686,16 +697,7 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
             for i, line in enumerate(lines):
                 if re.match(pattern, line):
                     # Found a later section, insert before it
-                    # Add the section with proper spacing
-                    section_content = get_canonical_section_template(section_num, section_name)
-                    # Split section_content into individual lines
-                    section_lines = section_content.split('\n')
-                    # Insert separator and section content
-                    # Insert in reverse order to avoid index shifting issues
-                    for content_line in reversed(section_lines):
-                        lines.insert(i, content_line)
-                    lines.insert(i, "---")
-                    lines.insert(i, "")  # Empty line before separator
+                    insert_section_at_index(lines, i, section_num, section_name)
                     inserted = True
                     break
             if inserted:
@@ -713,14 +715,7 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
                         while j < len(lines) and not lines[j].strip().startswith('## '):
                             j += 1
                         # Insert before the separator or next section
-                        section_content = get_canonical_section_template(section_num, section_name)
-                        # Split section_content into individual lines
-                        section_lines = section_content.split('\n')
-                        # Insert in reverse order to avoid index shifting issues
-                        for content_line in reversed(section_lines):
-                            lines.insert(j, content_line)
-                        lines.insert(j, "---")
-                        lines.insert(j, "")  # Empty line before separator
+                        insert_section_at_index(lines, j, section_num, section_name)
                         inserted = True
                         break
                 if inserted:
@@ -731,14 +726,7 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
             pattern = r'^##\s+15\.\s+'
             for i, line in enumerate(lines):
                 if re.match(pattern, line):
-                    section_content = get_canonical_section_template(section_num, section_name)
-                    # Split section_content into individual lines
-                    section_lines = section_content.split('\n')
-                    # Insert in reverse order to avoid index shifting issues
-                    for content_line in reversed(section_lines):
-                        lines.insert(i, content_line)
-                    lines.insert(i, "---")
-                    lines.insert(i, "")  # Empty line before separator
+                    insert_section_at_index(lines, i, section_num, section_name)
                     inserted = True
                     break
     
@@ -1685,6 +1673,8 @@ Your output will be parsed and applied as patches.
             print("✓ Agent output validated")
             
             # Apply repair patches (similar to review mode)
+            # Note: We use "review" mode for patching because schema_repair output
+            # uses the same patch structure (RISKS, OPEN_QUESTIONS, etc.)
             print(f"\n[Patching] Applying repair patches...")
             updated_doc, _ = apply_patches(requirements, agent_output, "review")
             
