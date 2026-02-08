@@ -33,6 +33,327 @@ PLANNING_STATE_MARKER = REPO_ROOT / ".agent_state" / "requirements_approved"
 
 # Regex pattern for detecting section boundaries (### with space or end of string)
 SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\Z)'
+# ---------- Canonical Template ----------
+CANONICAL_TEMPLATE = """# Requirements Document
+
+<!-- ============================================================================ -->
+<!-- TEMPLATE BASELINE - Reusable Requirements Template                          -->
+<!-- ============================================================================ -->
+<!-- This is a clean, canonical template for requirements documentation          -->
+<!-- To use: Copy this file to your project and replace placeholder content      -->
+<!-- For agents: This is a "Template Baseline" - see special rules below         -->
+<!-- ============================================================================ -->
+
+<!-- This document is authored by humans and reviewed by the Requirements Agent -->
+<!-- It serves as the single source of truth for what the project must deliver -->
+<!-- Status values: Draft | Under Review | Approved -->
+
+**Project:** [Project Name]
+**Version:** 0.0
+**Status:** Draft
+**Last Updated:** [Date]
+**Approved By:** Pending
+**Approval Date:** Pending
+
+---
+
+## 1. Document Control
+
+<!-- This section tracks the lifecycle of this requirements document -->
+
+| Field | Value |
+|-------|-------|
+| Document Status | Draft |
+| Current Version | 0.0 |
+| Last Modified | [Date] |
+| Modified By | Template |
+| Approval Status | Pending - Revisions Required |
+| Approved By | Pending |
+| Approval Date | Pending |
+
+### Version History
+
+<!-- Requirements Agent updates this section when integrating answers in integrate_answers mode -->
+<!-- Each integration must document: which Question IDs were integrated, which sections were updated, and nature of changes -->
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
+
+---
+
+## 2. Problem Statement
+
+<!-- Describe the problem being solved, not the solution -->
+<!-- Must be specific, observable, and defensible -->
+<!-- Focus on: What is broken? What pain exists? What is the measurable impact? -->
+
+[Content needed for Problem Statement]
+
+---
+
+## 3. Goals and Objectives
+
+### Primary Goals
+
+<!-- The must-have outcomes that define project success -->
+
+1. [Primary goal 1]
+2. [Primary goal 2]
+
+### Secondary Goals
+
+<!-- Nice-to-have outcomes that add value but are not success-critical -->
+
+1. [Secondary goal 1]
+2. [Secondary goal 2]
+
+---
+
+## 4. Non-Goals
+
+<!-- Explicitly state what this project will NOT do -->
+<!-- Prevents scope creep and sets clear boundaries -->
+
+This project explicitly does NOT include:
+
+1. [Non-goal 1]
+2. [Non-goal 2]
+
+---
+
+## 5. Stakeholders and Users
+
+### Primary Stakeholders
+
+<!-- Who are the decision makers and primary interested parties? -->
+
+- [Stakeholder 1]
+- [Stakeholder 2]
+
+### End Users
+
+<!-- Who will directly use or be affected by this system? -->
+
+- [User group 1]
+- [User group 2]
+
+---
+
+## 6. Assumptions
+
+<!-- List assumptions made during requirements definition -->
+<!-- These are things taken as true but not verified -->
+
+1. [Assumption 1]
+2. [Assumption 2]
+
+---
+
+## 7. Constraints
+
+### Technical Constraints
+
+<!-- Technology or platform limitations -->
+
+- [Technical constraint 1]
+- [Technical constraint 2]
+
+### Business Constraints
+
+<!-- Budget, timeline, or organizational limitations -->
+
+- [Business constraint 1]
+- [Business constraint 2]
+
+### Resource Constraints
+
+<!-- Team, skill, or tooling limitations -->
+
+- [Resource constraint 1]
+- [Resource constraint 2]
+
+---
+
+## 8. Functional Requirements
+
+<!-- What the system must DO -->
+<!-- Format: FR-XXX: [Name] -->
+<!-- Each requirement must have: Description, Priority, Acceptance Criteria -->
+
+### FR-001: [Requirement Name]
+
+**Description:** [What this requirement delivers]
+
+**Priority:** [High | Medium | Low]
+
+**Acceptance Criteria:**
+- [Criterion 1]
+- [Criterion 2]
+
+---
+
+## 9. Non-Functional Requirements
+
+<!-- How the system must BEHAVE -->
+<!-- Quality attributes: performance, security, usability, etc. -->
+<!-- Must be measurable -->
+
+### NFR-001: [Requirement Name]
+
+**Description:** [What quality attribute this addresses]
+
+**Target:** [Measurable target or threshold]
+
+**Measurement Method:** [How this will be verified]
+
+---
+
+## 10. Interfaces and Integrations
+
+### External Systems
+
+<!-- Systems this project must integrate with -->
+
+- [System 1]: [Integration purpose]
+- [System 2]: [Integration purpose]
+
+### Data Exchange
+
+<!-- What data flows in/out and in what format -->
+
+- [Data flow 1]: [Format and frequency]
+- [Data flow 2]: [Format and frequency]
+
+---
+
+## 11. Data Considerations
+
+### Data Requirements
+
+<!-- What data is needed, created, or managed -->
+
+- [Data requirement 1]
+- [Data requirement 2]
+
+### Privacy & Security
+
+<!-- Data protection, compliance, and security requirements -->
+
+- [Privacy requirement 1]
+- [Security requirement 2]
+
+### Data Retention
+
+<!-- Define how long data is kept and where -->
+
+- [Retention policy 1]
+- [Retention policy 2]
+
+---
+
+## 12. Risks and Open Issues
+
+### Identified Risks
+
+<!-- Requirements Agent updates this section during review -->
+<!-- Risks should identify quality gaps, ambiguities, or potential project obstacles -->
+<!-- Do NOT delete resolved risks - update their mitigation status -->
+
+| Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
+|---------|-------------|-------------|--------|---------------------|-------|
+| R-001 | Template baseline state | Low | Low | This is a template document - populate with project-specific content before approval | Requirements Agent |
+
+---
+
+### Intake
+
+<!-- Human notes and unstructured thoughts go here -->
+<!-- Requirements Agent processes this section and converts ambiguities into Open Questions -->
+<!-- This section is cleared after processing -->
+
+[Empty - add human notes here as needed]
+
+---
+
+### Open Questions
+
+<!-- Requirements Agent manages this section -->
+<!-- Format: Question ID, Status (Open/Resolved/Deferred), Asked By, Date, Question, Answer, Integration Targets -->
+
+[No open questions at this time]
+
+---
+
+## 13. Success Criteria and Acceptance
+
+### Project Success Criteria
+
+<!-- Define the overall measures of project success -->
+
+1. [Success criterion 1]
+2. [Success criterion 2]
+
+### Acceptance Criteria
+
+<!-- These are the criteria that must be met for the project to be considered complete -->
+
+- [Acceptance criterion 1]
+- [Acceptance criterion 2]
+
+---
+
+## 14. Out of Scope
+
+<!-- Explicitly state what will NOT be delivered in this project -->
+<!-- These are binding exclusions documented to prevent scope creep -->
+
+The following items are explicitly OUT OF SCOPE for this project:
+
+1. [Out of scope item 1]
+2. [Out of scope item 2]
+
+---
+
+## 15. Approval Record
+
+<!-- This section tracks approval workflow and status -->
+<!-- Only the Product Owner can set status to "Approved" -->
+<!-- Requirements Agent can only recommend "Ready for Approval" or "Pending - Revisions Required" -->
+
+| Field | Value |
+|-------|-------|
+| Current Status | Draft |
+| Recommended By | Pending |
+| Recommendation Date | Pending |
+| Approved By | Pending |
+| Approval Date | Pending |
+| Review Notes | Template baseline - not ready for approval until populated with project-specific content |
+
+---
+
+### Approval Status Definitions
+
+- **Draft:** Initial authoring in progress, not ready for review
+- **Ready for Approval:** Requirements Agent has validated all quality criteria are met, all open questions resolved, no High/Medium risks remain, Success Criteria populated - awaiting Product Owner approval
+- **Approved:** Product Owner has approved requirements as complete and accurate - triggers handoff to Planning Agent
+- **Pending - Revisions Required:** Quality issues, open questions, or unmitigated risks prevent approval recommendation
+
+### Approval Criteria
+
+For the Requirements Agent to recommend "Ready for Approval", ALL of the following must be true:
+
+1. [ ] All 15 sections are present and populated with project-specific content
+2. [ ] All Open Questions are marked "Resolved" (or Open Questions table is empty)
+3. [ ] No High or Medium severity risks remain unmitigated
+4. [ ] Success Criteria section (Section 13) is populated with measurable criteria
+5. [ ] All functional requirements have testable acceptance criteria
+6. [ ] All non-functional requirements have measurable targets
+7. [ ] No contradictory requirements exist
+8. [ ] Document is internally consistent
+
+---
+"""
 
 # ---------- Intake Section Parsing ----------
 def _parse_intake_section(content: str) -> str:
@@ -1851,6 +2172,62 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     
     return '\n'.join(lines), integration_info
 
+# ---------- Reset Function ----------
+def reset_requirements_document():
+    """
+    Destructive reset of requirements document to canonical template.
+    
+    This function:
+    - Replaces the entire requirements document with CANONICAL_TEMPLATE
+    - Discards all existing content (requirements, questions, risks, etc.)
+    - Resets version to 0.0 and status to Draft
+    - Is idempotent (multiple runs produce same result)
+    
+    This is a deliberate, destructive operation and must be explicitly requested.
+    """
+    print("\n" + "=" * 70)
+    print("WARNING: DESTRUCTIVE OPERATION")
+    print("=" * 70)
+    print("\nYou are about to RESET the requirements document to the canonical template.")
+    print("\nThis operation will:")
+    print("  - REPLACE the entire requirements document")
+    print("  - DISCARD all existing content")
+    print("  - ERASE all requirements, questions, risks, and version history")
+    print("  - RESET version to 0.0 and status to Draft")
+    print("\nThis action CANNOT be undone without git revert.")
+    print("=" * 70)
+    
+    # Require explicit confirmation
+    print("\nType 'RESET' (all caps) to confirm: ", end="")
+    confirmation = input().strip()
+    
+    if confirmation != "RESET":
+        print("\nReset cancelled. No changes made.")
+        sys.exit(0)
+    
+    print("\n[Reset] Replacing requirements document with canonical template...")
+    
+    # Replace document with canonical template
+    REQ_FILE.write_text(CANONICAL_TEMPLATE, encoding="utf-8")
+    
+    print("✓ Requirements document reset to canonical template")
+    print(f"✓ Document location: {REQ_FILE}")
+    print(f"✓ Version: 0.0")
+    print(f"✓ Status: Draft")
+    
+    # Verify the reset was successful by checking version
+    reset_content = REQ_FILE.read_text(encoding="utf-8")
+    if "**Version:** 0.0" in reset_content and "| 0.0 |" in reset_content:
+        print("\n✓ Reset verification passed - document is at template baseline")
+    else:
+        print("\n⚠️  Warning: Reset may be incomplete - verification failed")
+        sys.exit(1)
+    
+    print("\n[Next Steps]")
+    print("1. Review the reset document: cat docs/requirements.md")
+    print("2. Commit the reset: git add docs/requirements.md && git commit -m 'Reset requirements to canonical template'")
+    print("3. Begin requirements development with clean baseline")
+
 # ---------- Main ----------
 def main():
     parser = argparse.ArgumentParser(
@@ -1861,7 +2238,18 @@ def main():
         action="store_true",
         help="Disable automatic git commit"
     )
+    parser.add_argument(
+        "--reset-template",
+        action="store_true",
+        help="DESTRUCTIVE: Reset requirements document to canonical template baseline. Discards all existing content."
+    )
     args = parser.parse_args()
+    
+    # Handle reset mode - this happens BEFORE any other checks
+    if args.reset_template:
+        reset_requirements_document()
+        # Exit after reset - no further processing needed
+        sys.exit(0)
     
     # Check API key
     if not os.getenv("ANTHROPIC_API_KEY"):
