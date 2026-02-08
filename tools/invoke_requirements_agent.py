@@ -1423,35 +1423,61 @@ def _cleanup_template_placeholders(lines: list) -> None:
     - Removes placeholder text like [Date], [Author], etc. from content sections
     - Removes duplicated scaffolding (redundant template examples)
     - Preserves document structure
+    - EXCLUDES Open Questions section (brackets are intentional there)
     
     Called once and only once during the 0.0 -> 0.1+ version transition.
     """
     # Identify line ranges for content sections 2-14 (not section 1 or 15)
-    # We'll track section boundaries
+    # But EXCLUDE the Open Questions subsection within section 12
     section_ranges = []
     current_section = None
     current_start = None
+    in_open_questions = False
     
     for i, line in enumerate(lines):
+        # Check if we're entering Open Questions subsection
+        if '### Open Questions' in line:
+            # Save section up to this point if it was in range 2-14
+            if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+                section_ranges.append((current_start, i))
+            in_open_questions = True
+            current_start = None
+            continue
+        
+        # Check if we're exiting Open Questions subsection (next ### or ##)
+        if in_open_questions and (line.strip().startswith('###') or line.strip().startswith('##')):
+            in_open_questions = False
+            # If this is still in section 12 or another section 2-14, start tracking again
+            section_match = re.match(r'##\s+(\d+)\.\s+', line)
+            if section_match:
+                section_num = int(section_match.group(1))
+                if 2 <= section_num <= 14:
+                    current_section = section_num
+                    current_start = i
+            elif line.strip().startswith('###') and current_section is not None and 2 <= current_section <= 14:
+                # Subsection within same parent section
+                current_start = i
+            continue
+        
         # Detect section headers like "## 2. Problem Statement"
         section_match = re.match(r'##\s+(\d+)\.\s+', line)
         if section_match:
             section_num = int(section_match.group(1))
             
             # Save previous section if it was in range 2-14
-            if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+            if current_section is not None and 2 <= current_section <= 14 and current_start is not None and not in_open_questions:
                 section_ranges.append((current_start, i))
             
             # Start tracking new section if in range 2-14
-            if 2 <= section_num <= 14:
+            if 2 <= section_num <= 14 and not in_open_questions:
                 current_section = section_num
                 current_start = i
             else:
                 current_section = None
                 current_start = None
     
-    # Handle last section if it was in range 2-14
-    if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+    # Handle last section if it was in range 2-14 and not in Open Questions
+    if current_section is not None and 2 <= current_section <= 14 and current_start is not None and not in_open_questions:
         section_ranges.append((current_start, len(lines)))
     
     # Clean up placeholders in identified sections
@@ -1522,10 +1548,11 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     
     if mode == "review":
         # Extract review patches
-        status_match = re.search(r'### STATUS_UPDATE\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
-        risks_match = re.search(r'### RISKS\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
-        questions_match = re.search(r'### OPEN_QUESTIONS\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
-        intake_clear_match = re.search(r'### INTAKE_CLEAR\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
+        # Note: Use word boundary or space after ### to avoid matching #### headers
+        status_match = re.search(r'### STATUS_UPDATE\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
+        risks_match = re.search(r'### RISKS\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
+        questions_match = re.search(r'### OPEN_QUESTIONS\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
+        intake_clear_match = re.search(r'### INTAKE_CLEAR\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
         
         status_update = status_match.group(1).strip() if status_match else ""
         risks_content = risks_match.group(1).strip() if risks_match else ""
@@ -1607,25 +1634,35 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                 for i, line in enumerate(lines):
                     if '### Open Questions' in line:
                         # Find the comment block after questions
+                        # Comment can be multiline, so search for "ANSWER INTEGRATION WORKFLOW"
+                        # anywhere in the next few lines after finding <!--
                         for j in range(i + 1, len(lines)):
-                            if lines[j].strip().startswith('<!--') and 'ANSWER INTEGRATION WORKFLOW' in lines[j]:
-                                # Insert before the comment block
-                                lines.insert(j, "\n" + questions_content + "\n")
+                            # Check if this line or nearby lines contain the comment
+                            if 'ANSWER INTEGRATION WORKFLOW' in lines[j]:
+                                # Insert before this line (or before the opening <!--)
+                                # Search backwards to find the opening <!--
+                                insert_pos = j
+                                for k in range(j - 1, i, -1):
+                                    if '<!--' in lines[k]:
+                                        insert_pos = k
+                                        break
+                                lines.insert(insert_pos, "\n" + questions_content + "\n")
                                 break
                         break
     
     else:  # integrate mode
         # Extract integration patches
+        # Note: Use specific lookahead patterns to avoid matching #### headers
         integrated_match = re.search(
-            r'### INTEGRATED_SECTIONS\s*\n(.*?)(?=### RISKS|\Z)',
+            r'### INTEGRATED_SECTIONS\s*\n(.*?)(?=\n### RISKS|\Z)',
             agent_output, re.DOTALL
         )
         risks_match = re.search(
-            r'### RISKS\s*\n(.*?)(?=### STATUS_UPDATE|\Z)',
+            r'### RISKS\s*\n(.*?)(?=\n### STATUS_UPDATE|\Z)',
             agent_output, re.DOTALL
         )
         status_match = re.search(
-            r'### STATUS_UPDATE\s*\n(.*?)(?=###|\Z)',
+            r'### STATUS_UPDATE\s*\n(.*?)(?=\n###\s|\Z)',
             agent_output, re.DOTALL
         )
         
