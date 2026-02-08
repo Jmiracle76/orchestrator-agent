@@ -296,13 +296,14 @@ def is_requirements_approved(requirements: str) -> bool:
     """
     Detect if requirements are approved by checking for explicit approval marker.
     
-    Returns True if "Approval Record" section contains "Current Status" with "Approved".
+    Returns True if "Approval Record" section contains "Current Status" field set to "Approved".
     """
-    # Find Approval Record section and check for approval
+    # Find Approval Record section and check for approval on same line
     approval_section_match = re.search(r'## 15\. Approval Record.*?(?=## \d+\.|$)', requirements, re.DOTALL)
     if approval_section_match:
         section_text = approval_section_match.group()
-        return 'Current Status' in section_text and 'Approved' in section_text
+        # Check for both terms appearing on the same line or in table format
+        return bool(re.search(r'Current Status.*Approved|Approved.*Current Status', section_text))
     return False
 
 def has_planning_been_triggered() -> bool:
@@ -654,18 +655,19 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     for i, line in enumerate(lines):
         if '### Version History' in line:
             # Find first data row to get current version and insert new entry
-            version_to_use = "0.1"
             for j in range(i + 1, len(lines)):
                 if '|---' in lines[j]:
                     continue
                 if lines[j].strip().startswith('|') and lines[j].count('|') >= 4:
                     parts = lines[j].split('|')
+                    version_to_use = "0.1"
                     if len(parts) >= 2:
+                        prev_ver = parts[1].strip()
+                        # Simple increment: if it's "X.Y", make it "X.Y+1"
                         try:
-                            prev_ver = parts[1].strip()
-                            if '.' in prev_ver:
-                                major, minor = prev_ver.split('.', 1)
-                                version_to_use = f"{major}.{int(float(minor)) + 1}"
+                            if '.' in prev_ver and prev_ver.count('.') == 1:
+                                major, minor = prev_ver.split('.')
+                                version_to_use = f"{major}.{int(minor) + 1}"
                         except (ValueError, IndexError):
                             pass
                     lines.insert(j, f"| {version_to_use} | {today} | Requirements Agent | {change_desc} |")
