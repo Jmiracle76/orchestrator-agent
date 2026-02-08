@@ -56,10 +56,10 @@ The project currently consists of multiple AI agents (requirements, planning, or
 
 There is no dedicated planning/orchestrator agent responsible for:
 
-Interpreting project state
-Sequencing agent execution
-Enforcing lifecycle boundaries
-Translating approved requirements into structured execution plans
+- Interpreting project state
+- Sequencing agent execution
+- Enforcing lifecycle boundaries
+- Translating approved requirements into structured execution plans
 
 Without a formal orchestrator, agent interactions are brittle, difficult to reason about, and prone to uncontrolled expansion.
 
@@ -81,16 +81,17 @@ Create a Planning / Orchestrator Agent that reliably translates approved project
 
 Use the existing /agent-profiles/orchestration-agent.md file as the initial starting point for this agent. This file can be edited/changed as necessary.
 A new /tools/invoke_orchestrator_agent.py script is expected to be created to invoke the orchestrator agent once and only once and when and only when the requirements.md file has been marked "Approved".
-Reduce manual intervention during early project setup
-Enforce clear lifecycle stages between agents
-Prevent uncontrolled script and file sprawl
-Enable repeatable, auditable agent-driven project initialization
+
+- Reduce manual intervention during early project setup
+- Enforce clear lifecycle stages between agents
+- Prevent uncontrolled script and file sprawl
+- Enable repeatable, auditable agent-driven project initialization
 
 In Scope
-A single Planning / Orchestrator Agent
-Supporting logic embedded in a clearly bounded new invocation script
-Structured handoff between Requirements Agent → Planning Agent leveraging existing logic already present in /tools/invoke_requirements_agent.py.
-Generation of milestones and GitHub issues based on approved requirements
+- A single Planning / Orchestrator Agent
+- Supporting logic embedded in a clearly bounded new invocation script
+- Structured handoff between Requirements Agent → Planning Agent leveraging existing logic already present in /tools/invoke_requirements_agent.py.
+- Generation of milestones and GitHub issues based on approved requirements
 
 Out of Scope (Non-Goals)
 ❌ Implementing the Requirements Agent (already exists)
@@ -109,8 +110,8 @@ Out of Scope (Non-Goals)
 <!-- These are binding exclusions to prevent scope creep -->
 <!-- Be specific to avoid ambiguity -->
 
-1. [Non-goal 1 - what this project explicitly will NOT do]
-2. [Non-goal 2]
+<!-- 1. [Non-goal 1 - what this project explicitly will NOT do] -->
+
 
 ---
 
@@ -122,7 +123,7 @@ Out of Scope (Non-Goals)
 
 | Stakeholder | Role | Interest/Need | Contact |
 |-------------|------|---------------|---------|
-| [Stakeholder name] | [Role] | [Their interest/need] | [Contact info] |
+| [Jason] | [Product Owner] | [Their interest/need] | [Contact info] |
 
 ### End Users
 
@@ -137,10 +138,10 @@ Out of Scope (Non-Goals)
 <!-- Testable or falsifiable statements assumed to be true -->
 <!-- Each assumption should be validated before or during implementation -->
 
-Requirements are authoritative once approved
-GitHub is the system of record for issues and milestones
-Human review is expected before execution phases begin
-Early project lifecycle prioritizes clarity over automation cleverness
+- Requirements are authoritative once approved
+- GitHub is the system of record for issues and milestones
+- Human review is expected before execution phases begin
+- Early project lifecycle prioritizes clarity over automation cleverness
 
 ---
 
@@ -151,21 +152,21 @@ Early project lifecycle prioritizes clarity over automation cleverness
 <!-- List technical limitations, platform requirements, compatibility needs -->
 
 - [Technical constraint 1]
-- [Technical constraint 2]
+
 
 ### Business Constraints
 
 <!-- List budget, timeline, regulatory, or organizational constraints -->
 
 - [Business constraint 1]
-- [Business constraint 2]
+
 
 ### Resource Constraints
 
 <!-- List limitations on people, time, budget, or infrastructure -->
 
 - [Resource constraint 1]
-- [Resource constraint 2]
+
 
 ---
 
@@ -191,9 +192,9 @@ FR-001: State Detection
 
 The Planning Agent must detect project state based on the requirements document, including at minimum:
 
-Draft
-Under Review
-Approved
+- Draft
+- Under Review
+- Approved
 
 The agent must not proceed unless requirements are explicitly marked Approved.
 
@@ -202,43 +203,43 @@ FR-002: Controlled Agent Handoff
 
 The Planning Agent must only be invoked:
 
-After a successful Requirements Agent run
-When requirements status transitions to Approved
-No speculative invocation is allowed.
+- After a successful Requirements Agent run
+- When requirements status transitions to Approved
+- No speculative invocation is allowed.
 
 FR-003: Milestone Generation
 
 The Planning Agent must generate a structured list of milestones derived directly from approved requirements, including:
 
-Clear milestone names
-Descriptions tied to requirement IDs or sections
-Logical sequencing
+- Clear milestone names
+- Descriptions tied to requirement IDs or sections
+- Logical sequencing
 
 FR-004: Issue Generation
 
 For each milestone, the agent must generate one or more GitHub issues containing:
 
-Clear scope boundaries
-Acceptance criteria
-Explicit non-goals
-References back to requirements sections
+- Clear scope boundaries
+- Acceptance criteria
+- Explicit non-goals
+- References back to requirements sections
 
 FR-005: Scope Enforcement
 
 The Planning Agent must not:
 
-Add requirements
-Modify existing requirements
-Invent features or capabilities
-Expand scope beyond what is explicitly documented
+- Add requirements
+- Modify existing requirements
+- Invent features or capabilities
+- Expand scope beyond what is explicitly documented
 
 FR-006: Repository Safety
 
 The Planning Agent must:
 
-Only create or modify files explicitly designated for planning output
-Never create new scripts, tests, documentation, or configuration files
-Never modify agent code or invocation logic
+- Only create or modify files explicitly designated for planning output
+- Never create new scripts, tests, documentation, or configuration files
+- Never modify agent code or invocation logic
 
 FR-007: Deterministic Output
 
@@ -248,13 +249,10 @@ FR-008: Explainability
 
 The Planning Agent must clearly explain:
 
-Why each milestone exists
-Which requirements it satisfies
-Why sequencing decisions were made
-Opaque “because it seemed right” planning is not acceptable.
-
-
-
+- Why each milestone exists
+- Which requirements it satisfies
+- Why sequencing decisions were made
+- Opaque “because it seemed right” planning is not acceptable.
 
 ---
 
@@ -358,13 +356,13 @@ If preconditions are not met, the agent must fail cleanly without side effects.
 
 | Question ID | Question | Asked By | Date | Answer | Resolution Status |
 |-------------|----------|----------|------|--------|-------------------|
-| Q-001 | What constitutes "Approved" status mechanically? Who has authority to set it (Product Owner only? Script? Agent recommendation sufficient?), and what is the exact trigger mechanism? | Requirements Agent | 2026-02-06 | | Open |
-| Q-002 | Should planning artifacts (milestones, issues) live in-repo as files (e.g., /planning/milestones.md) or be API-only (GitHub issues)? This affects version control, auditability, and rollback capabilities. | Requirements Agent | 2026-02-06 | | Open |
-| Q-003 | Should re-running the Planning Agent overwrite existing plans, generate diffs, or error if plans already exist? What is the idempotency model? | Requirements Agent | 2026-02-06 | | Open |
+| Q-001 | What constitutes "Approved" status mechanically? Who has authority to set it (Product Owner only? Script? Agent recommendation sufficient?), and what is the exact trigger mechanism? | Requirements Agent | 2026-02-06 | Only Human approval is accepted. | Open |
+| Q-002 | Should planning artifacts (milestones, issues) live in-repo as files (e.g., /planning/milestones.md) or be API-only (GitHub issues)? This affects version control, auditability, and rollback capabilities. | Requirements Agent | 2026-02-06 |Planning artifacts are to be drafted and developed in-repo as files until they are flagged as "Approved" by a human. Once planning artifacts are approved, a script can be triggered to create GitHub Milestones and Issues via API. | Open |
+| Q-003 | Should re-running the Planning Agent overwrite existing plans, generate diffs, or error if plans already exist? What is the idempotency model? | Requirements Agent | 2026-02-06 | Re-running the Planning Agent should generate diffs. Planning agent runs can be triggered by human made changes to planning artifacts. | Open |
 | Q-004 | How should requirement changes invalidate existing plans? Should the Planning Agent detect drift between requirements.md and existing planning artifacts? Is manual re-planning required or automatic? | Requirements Agent | 2026-02-06 | | Open |
-| Q-005 | Is manual confirmation required before GitHub issue creation, or can the Planning Agent autonomously create issues? What is the safety gate? | Requirements Agent | 2026-02-06 | | Open |
-| Q-006 | Are Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) intentionally omitted as "Not Applicable" for this project, or do they need to be populated? If N/A, should sections explicitly state this with justification? | Requirements Agent | 2026-02-06 | | Open |
-| Q-007 | Section 4 (Non-Goals) is placeholder - should this explicitly list items like "not implementing downstream agents", "not executing development work", etc., or are Non-Goals already sufficiently covered in Section 3 Out of Scope? | Requirements Agent | 2026-02-06 | | Open |
+| Q-005 | Is manual confirmation required before GitHub issue creation, or can the Planning Agent autonomously create issues? What is the safety gate? | Requirements Agent | 2026-02-06 |Github milestone and issue creation can only occur after planning artifacts have been marked Approved by a human. | Open |
+| Q-006 | Are Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) intentionally omitted as "Not Applicable" for this project, or do they need to be populated? If N/A, should sections explicitly state this with justification? | Requirements Agent | 2026-02-06 | These sections still need developed. Additonal questions can be asked until all sections have been satisfactorly populated. | Open |
+| Q-007 | Section 4 (Non-Goals) is placeholder - should this explicitly list items like "not implementing downstream agents", "not executing development work", etc., or are Non-Goals already sufficiently covered in Section 3 Out of Scope? | Requirements Agent | 2026-02-06 | Additional questions can be added until non-goals has been satisfactorily populated. | Open |
 | Q-008 | What measurable criteria define "predictability" (NFR-001)? E.g., "identical output structure across N runs", "deterministic milestone ordering", "reproducible issue IDs"? | Requirements Agent | 2026-02-06 | | Open |
 | Q-009 | What measurable criteria define "simplicity" (NFR-002)? E.g., "orchestrator logic under X lines of code", "fewer than Y decision branches", "zero abstraction layers"? | Requirements Agent | 2026-02-06 | | Open |
 | Q-010 | What measurable criteria define "auditability" (NFR-003)? E.g., "every milestone references at least one FR-XXX ID", "100% of issues trace to requirements sections", "planning log captures all decisions"? | Requirements Agent | 2026-02-06 | | Open |
