@@ -190,56 +190,72 @@ Out of Scope (Non-Goals)
 
 FR-001: State Detection
 
-The Planning Agent must detect project state based on the requirements document, including at minimum:
-
+**Description:** The Planning Agent must detect project state based on the requirements document, including at minimum:
 - Draft
 - Under Review
 - Approved
+**Priority:** High
 
-The agent must not proceed unless requirements are explicitly marked Approved.
+**Acceptance Criteria:**
+- [ ] The agent must not proceed unless requirements are explicitly marked Approved.
 
 
 FR-002: Controlled Agent Handoff
 
-The Planning Agent must only be invoked:
-
+**Description:** The Planning Agent must only be invoked:
 - After a successful Requirements Agent run
 - When requirements status transitions to Approved
 - No speculative invocation is allowed.
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ]    
 
 FR-003: Milestone Generation
 
-The Planning Agent must generate a structured list of milestones derived directly from approved requirements, including:
-
+**Description:** The Planning Agent must generate a structured list of milestones derived directly from approved requirements, including:
 - Clear milestone names
 - Descriptions tied to requirement IDs or sections
 - Logical sequencing
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ]  
 
 FR-004: Issue Generation
 
-For each milestone, the agent must generate one or more GitHub issues containing:
-
+**Description:** For each milestone, the agent must generate one or more GitHub issues containing:
 - Clear scope boundaries
 - Acceptance criteria
 - Explicit non-goals
 - References back to requirements sections
+**Priority:** High
+  
+**Acceptance Criteria:**
+- [ ] 
 
 FR-005: Scope Enforcement
 
-The Planning Agent must not:
-
+**Description:** The Planning Agent must not:
 - Add requirements
 - Modify existing requirements
 - Invent features or capabilities
 - Expand scope beyond what is explicitly documented
+**Priority:** High
+  
+**Acceptance Criteria:**
+- [ ] 
 
 FR-006: Repository Safety
 
-The Planning Agent must:
-
+**Description:** The Planning Agent must:
 - Only create or modify files explicitly designated for planning output
 - Never create new scripts, tests, documentation, or configuration files
 - Never modify agent code or invocation logic
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ] 
 
 FR-007: Deterministic Output
 
@@ -247,12 +263,15 @@ Given the same approved requirements, the Planning Agent should produce material
 
 FR-008: Explainability
 
-The Planning Agent must clearly explain:
-
+**Description:** The Planning Agent must clearly explain:
 - Why each milestone exists
 - Which requirements it satisfies
 - Why sequencing decisions were made
 - Opaque “because it seemed right” planning is not acceptable.
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ] 
 
 ---
 
@@ -270,19 +289,26 @@ The Planning Agent must clearly explain:
 
 NFR-001: Predictability
 
-Agent behavior must be predictable and bounded. Novel behavior is a defect, not a feature.
-
+**Description:** Agent behavior must be predictable and bounded. Novel behavior is a defect, not a feature.
+**Priority:** High
+**Measurement Criteria:**
 NFR-002: Simplicity
 
-The orchestrator logic must remain minimal. Prefer fewer rules over clever abstractions.
+**Description:** The orchestrator logic must remain minimal. Prefer fewer rules over clever abstractions.
+**Priority:** High
+**Measurement Criteria:**
 
 NFR-003: Auditability
 
-All planning outputs must be traceable back to specific requirements.
+**Description:** All planning outputs must be traceable back to specific requirements.
+**Priority:** High
+**Measurement Criteria:**
 
 NFR-004: Failure Safety
 
-If preconditions are not met, the agent must fail cleanly without side effects.
+**Description:** If preconditions are not met, the agent must fail cleanly without side effects.
+**Priority:** High
+**Measurement Criteria:**
 
 
 **Acceptance Criteria:**
