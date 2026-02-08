@@ -1255,7 +1255,7 @@ def main():
             if revoke_approval_state():
                 print("  ✓ Planning state marker deleted")
                 
-                # Commit the revocation
+                # Commit the revocation (both document and marker deletion)
                 try:
                     subprocess.check_call(
                         ["git", "add", str(REQ_FILE)],
@@ -1269,17 +1269,27 @@ def main():
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL
                     )
-                    subprocess.check_call(
-                        ["git", "commit", "-m", "revoke: approval invalidated by new human input in Intake section"],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    print("  ✓ Approval revocation committed")
+                    
+                    # Check if there are actually changes to commit
+                    status = subprocess.check_output(
+                        ["git", "diff", "--cached", "--name-only"],
+                        cwd=REPO_ROOT
+                    ).decode().strip()
+                    
+                    if status:
+                        subprocess.check_call(
+                            ["git", "commit", "-m", "revoke: approval invalidated by new human input in Intake section"],
+                            cwd=REPO_ROOT,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        print("  ✓ Approval revocation committed")
+                    else:
+                        print("  ℹ️  No changes to commit (approval already pending)")
                 except subprocess.CalledProcessError as e:
                     print(f"  ✗ Failed to commit revocation: {e}")
             else:
-                # No state marker exists, just commit the document change
+                # No state marker exists, just commit the document change if needed
                 try:
                     subprocess.check_call(
                         ["git", "add", str(REQ_FILE)],
@@ -1287,13 +1297,23 @@ def main():
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL
                     )
-                    subprocess.check_call(
-                        ["git", "commit", "-m", "revoke: approval status updated to Pending due to new human input"],
-                        cwd=REPO_ROOT,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    print("  ✓ Approval status change committed")
+                    
+                    # Check if there are actually changes to commit
+                    status = subprocess.check_output(
+                        ["git", "diff", "--cached", "--name-only"],
+                        cwd=REPO_ROOT
+                    ).decode().strip()
+                    
+                    if status:
+                        subprocess.check_call(
+                            ["git", "commit", "-m", "revoke: approval status updated to Pending due to new human input"],
+                            cwd=REPO_ROOT,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        print("  ✓ Approval status change committed")
+                    else:
+                        print("  ℹ️  No changes to commit (approval already pending)")
                 except subprocess.CalledProcessError as e:
                     print(f"  ✗ Failed to commit status change: {e}")
         else:
