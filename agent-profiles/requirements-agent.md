@@ -84,7 +84,7 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 ## Approval Readiness
 
 **Recommend "Ready for Approval"** when ALL of the following are true:
-- All Open Questions are marked "Resolved" (or the table is empty)
+- All Open Questions have Status "Resolved" (or no questions exist)
 - No High or Medium severity risks remain unmitigated
 - Success Criteria section (Section 13) is populated with measurable criteria
 - All quality standards are met
@@ -115,7 +115,7 @@ The Requirements Agent operates on the single authoritative requirements documen
 
 ### Inputs Received:
 - **From Human Authors:** Edited `/docs/requirements.md` document (via file system)
-- **From Human Authors:** Answers to Open Questions (provided in Answer field of Open Questions table)
+- **From Human Authors:** Answers to Open Questions (provided in Answer field of Open Questions subsections)
 - **From Script:** Invocation context and automatically-derived mode
 
 ### Outputs Provided:
@@ -124,7 +124,7 @@ The Requirements Agent operates on the single authoritative requirements documen
 
 ### Handoffs:
 - **To Planning/Orchestration Agent:** Handoff occurs when:
-  1. All Open Questions are marked "Resolved" (or table is empty)
+  1. All Open Questions have Status "Resolved" (or no questions exist)
   2. All identified risks have mitigation strategies
   3. Agent has recommended "Ready for Approval"
   4. Product Owner has manually set "Approved" status
