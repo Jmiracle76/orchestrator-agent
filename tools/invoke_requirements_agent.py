@@ -294,23 +294,17 @@ def determine_mode(requirements: str) -> str:
 # ---------- Approval Detection & State Recording ----------
 def is_requirements_approved(requirements: str) -> bool:
     """
-    Detect if requirements are approved by checking the Approval Record section.
+    Detect if requirements are approved by checking for explicit approval marker.
     
-    Returns True if Current Status field contains "Approved".
-    This is a deterministic, regex-based check.
-    
-    Expected table format (## 15. Approval Record):
-    | Field | Value |
-    |-------|-------|
-    | Current Status | Approved |
-    
-    The pattern matches variations in whitespace but requires exact text match for "Approved".
+    Returns True if "Approval Record" section contains "Current Status" field set to "Approved".
     """
-    # Look for the Approval Record section and Current Status field
-    # Pattern: | Current Status | Approved |
-    # Allows flexible whitespace but requires exact "Approved" text (case insensitive)
-    pattern = r'\|\s*Current Status\s*\|\s*Approved\s*\|'
-    return bool(re.search(pattern, requirements, re.IGNORECASE))
+    # Find Approval Record section and check for approval on same line
+    approval_section_match = re.search(r'## 15\. Approval Record.*?(?=## \d+\.|$)', requirements, re.DOTALL)
+    if approval_section_match:
+        section_text = approval_section_match.group()
+        # Check for both terms appearing on the same line or in table format
+        return bool(re.search(r'Current Status.*Approved|Approved.*Current Status', section_text))
+    return False
 
 def has_planning_been_triggered() -> bool:
     """
@@ -410,7 +404,7 @@ OUTPUT FORMAT (required):
 [Specific reasons]
 
 ### RISKS
-[New risk rows in markdown table format, or "No new risks identified"]
+[New risk entries, or "No new risks identified"]
 
 ### OPEN_QUESTIONS
 [New question subsections in section-based format, or "No new questions"]
@@ -459,7 +453,7 @@ For each question being integrated, list:
 <content to append, with source traceability>
 
 ### RISKS
-<Updated risk rows in markdown table format, or "No risk changes">
+<Updated risk entries, or "No risk changes">
 
 ### STATUS_UPDATE
 <Your status recommendation with reasons>
@@ -467,6 +461,20 @@ For each question being integrated, list:
 DO NOT output the full document.
 DO NOT include a RESOLVED_QUESTIONS section - resolution is derived automatically.
 """
+
+# ---------- Patch Application Helpers ----------
+def _update_approval_status(lines: list, status_update: str) -> None:
+    """Helper to update approval status in document lines."""
+    if not status_update or "No changes" in status_update:
+        return
+    
+    for i, line in enumerate(lines):
+        if '| Approval Status |' in line:
+            if 'Ready for Approval' in status_update:
+                lines[i] = '| Approval Status | Ready for Approval |'
+            elif 'Pending' in status_update:
+                lines[i] = '| Approval Status | Pending - Revisions Required |'
+            break
 
 # ---------- Patch Application ----------
 def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str, dict]:
@@ -499,23 +507,16 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         questions_content = questions_match.group(1).strip() if questions_match else ""
         
         # Update approval status if provided
-        if status_update and "No changes" not in status_update:
-            for i, line in enumerate(lines):
-                if '| Approval Status |' in line:
-                    if 'Ready for Approval' in status_update:
-                        lines[i] = '| Approval Status | Ready for Approval |'
-                    elif 'Pending' in status_update:
-                        lines[i] = '| Approval Status | Pending - Revisions Required |'
-                    break
+        _update_approval_status(lines, status_update)
         
         # Append new risks
         if risks_content and "No new risks" not in risks_content:
             for i, line in enumerate(lines):
-                if '### Risks' in line:
-                    # Find end of risks section
+                if '### Risks' in line or '### Identified Risks' in line:
+                    # Find next section heading and insert before it
                     for j in range(i + 1, len(lines)):
-                        if lines[j].strip() and not lines[j].strip().startswith('|'):
-                            lines.insert(j, "\n" + risks_content)
+                        if lines[j].strip().startswith('###'):
+                            lines.insert(j, "\n" + risks_content + "\n")
                             break
                     break
         
@@ -636,45 +637,40 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         # Update risks
         if risks_content and "No risk changes" not in risks_content:
             for i, line in enumerate(lines):
-                if '### Risks' in line:
+                if '### Risks' in line or '### Identified Risks' in line:
+                    # Find next section heading and insert before it
                     for j in range(i + 1, len(lines)):
-                        if lines[j].strip() and not lines[j].strip().startswith('|'):
-                            lines.insert(j, "\n" + risks_content)
+                        if lines[j].strip().startswith('###'):
+                            lines.insert(j, "\n" + risks_content + "\n")
                             break
                     break
         
         # Update approval status
-        if status_update:
-            for i, line in enumerate(lines):
-                if '| Approval Status |' in line:
-                    if 'Ready for Approval' in status_update:
-                        lines[i] = '| Approval Status | Ready for Approval |'
-                    elif 'Pending' in status_update:
-                        lines[i] = '| Approval Status | Pending - Revisions Required |'
-                    break
+        _update_approval_status(lines, status_update)
     
-    # Add revision history entry
+    # Add revision history entry (simplified version increment)
     today = datetime.now().strftime("%Y-%m-%d")
     change_desc = f"{mode.capitalize()} pass by Requirements Agent"
     
     for i, line in enumerate(lines):
         if '### Version History' in line:
-            # Find first data row and extract version
+            # Find first data row to get current version and insert new entry
             for j in range(i + 1, len(lines)):
-                if lines[j].startswith('|') and '|---' not in lines[j] and lines[j].count('|') >= 4:
-                    parts = [p.strip() for p in lines[j].split('|')]
+                if '|---' in lines[j]:
+                    continue
+                if lines[j].strip().startswith('|') and lines[j].count('|') >= 4:
+                    parts = lines[j].split('|')
+                    version_to_use = "0.1"
                     if len(parts) >= 2:
+                        prev_ver = parts[1].strip()
+                        # Simple increment: if it's "X.Y", make it "X.Y+1"
                         try:
-                            # Use string manipulation to avoid floating-point precision issues
-                            current_ver_str = parts[1]
-                            major, minor = current_ver_str.split('.')
-                            new_minor = int(minor) + 1
-                            new_ver = f"{major}.{new_minor}"
-                            new_entry = f"| {new_ver} | {today} | Requirements Agent | {change_desc} |"
-                            lines.insert(j, new_entry)
-                            break
+                            if '.' in prev_ver and prev_ver.count('.') == 1:
+                                major, minor = prev_ver.split('.')
+                                version_to_use = f"{major}.{int(minor) + 1}"
                         except (ValueError, IndexError):
                             pass
+                    lines.insert(j, f"| {version_to_use} | {today} | Requirements Agent | {change_desc} |")
                     break
             break
     
