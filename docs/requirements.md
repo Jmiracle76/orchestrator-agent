@@ -31,7 +31,7 @@
 | Current Version | 0.0 |
 | Last Modified | [Date] |
 | Modified By | [Author] |
-| Approval Status | Ready for Approval |
+| Approval Status | Pending |
 | Approved By | Pending |
 | Approval Date | Pending |
 
@@ -649,10 +649,6 @@ NFR-004: Failure Safety
 <!-- Requirements Agent updates this section during review -->
 <!-- Risks should identify quality gaps, ambiguities, or potential project obstacles -->
 <!-- Do NOT delete resolved risks - update their mitigation status -->
-
-| Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
-|---------|-------------|-------------|--------|---------------------| Resolved |
-| R-001 | [Initial template state - no risks identified yet] | Low | Low | Risks will be identified by Requirements Agent during first review | Requirements Agent |
 
 
 | Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
