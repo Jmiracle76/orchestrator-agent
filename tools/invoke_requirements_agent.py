@@ -385,16 +385,23 @@ INTAKE_PLACEHOLDER = (
     "to formal Open Questions by the Requirements Agent.]"
 )
 STATUS_TABLE_FIELDS = ("| Approval Status |", "| Current Status |")
+SECTION_HEADER_PATTERN = re.compile(r'^##\s+(\d+)\.\s+(.+?)\s*$')
 
+
+
+def _normalize_section_header(line: str) -> str:
+    match = SECTION_HEADER_PATTERN.match(line.strip())
+    if not match:
+        return ""
+    number, title = match.groups()
+    title = re.sub(r'\s+', ' ', title.strip())
+    return f"## {number}. {title}"
 
 
 def missing_required_sections(content: str) -> List[str]:
     """Return a list of missing required top-level sections."""
-    headers = {
-        line.strip()
-        for line in content.splitlines()
-        if line.strip().startswith("## ")
-    }
+    headers = {_normalize_section_header(line) for line in content.splitlines()}
+    headers.discard("")
     return [section for section in REQUIRED_SECTIONS if section not in headers]
 
 
@@ -408,7 +415,7 @@ def has_answered_questions(content: str) -> bool:
     }
     # Expected format: Answer block followed by Integration Targets.
     answer_pattern = re.compile(
-        r'\*\*Answer:\*\*\s*\n(.*?)(?=\n\*\*Integration Targets:\*\*|\Z)',
+        r'\*\*Answer:\*\*\s*(.*?)(?=\n\*\*Integration Targets:\*\*|\Z)',
         re.DOTALL
     )
     for match in answer_pattern.finditer(content):
@@ -529,9 +536,9 @@ def _should_apply_patch(content: str, skip_phrases: tuple[str, ...]) -> bool:
 def _replace_subsection(lines: List[str], header: str, content: str) -> bool:
     content = content or ""
     content_lines = [line.rstrip() for line in content.strip().splitlines()]
-    header_text = header.strip()
+    header_text = re.sub(r'\s+', ' ', header.strip())
     for i, line in enumerate(lines):
-        if line.strip() == header_text:
+        if re.sub(r'\s+', ' ', line.strip()) == header_text:
             start = i + 1
             end = None
             for j in range(start, len(lines)):
@@ -574,7 +581,8 @@ def _append_to_section(lines: List[str], section_heading: str, content: str) -> 
 
 
 def _apply_integrated_sections(lines: List[str], integrated_content: str) -> None:
-    if not integrated_content:
+    normalized = integrated_content.strip().lower() if integrated_content else ""
+    if not normalized or "no updates" in normalized or "no integrated sections" in normalized:
         return
     # Expected format per block:
     # - Question ID: Q-XXX
@@ -586,7 +594,11 @@ def _apply_integrated_sections(lines: List[str], integrated_content: str) -> Non
         r'- Question ID:[^\n]*\n- Section:\s*(.+?)\n(.*?)(?=\n\s*(?:- Question ID:|- Section:)|\Z)',
         re.DOTALL
     )
-    for match in section_pattern.finditer(integrated_content):
+    matches = list(section_pattern.finditer(integrated_content))
+    if not matches:
+        print("WARNING: No integrated sections matched expected format.")
+        return
+    for match in matches:
         section_heading = match.group(1).strip()
         content = match.group(2).strip()
         _append_to_section(lines, section_heading, content)
@@ -641,6 +653,17 @@ def main():
     
     if not AGENT_PROFILE.exists():
         print(f"ERROR: Agent profile not found: {AGENT_PROFILE}")
+        sys.exit(1)
+
+    try:
+        subprocess.check_call(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+    except subprocess.CalledProcessError:
+        print("ERROR: git repository not available for commit operations")
         sys.exit(1)
     
     # --- Load document ---

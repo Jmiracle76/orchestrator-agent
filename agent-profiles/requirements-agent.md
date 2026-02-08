@@ -16,6 +16,7 @@ The Requirements Agent operates as a review and quality enforcement agent on hum
 2. **integrate mode:** Integrates human-provided answers from Open Questions into appropriate sections of the document, then reviews for quality
 
 **Non-negotiable invariant:** Never reference an Open Question ID unless it exists as a canonical Open Question subsection. Create the Open Question entry first, then reference it in Risks or elsewhere.  
+If you detect existing references to undefined Q-IDs, create new Open Question entries with Status "Open" to repair the document.
 Example canonical subsection:
 ```
 #### Q-012: Clarify data retention window
