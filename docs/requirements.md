@@ -241,7 +241,50 @@ This project explicitly does NOT include:
 <!-- Requirements Agent processes this section and converts ambiguities into Open Questions -->
 <!-- This section is cleared after processing -->
 
-[Empty - add human notes here as needed]
+The project currently consists of multiple AI agents (requirements, planning, orchestration candidates) and supporting invocation scripts that are evolving organically. As functionality grows, agent behavior has become inconsistent, scope boundaries are unclear, and tooling changes frequently exceed intended scope, resulting in bloated scripts, unintended side effects, and manual cleanup.
+
+There is no dedicated planning/orchestrator agent responsible for:
+
+- Interpreting project state
+- Sequencing agent execution
+- Enforcing lifecycle boundaries
+- Translating approved requirements into structured execution plans
+
+Without a formal orchestrator, agent interactions are brittle, difficult to reason about, and prone to uncontrolled expansion.
+
+Create a Planning / Orchestrator Agent that reliably translates approved project requirements into an actionable, bounded execution plan without exceeding defined scope or mutating the repository beyond intent.
+
+Use the existing /agent-profiles/orchestration-agent.md file as the initial starting point for this agent. This file can be edited/changed as necessary.
+A new /tools/invoke_orchestrator_agent.py script is expected to be created to invoke the orchestrator agent once and only once and when and only when the requirements.md file has been marked "Approved".
+
+- Reduce manual intervention during early project setup
+- Enforce clear lifecycle stages between agents
+- Prevent uncontrolled script and file sprawl
+- Enable repeatable, auditable agent-driven project initialization
+
+In Scope
+- A single Planning / Orchestrator Agent
+- Supporting logic embedded in a clearly bounded new invocation script
+- Structured handoff between Requirements Agent → Planning Agent leveraging existing logic already present in /tools/invoke_requirements_agent.py.
+- Generation of milestones and GitHub issues based on approved requirements
+
+Out of Scope (Non-Goals)
+
+❌ Implementing the Requirements Agent (already exists)
+
+❌ Executing development work (no coding, refactoring, or file edits beyond planning artifacts)
+
+❌ Creating test scripts, README files, diagrams, or supplemental documentation
+
+❌ Invoking other agents beyond what is explicitly specified
+
+❌ Reviewing or validating outputs from downstream agents
+
+❌ Managing CI/CD, deployment, or runtime orchestration
+
+❌ Making architectural or technical design decisions not present in requirements
+
+
 
 ---
 
