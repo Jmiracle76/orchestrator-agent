@@ -688,9 +688,14 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
                     # Found a later section, insert before it
                     # Add the section with proper spacing
                     section_content = get_canonical_section_template(section_num, section_name)
-                    # Insert with separator before it
-                    lines.insert(i, "---\n")
-                    lines.insert(i + 1, section_content)
+                    # Split section_content into individual lines
+                    section_lines = section_content.split('\n')
+                    # Insert separator and section content
+                    # Insert in reverse order to avoid index shifting issues
+                    for content_line in reversed(section_lines):
+                        lines.insert(i, content_line)
+                    lines.insert(i, "---")
+                    lines.insert(i, "")  # Empty line before separator
                     inserted = True
                     break
             if inserted:
@@ -709,8 +714,13 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
                             j += 1
                         # Insert before the separator or next section
                         section_content = get_canonical_section_template(section_num, section_name)
-                        lines.insert(j, "---\n")
-                        lines.insert(j + 1, section_content)
+                        # Split section_content into individual lines
+                        section_lines = section_content.split('\n')
+                        # Insert in reverse order to avoid index shifting issues
+                        for content_line in reversed(section_lines):
+                            lines.insert(j, content_line)
+                        lines.insert(j, "---")
+                        lines.insert(j, "")  # Empty line before separator
                         inserted = True
                         break
                 if inserted:
@@ -722,8 +732,13 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
             for i, line in enumerate(lines):
                 if re.match(pattern, line):
                     section_content = get_canonical_section_template(section_num, section_name)
-                    lines.insert(i, "---\n")
-                    lines.insert(i + 1, section_content)
+                    # Split section_content into individual lines
+                    section_lines = section_content.split('\n')
+                    # Insert in reverse order to avoid index shifting issues
+                    for content_line in reversed(section_lines):
+                        lines.insert(i, content_line)
+                    lines.insert(i, "---")
+                    lines.insert(i, "")  # Empty line before separator
                     inserted = True
                     break
     
