@@ -14,7 +14,7 @@
 
 **Project:** [Project Name]
 
-**Version:** 0.1
+**Version:** 0.2
 
 **Status:** Draft
 
@@ -33,7 +33,7 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.1 |
+| Current Version | 0.2 |
 | Last Modified | 2026-02-08 |
 | Modified By | Requirements Agent |
 | Approval Status | Pending - Revisions Required |
@@ -47,6 +47,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.2 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | 0.1 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
 
@@ -264,6 +265,42 @@ This project explicitly does NOT include:
 - **Description:** The Intake states "Use the existing /agent-profiles/orchestration-agent.md file as the initial starting point" and "This file can be edited/changed as necessary" but does not clarify whether that profile is authoritative, draft, or requires revision. If it conflicts with these requirements, there may be implementation confusion.
 - **Mitigation Strategy:** Add Open Question Q-004 to clarify orchestration-agent.md status and alignment
 - **Owner:** Requirements Agent
+
+
+**R-002: Agent Scope Boundary Ambiguity**
+- **Probability:** Medium
+- **Impact:** Medium
+- **Description:** The Intake notes describe "agent behavior has become inconsistent, scope boundaries are unclear" but do not specify which existing agents are affected, what specific inconsistencies have occurred, or what the current scope boundaries are. Without this baseline understanding, it will be difficult to define clear boundaries for the new Planning/Orchestrator Agent.
+- **Mitigation Strategy:** Resolve Q-001 to gather details on current agent inconsistencies and scope issues
+- **Owner:** Requirements Agent
+
+**R-003: Handoff Mechanism Undefined**
+- **Probability:** Medium
+- **Impact:** High
+- **Description:** The Intake mentions "structured handoff between Requirements Agent → Planning Agent leveraging existing logic already present in /tools/invoke_requirements_agent.py" but does not specify what constitutes a valid handoff, what state checks must pass, or what artifacts are exchanged. Without clear handoff criteria, the orchestrator cannot reliably determine when to execute.
+- **Mitigation Strategy:** Resolve Q-002 to define handoff trigger conditions and artifacts
+- **Owner:** Requirements Agent
+
+**R-004: Planning Output Format Not Specified**
+- **Probability:** High
+- **Impact:** High
+- **Description:** The Intake states the orchestrator should generate "milestones and GitHub issues based on approved requirements" but does not specify format, structure, priority schemes, dependency modeling, or acceptance criteria for these artifacts. Without this specification, the orchestrator cannot produce consistent, actionable outputs.
+- **Mitigation Strategy:** Resolve Q-003 to define planning artifact specifications
+- **Owner:** Requirements Agent
+
+**R-005: Orchestrator Agent Profile Status Unclear**
+- **Probability:** Low
+- **Impact:** Medium
+- **Description:** The Intake states "Use the existing /agent-profiles/orchestration-agent.md file as the initial starting point" and "This file can be edited/changed as necessary" but does not clarify whether that profile is authoritative, draft, or requires revision. If it conflicts with these requirements, there may be implementation confusion.
+- **Mitigation Strategy:** Resolve Q-004 to clarify orchestration-agent.md status and alignment
+- **Owner:** Requirements Agent
+
+**R-006: Template Baseline Not Populated**
+- **Probability:** High
+- **Impact:** High
+- **Description:** Document remains in template baseline state with no project-specific content in critical sections (Problem Statement, Goals, Functional Requirements, Success Criteria). Cannot proceed to approval without actual requirements definition.
+- **Mitigation Strategy:** Product Owner must populate Sections 2, 3, 8, 9, and 13 with project-specific content
+- **Owner:** Product Owner
 
 ### Intake
 
