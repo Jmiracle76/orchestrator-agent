@@ -41,7 +41,7 @@ Code example: if (x | y) { ... }
 """
     violations = detect_markdown_tables(content)
     # Single pipes in regular text should not be detected
-    assert len(violations) == 0, f"Should not detect false positives, but found {len(violations)}"
+    assert len(violations) == 0, f"Should not detect false positives, but found {len(violations)}: {violations}"
     print("✅ test_no_false_positives passed")
 
 

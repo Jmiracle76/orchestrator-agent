@@ -34,8 +34,8 @@ def detect_markdown_tables(content: str) -> List[Tuple[int, str]]:
             table_lines.append((i, line.strip()))
         # Check for potential table data line (only if it looks like a table)
         elif table_pattern.match(line) and '|' in line:
-            # Additional check: must have at least 2 pipe characters
-            if line.count('|') >= 3:  # At least | content | content |
+            # Additional check: must have at least 3 pipes for a 2-cell table
+            if line.count('|') >= 3:  # At least 3 pipes for 2-cell table: |cell1|cell2|
                 table_lines.append((i, line.strip()))
     
     return table_lines
@@ -50,7 +50,7 @@ def validate_file(file_path: Path, skip_examples: bool = True) -> Tuple[bool, Li
         skip_examples: If True, skip checking content within code blocks (default: True)
     
     Returns:
-        Tuple of (is_valid, list_of_violations)
+        Tuple of (is_valid, list of (line_number, line_content) tuples)
     """
     try:
         content = file_path.read_text(encoding='utf-8')
