@@ -296,10 +296,14 @@ def is_requirements_approved(requirements: str) -> bool:
     """
     Detect if requirements are approved by checking for explicit approval marker.
     
-    Returns True if document contains "Current Status" followed by "Approved".
+    Returns True if "Approval Record" section contains "Current Status" with "Approved".
     """
-    # Simple text search for approval indicator in section
-    return 'Current Status' in requirements and 'Approved' in requirements
+    # Find Approval Record section and check for approval
+    approval_section_match = re.search(r'## 15\. Approval Record.*?(?=## \d+\.|$)', requirements, re.DOTALL)
+    if approval_section_match:
+        section_text = approval_section_match.group()
+        return 'Current Status' in section_text and 'Approved' in section_text
+    return False
 
 def has_planning_been_triggered() -> bool:
     """
@@ -643,17 +647,28 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         # Update approval status
         _update_approval_status(lines, status_update)
     
-    # Add revision history entry (simplified - just append a line after Version History)
+    # Add revision history entry (simplified version increment)
     today = datetime.now().strftime("%Y-%m-%d")
     change_desc = f"{mode.capitalize()} pass by Requirements Agent"
     
     for i, line in enumerate(lines):
         if '### Version History' in line:
-            # Find the header row separator and insert after it
-            for j in range(i + 1, min(i + 10, len(lines))):
+            # Find first data row to get current version and insert new entry
+            version_to_use = "0.1"
+            for j in range(i + 1, len(lines)):
                 if '|---' in lines[j]:
-                    # Insert new entry right after the separator
-                    lines.insert(j + 1, f"| - | {today} | Requirements Agent | {change_desc} |")
+                    continue
+                if lines[j].strip().startswith('|') and lines[j].count('|') >= 4:
+                    parts = lines[j].split('|')
+                    if len(parts) >= 2:
+                        try:
+                            prev_ver = parts[1].strip()
+                            if '.' in prev_ver:
+                                major, minor = prev_ver.split('.', 1)
+                                version_to_use = f"{major}.{int(float(minor)) + 1}"
+                        except (ValueError, IndexError):
+                            pass
+                    lines.insert(j, f"| {version_to_use} | {today} | Requirements Agent | {change_desc} |")
                     break
             break
     
