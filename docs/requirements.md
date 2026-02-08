@@ -13,8 +13,8 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** [Project Name]
-**Version:** 0.0
-**Status:** Draft
+**Version:** 0.1
+**Status:** **Recommendation:** Pending - Revisions Required
 **Last Updated:** [Date]
 **Approved By:** Pending
 **Approval Date:** Pending
@@ -28,10 +28,10 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.0 |
+| Current Version | 0.1 |
 | Last Modified | [Date] |
 | Modified By | Template |
-| Approval Status | Pending - Revisions Required |
+| Approval Status | **Recommendation:** Pending - Revisions Required |
 | Approved By | Pending |
 | Approval Date | Pending |
 
@@ -42,6 +42,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.1 | 2026-02-08 | Requirements Agent | Automated update |
 | 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
 
 ---
@@ -220,41 +221,191 @@ This project explicitly does NOT include:
 
 ### Identified Risks
 
-<!-- Requirements Agent updates this section during review -->
-<!-- Risks should identify quality gaps, ambiguities, or potential project obstacles -->
-<!-- Do NOT delete resolved risks - update their mitigation status -->
-
 | Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
 |---------|-------------|-------------|--------|---------------------|-------|
-| R-001 | Template baseline state | Low | Low | This is a template document - populate with project-specific content before approval | Requirements Agent |
+| R-001 | Template baseline state | High | High | Process Intake content into Open Questions, await human authoring of project-specific requirements in Sections 2-14 | Requirements Agent |
+| R-002 | Unclear scope boundaries between agents | High | High | Must define explicit responsibility boundaries for Requirements Agent, Planning Agent, and Orchestration Agent before architectural decisions can be made (see Q-001, Q-002) | Requirements Agent |
+| R-003 | Undefined orchestrator agent responsibilities | High | High | Must clarify full scope of orchestrator agent duties, authority boundaries, and handoff protocols (see Q-003) | Requirements Agent |
+| R-004 | Ambiguous problem definition | High | High | Intake describes symptoms (organic growth, inconsistency) but root cause and measurable impact need clarification (see Q-004) | Requirements Agent |
+| R-005 | Missing stakeholder and user identification | High | Medium | Cannot validate requirements completeness without knowing who will use/maintain the orchestrator system (see Q-005) | Requirements Agent |
 
 ---
 
 ### Intake
 
-<!-- Human notes and unstructured thoughts go here -->
-<!-- Requirements Agent processes this section and converts ambiguities into Open Questions -->
-<!-- This section is cleared after processing -->
-
-The project currently consists of multiple AI agents (requirements, planning, orchestration candidates) and supporting invocation scripts that are evolving organically. As functionality grows, agent behavior has become inconsistent, scope boundaries are unclear, and tooling changes frequently exceed intended scope, resulting in bloated scripts, unintended side effects, and manual cleanup.
-
-There is no dedicated planning/orchestrator agent responsible for:
-
-- Interpreting project state
-- Sequencing agent execution
-- Enforcing lifecycle boundaries
-- Translating approved requirements into structured execution plans
-
-Without a formal orchestrator, agent interactions are brittle, difficult to reason about, and prone to uncontrolled expansion.
+[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
 
 ---
 
 ### Open Questions
 
-<!-- Requirements Agent manages this section -->
-<!-- Format: Question ID, Status (Open/Resolved/Deferred), Asked By, Date, Question, Answer, Integration Targets -->
+#### Q-001: Define explicit scope boundaries between Requirements, Planning, and Orchestration agents
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
 
-[No open questions at this time]
+**Question:**
+The Intake mentions three agent types (requirements, planning, orchestration) with unclear boundaries. What are the explicit responsibility boundaries and handoff protocols for each agent? Specifically:
+- What decisions/actions does Requirements Agent own vs delegate?
+- What decisions/actions does Planning Agent own vs delegate?
+- What decisions/actions does Orchestration Agent own vs delegate?
+- Where do their authorities overlap or conflict?
+
+**Answer:**
+
+**Integration Targets:**
+- Section 2: Problem Statement (scope boundary issues)
+- Section 5: Stakeholders and Users (agent roles as system components)
+- Section 8: Functional Requirements (orchestrator must enforce these boundaries)
+
+---
+
+#### Q-002: Clarify "planning/orchestrator agent" terminology
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+The Intake uses "planning/orchestrator" and "orchestration candidates" terminology. Is this:
+- A single combined Planning-and-Orchestration agent?
+- Two separate agents (Planning Agent + Orchestration Agent)?
+- Multiple candidate implementations being evaluated?
+
+What is the canonical architecture?
+
+**Answer:**
+
+**Integration Targets:**
+- Section 2: Problem Statement (architectural clarity)
+- Section 5: Stakeholders and Users (agent architecture)
+- Section 8: Functional Requirements (orchestrator identity and scope)
+
+---
+
+#### Q-003: Define orchestrator agent core responsibilities
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+The Intake lists four candidate responsibilities for the orchestrator:
+1. Interpreting project state
+2. Sequencing agent execution
+3. Enforcing lifecycle boundaries
+4. Translating approved requirements into structured execution plans
+
+Are these all in scope? Are there other responsibilities? What is explicitly OUT of scope for the orchestrator?
+
+**Answer:**
+
+**Integration Targets:**
+- Section 3: Goals and Objectives (orchestrator capabilities)
+- Section 4: Non-Goals (orchestrator exclusions)
+- Section 8: Functional Requirements (orchestrator must-haves)
+
+---
+
+#### Q-004: Quantify impact of current problems
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+The Intake describes symptoms ("inconsistent behavior", "bloated scripts", "unintended side effects", "manual cleanup"). What are the measurable impacts of these problems?
+- How much time is spent on manual cleanup per week/sprint?
+- How many unintended side effects have occurred in the last month?
+- What is the current failure/retry rate of agent invocations?
+- What specific evidence demonstrates "brittle" interactions?
+
+These metrics are needed for Section 2 (Problem Statement) and Section 13 (Success Criteria).
+
+**Answer:**
+
+**Integration Targets:**
+- Section 2: Problem Statement (quantified problem impact)
+- Section 13: Success Criteria (measurable improvement targets)
+
+---
+
+#### Q-005: Identify stakeholders and users of orchestrator system
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+Who are the stakeholders and users of the orchestrator agent system?
+- Who will invoke the orchestrator? (humans, other agents, CI/CD pipeline?)
+- Who will maintain the orchestrator's configuration/rules?
+- Who is the decision-making authority for orchestrator scope changes?
+- Who are the "customers" that experience the pain described in Intake?
+
+**Answer:**
+
+**Integration Targets:**
+- Section 5: Stakeholders and Users (complete stakeholder map)
+- Section 6: Assumptions (usage model assumptions)
+
+---
+
+#### Q-006: Define success criteria for orchestrator agent
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+What are the measurable success criteria for the orchestrator agent project? For example:
+- Reduction in manual cleanup time? (target: X% reduction)
+- Reduction in unintended side effects? (target: zero side effects per sprint)
+- Agent invocation success rate? (target: X% successful on first attempt)
+- Consistency score for agent behavior? (target: measurable consistency metric)
+
+Section 13 (Success Criteria) cannot be approved without specific, measurable targets.
+
+**Answer:**
+
+**Integration Targets:**
+- Section 13: Success Criteria (measurable project outcomes)
+
+---
+
+#### Q-007: Clarify technical constraints and environment
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+What are the technical constraints for the orchestrator agent?
+- What language/platform must it use? (Python scripts are mentioned - is this mandatory?)
+- What existing infrastructure must it integrate with?
+- Are there performance requirements? (latency, throughput)
+- Are there deployment constraints? (local execution only, must run in CI/CD, etc.)
+
+**Answer:**
+
+**Integration Targets:**
+- Section 7: Constraints (technical environment)
+- Section 9: Non-Functional Requirements (performance, deployment)
+- Section 10: Interfaces and Integrations (existing tooling)
+
+---
+
+#### Q-008: Define data and state management requirements
+**Status:** Open
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+
+**Question:**
+The orchestrator must "interpret project state" (per Intake). What data and state must it manage?
+- What project state is tracked? (agent status, execution history, dependencies?)
+- Where is state stored? (filesystem, database, memory only?)
+- What is the data retention policy for execution logs/history?
+- Are there audit or traceability requirements?
+
+**Answer:**
+
+**Integration Targets:**
+- Section 11: Data Considerations (state management, retention)
+- Section 8: Functional Requirements (state interpretation capabilities)
 
 ---
 
@@ -296,7 +447,7 @@ The following items are explicitly OUT OF SCOPE for this project:
 
 | Field | Value |
 |-------|-------|
-| Current Status | Draft |
+| Current Status | **Recommendation:** Pending - Revisions Required |
 | Recommended By | Pending |
 | Recommendation Date | Pending |
 | Approved By | Pending |
