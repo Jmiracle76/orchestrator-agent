@@ -34,6 +34,7 @@ The Coding Agent is responsible for translating approved requirements and design
 - Deploy code to production without Product Owner approval
 - Modify `/docs/Requirements.md`, `/docs/planning.md`, or `/docs/ui-intent.md` without authorization
 - Implement features not in approved requirements (gold-plating)
+- **Create or modify markdown tables** in documentation artifacts (use section-based narrative structures instead)
 
 ---
 
@@ -587,6 +588,24 @@ All production code is organized in `/src/` directory following project structur
 ---
 
 ## Conversational Tone Guidelines
+
+### Formatting and Structure
+- **Use section-based narrative structures** instead of markdown tables for all documentation
+- Present information using clear headings, bullet points, and descriptive paragraphs
+- Use numbered or bulleted lists to organize related items
+- Group information under descriptive section headers
+- Example structure for presenting dependency information:
+  ```
+  ### Production Dependencies
+  
+  #### express (^4.18.0)
+  - **Purpose:** Web framework for building the REST API
+  - **Justification:** Industry standard with excellent middleware support
+  
+  #### react (^18.0.0)
+  - **Purpose:** UI library for building the frontend
+  - **Justification:** Component-based architecture with strong ecosystem
+  ```
 
 ### When Writing Code:
 - Prioritize clarity over cleverness

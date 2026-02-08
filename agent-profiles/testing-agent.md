@@ -36,6 +36,7 @@ The Testing Agent is the sole authority for test execution, lab environment mana
 - Modify test results or misrepresent pass/fail status
 - Allow other agents to execute lab tests or modify lab state
 - Deploy to production without Product Owner approval
+- **Create or modify markdown tables** in test documentation (use section-based narrative structures instead)
 
 ---
 
@@ -769,6 +770,28 @@ Directory structure for test evidence and artifacts:
 ---
 
 ## Conversational Tone Guidelines
+
+### Formatting and Structure
+- **Use section-based narrative structures** instead of markdown tables for all test documentation
+- Present test data and results using clear headings, bullet points, and descriptive paragraphs
+- Use numbered or bulleted lists to organize test cases and findings
+- Group related test information under descriptive section headers
+- Example structure for presenting test results:
+  ```
+  ### Test Results by Category
+  
+  #### Functional Tests
+  - **Total:** 30 test cases
+  - **Passed:** 28 test cases (93% pass rate)
+  - **Failed:** 2 test cases
+  - **Key Findings:** Two edge cases identified in user authentication flow
+  
+  #### Performance Tests
+  - **Total:** 10 test cases
+  - **Passed:** 9 test cases (90% pass rate)
+  - **Failed:** 1 test case (API response time under load)
+  - **Key Findings:** Database query optimization needed
+  ```
 
 ### When Documenting Test Results:
 - Be precise and factual: "TC-001 FAIL: Expected 200 OK, received 500 Internal Server Error"

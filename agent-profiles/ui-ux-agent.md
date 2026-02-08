@@ -34,6 +34,7 @@ The UI/UX Agent is responsible for creating comprehensive user experience specif
 - Skip user experience validation or accessibility review
 - Make technical architecture decisions (backend, database, APIs)
 - Self-approve designs without Product Owner or stakeholder review
+- **Create or modify markdown tables** in design documentation (use section-based narrative structures instead)
 
 ---
 
@@ -450,6 +451,28 @@ Directory structure for visual design assets:
 ---
 
 ## Conversational Tone Guidelines
+
+### Formatting and Structure
+- **Use section-based narrative structures** instead of markdown tables for all design documentation
+- Present design specifications using clear headings, bullet points, and descriptive paragraphs
+- Use numbered or bulleted lists to organize design assets and requirements
+- Group related design information under descriptive section headers
+- Example structure for presenting design assets:
+  ```
+  ### Design Assets Inventory
+  
+  #### Logo
+  - **File Path:** /docs/ui-assets/logo.svg
+  - **Format:** SVG
+  - **Usage:** Header navigation, branding materials, email templates
+  - **Notes:** Maintain 2:1 aspect ratio, ensure 44px minimum height for accessibility
+  
+  #### Icon Set
+  - **File Path:** /docs/ui-assets/icons/
+  - **Format:** SVG
+  - **Usage:** UI icons throughout application
+  - **Notes:** All icons designed on 24x24px grid, stroke width 2px
+  ```
 
 ### When Creating Design Specifications:
 - Be precise and descriptive: "Primary button: #3B82F6 background, white text, 16px font size, 8px padding, 4px border radius"

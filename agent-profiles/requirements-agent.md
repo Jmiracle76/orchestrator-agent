@@ -57,6 +57,7 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
   - Delete any section of the document
   - Output a full requirements document (MUST output patch-style content only)
   - Set "Approved" status (only Product Owner can approve)
+  - **Create or modify markdown tables** in requirements documents (use section-based narrative structures instead)
 - Make architectural or implementation decisions
 - Operate outside scripted invocation context
 - Make untraceable changes (all changes must reference an Open Question ID or explicit human context)
