@@ -588,10 +588,22 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                 
                 # Mark this target as integrated if successful
                 if section_found and q_id in integration_tracking:
-                    # Match the target by section heading
+                    # Match the target by checking if the section heading appears in any target
+                    # The section heading from agent is "## 8. Functional Requirements"
+                    # The target is "Section 8: Functional Requirements"
+                    # We need a more flexible match
                     for target in integration_tracking[q_id]:
-                        if section_heading in target or target in section_heading:
+                        # Extract section number and name from both formats
+                        # Target format: "Section X: Name" or "Section X. Name"
+                        # Heading format: "## X. Name"
+                        
+                        # Simple heuristic: if the key parts (number and name) match
+                        target_normalized = target.lower().replace('section ', '').replace(':', '.').strip()
+                        heading_normalized = section_heading.lower().replace('#', '').strip()
+                        
+                        if target_normalized in heading_normalized or heading_normalized in target_normalized:
                             integration_tracking[q_id][target] = True
+                            break
         
         # Derive resolution status: mark questions as resolved ONLY if all targets were integrated
         for q_id, targets in integration_tracking.items():
@@ -604,7 +616,8 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                         for j in range(i + 1, min(i + 10, len(lines))):
                             if '**Status:**' in lines[j]:
                                 # Update status to Resolved
-                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S.*?(?=\s*\n)', '**Status:** Resolved', lines[j])
+                                # Match "**Status:** <anything>" and replace with "**Status:** Resolved"
+                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S+', '**Status:** Resolved', lines[j])
                                 break
                         break
             else:
