@@ -663,7 +663,9 @@ def update_approval_status_to_pending(requirements: str) -> str:
     # Find and update the Approval Status field in Document Control table
     for i, line in enumerate(lines):
         if '| Approval Status |' in line:
-            lines[i] = '| Approval Status | Pending - Revisions Required |\n'
+            # Preserve original line ending
+            line_ending = '\n' if line.endswith('\n') else ''
+            lines[i] = f'| Approval Status | Pending - Revisions Required |{line_ending}'
             break
     
     return ''.join(lines)
@@ -1323,7 +1325,7 @@ def main():
             requirements = revoke_approval_and_commit(
                 requirements,
                 "answered questions pending integration",
-                "revoke: approval invalidated by answered questions pending integration"
+                "revoke: answered questions pending integration"
             )
     
     # Parse Intake section
@@ -1341,7 +1343,7 @@ def main():
             requirements = revoke_approval_and_commit(
                 requirements,
                 "new human input in Intake section",
-                "revoke: approval invalidated by new human input in Intake section"
+                "revoke: new human input in Intake section"
             )
         else:
             print("  ✓ Requirements not currently approved - no revocation needed")
