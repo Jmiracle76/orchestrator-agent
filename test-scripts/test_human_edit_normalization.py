@@ -287,9 +287,39 @@ def test_approval_gate_detection():
 ## 2. Problem Statement
 """
     
+    # Edge case: partial match should NOT trigger approval gate
+    doc_not_ready = """# Requirements Document
+
+**Version:** 0.1
+
+## 1. Document Control
+
+| Field | Value |
+|-------|-------|
+| Approval Status | Not Ready for Approval |
+
+## 2. Problem Statement
+"""
+    
+    # Edge case: case sensitivity (should not match)
+    doc_lowercase = """# Requirements Document
+
+**Version:** 0.1
+
+## 1. Document Control
+
+| Field | Value |
+|-------|-------|
+| Approval Status | ready for approval |
+
+## 2. Problem Statement
+"""
+    
     assert is_document_at_approval_gate(doc_ready), "Should detect Ready for Approval"
     assert is_document_at_approval_gate(doc_approved), "Should detect Approved"
     assert not is_document_at_approval_gate(doc_pending), "Should not detect Pending"
+    assert not is_document_at_approval_gate(doc_not_ready), "Should not detect 'Not Ready for Approval' (false positive)"
+    assert not is_document_at_approval_gate(doc_lowercase), "Should be case-sensitive"
     
     print("✓ Approval gate detection works correctly")
 

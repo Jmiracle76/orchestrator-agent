@@ -569,12 +569,13 @@ def validate_document_schema(requirements: str) -> tuple[bool, str]:
     ]
     
     for section_num, section_name in required_sections:
-        pattern = rf'##\s+{section_num}\.\s+'
+        # Check both section number and name to avoid false positives
+        pattern = rf'##\s+{section_num}\.\s+{re.escape(section_name)}'
         if not re.search(pattern, requirements):
             return False, f"SCHEMA VIOLATION: Missing required section {section_num} ({section_name})"
     
     # Validate Open Questions schema
-    open_q_match = re.search(r'### Open Questions\n', requirements)
+    open_q_match = re.search(r'### Open Questions\s*\n', requirements)
     if open_q_match:
         # Extract Open Questions section
         start_pos = open_q_match.end()
@@ -635,13 +636,15 @@ def is_document_at_approval_gate(requirements: str) -> bool:
         True if document is Ready for Approval or Approved
     """
     # Check Document Control table for approval status
+    # Match more precisely to avoid false positives like "Not Ready for Approval"
     approval_status_match = re.search(r'\|\s*Approval Status\s*\|\s*([^|]+)\s*\|', requirements)
     if approval_status_match:
         status = approval_status_match.group(1).strip()
-        if "Ready for Approval" in status or "Approved" in status:
+        # Exact match for approved states to avoid false positives
+        if status == "Ready for Approval" or status == "Approved":
             return True
     
-    # Also check Section 15 (Approval Record)
+    # Also check Section 15 (Approval Record) using existing function
     if is_requirements_approved(requirements):
         return True
     
