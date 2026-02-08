@@ -31,7 +31,7 @@
 | Current Version | 0.0 |
 | Last Modified | [Date] |
 | Modified By | [Author] |
-| Approval Status | Pending |
+| Approval Status | Ready for Approval |
 | Approved By | Pending |
 | Approval Date | Pending |
 
@@ -40,6 +40,7 @@
 <!-- Requirements Agent updates this section when integrating answers in integrate_answers mode -->
 <!-- Each integration must document: which Question IDs were integrated, which sections were updated, and nature of changes -->
 
+| 0.2 | 2026-02-08 | Requirements Agent | Integrate pass by Requirements Agent |
 | 0.1 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -116,9 +117,52 @@ Out of Scope (Non-Goals)
 
 ---
 
+
+The following items are explicitly OUT OF SCOPE for this project:
+
+1. **Implementing Downstream Agents:** The Planning Agent does not implement or modify other agents (e.g., development agents, testing agents). It only generates plans.
+
+2. **Executing Development Work:** No code implementation, refactoring, or file edits beyond planning artifacts. The Planning Agent does not write application code.
+
+3. **Modifying Code Beyond Planning Artifacts:** The agent must not create or modify scripts, tests, configuration files, or any code outside explicitly designated planning directories.
+
+4. **Making Architectural Decisions:** Technical architecture and design decisions not present in approved requirements are out of scope. The agent translates requirements, not invents solutions.
+
+5. **Creating Supplemental Documentation:** README files, diagrams, design documents, or other documentation beyond planning artifacts are not generated.
+
+6. **Runtime Orchestration:** This is project initialization planning only, not CI/CD, deployment orchestration, or runtime process management.
+
+7. **Multi-Agent Coordination:** The Planning Agent does not coordinate execution between multiple downstream agents. It produces a static plan.
+
+8. **Automated Testing or Validation:** The agent does not create test scripts, validate outputs from other agents, or perform quality assurance.
+
+*Source: Product Owner (Answer to Q-007)*
+
+---
+
 ## 5. Stakeholders and Users
 
 <!-- Identify all stakeholders and their roles/interests -->
+
+
+### Primary Stakeholders
+
+| Stakeholder | Role | Interest/Need | Contact |
+|-------------|------|---------------|---------|
+| Jason | Product Owner | Authoritative requirements approval, project direction, quality oversight | [Contact info] |
+| Requirements Agent | Review Agent | Enforce requirements quality standards, identify gaps and ambiguities | Automated agent |
+| Planning/Orchestrator Agent | Planning Agent | Translate approved requirements into actionable execution plans | Automated agent |
+
+### End Users
+
+| User Type | Characteristics | Needs | Use Cases |
+|-----------|----------------|-------|-----------|
+| Development Team | Engineers implementing agent-driven workflows | Clear, bounded execution plans; predictable agent behavior; minimal manual cleanup | Executing development work based on planning artifacts |
+| Product Owner | Human authority over requirements and approvals | Reliable planning outputs; traceability to requirements; control over scope | Approving requirements and planning artifacts; validating agent outputs |
+
+*Source: Product Owner (Answer to Q-006)*
+
+---
 
 ### Primary Stakeholders
 
@@ -148,6 +192,30 @@ Out of Scope (Non-Goals)
 
 ## 7. Constraints
 
+
+### Technical Constraints
+
+- Planning Agent must operate only on approved requirements documents
+- Planning artifacts must be stored as version-controlled files before GitHub API interaction
+- Agent execution must be bounded by explicit invocation scripts
+- GitHub API access limited to post-approval artifact creation
+
+### Business Constraints
+
+- Human approval required at multiple lifecycle gates (requirements → planning → execution)
+- No autonomous agent decision-making beyond explicitly defined scope
+- All planning decisions must be auditable and reversible
+
+### Resource Constraints
+
+- Single Planning/Orchestrator Agent (not a multi-agent system)
+- Limited to project initialization phase (not runtime orchestration)
+- No CI/CD or deployment automation in scope
+
+*Source: Product Owner (Answer to Q-006)*
+
+---
+
 ### Technical Constraints
 
 <!-- List technical limitations, platform requirements, compatibility needs -->
@@ -176,6 +244,78 @@ Out of Scope (Non-Goals)
 <!-- Define what the system must DO -->
 <!-- Each requirement should be specific, testable, and trace to a goal -->
 <!-- Use format: FR-XXX: [Requirement Name] -->
+
+
+**FR-009: Planning Artifact Storage**
+
+**Description:** Planning artifacts (milestones, issues, sequencing) must be authored and maintained in-repository as version-controlled files until explicitly approved by a human. Once planning artifacts are marked Approved, a separate script may be manually triggered to create corresponding GitHub milestones and issues via API.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-002)
+
+**Acceptance Criteria:**
+- [ ] Planning artifacts exist as files in /planning/ directory
+- [ ] Git history tracks all planning changes
+- [ ] GitHub API calls occur only after human approval of planning artifacts
+- [ ] Repository is the planning system of record; GitHub is the execution system of record
+
+*Source: Product Owner (Answer to Q-002)*
+
+---
+
+
+**FR-010: Planning Agent Idempotency**
+
+**Description:** Re-running the Planning Agent must generate diff-based updates to existing planning artifacts rather than wholesale overwrites. The agent must preserve existing structure, highlight additions/removals/modifications, and be triggered by human edits to planning artifacts or requirement changes.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-003)
+
+**Acceptance Criteria:**
+- [ ] Re-running Planning Agent generates diffs, not full replacements
+- [ ] Existing planning structure is preserved
+- [ ] Changes are highlighted (additions, removals, modifications)
+- [ ] Planning Agent runs are triggered explicitly by humans
+
+*Source: Product Owner (Answer to Q-003)*
+
+---
+
+
+**FR-011: Requirement Drift Detection**
+
+**Description:** The Planning Agent must detect drift between requirements.md and existing planning artifacts. When drift is detected, existing plans are marked "Stale" and a human must explicitly re-run the Planning Agent. Automatic invalidation without regeneration is permitted; automatic regeneration is not.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-004)
+
+**Acceptance Criteria:**
+- [ ] Planning Agent detects when requirements.md changes invalidate existing plans
+- [ ] Stale planning artifacts are clearly marked
+- [ ] No automatic re-planning occurs
+- [ ] Human must explicitly re-invoke Planning Agent after drift detection
+
+*Source: Product Owner (Answer to Q-004)*
+
+---
+
+
+**FR-012: GitHub Artifact Creation Safety**
+
+**Description:** GitHub milestone and issue creation may only occur after planning artifacts are explicitly marked "Approved" by a human. The Planning Agent must never autonomously create GitHub artifacts. Issue creation requires a separate, manual invocation step.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-005)
+
+**Acceptance Criteria:**
+- [ ] Planning Agent never directly creates GitHub milestones or issues
+- [ ] GitHub artifact creation requires explicit human approval of planning artifacts
+- [ ] Separate manual script invocation required for GitHub API calls
+- [ ] No GitHub artifacts created until planning approval gate is passed
+
+*Source: Product Owner (Answer to Q-005)*
+
+---
 
 ### FR-001: [Requirement Name]
 
@@ -282,6 +422,98 @@ FR-008: Explainability
 <!-- Must include measurable targets or acceptance criteria -->
 <!-- Use format: NFR-XXX: [Category] - [Requirement Name] -->
 
+
+**NFR-005: Planning Artifact Auditability**
+
+**Description:** Planning artifacts must be version-controlled and provide rollback capability through git history.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-002)
+
+**Measurement Criteria:**
+- All planning artifacts exist as files committed to repository
+- Git history provides complete audit trail of planning decisions
+- Rollback to previous planning states possible via git operations
+
+**Acceptance Criteria:**
+- [ ] All planning outputs are version-controlled files
+- [ ] Git history captures all planning changes with clear commit messages
+- [ ] Planning artifacts can be rolled back using standard git operations
+
+*Source: Product Owner (Answer to Q-002)*
+
+---
+
+
+**NFR-001: Predictability (UPDATED)**
+
+**Description:** Agent behavior must be predictable and bounded. Novel behavior is a defect, not a feature. Predictability is defined as consistent output structure across repeated runs, deterministic milestone ordering given identical inputs, and no variation in generated content beyond timestamps or metadata.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-008)
+
+**Measurement Criteria:**
+- Given unchanged approved requirements, Planning Agent produces materially identical outputs across multiple runs
+- Milestone ordering is deterministic (same sequence every time)
+- Only timestamps and run metadata vary between runs; content remains identical
+
+**Acceptance Criteria:**
+- [ ] Three consecutive Planning Agent runs with identical inputs produce identical output structure
+- [ ] Milestone ordering is consistent across runs
+- [ ] Content differences limited to timestamps and metadata only
+
+*Source: Product Owner (Answer to Q-008)*
+
+---
+
+
+**NFR-002: Simplicity (UPDATED)**
+
+**Description:** The orchestrator logic must remain minimal. Prefer fewer rules over clever abstractions. Simplicity is defined as single responsibility per script, no dynamic agent invocation chains, no abstract orchestration layers, and clear linear control flow.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-009)
+
+**Measurement Criteria:**
+- Planning Agent invocation script has single responsibility (invoke planning agent)
+- No dynamic multi-agent chains or runtime orchestration logic
+- Control flow is linear and explicit (no abstraction layers)
+- Complexity reduction takes precedence over feature completeness
+
+**Acceptance Criteria:**
+- [ ] Invocation script performs single function (invoke Planning Agent)
+- [ ] No dynamic agent invocation logic present
+- [ ] Control flow is readable and linear
+- [ ] No unnecessary abstraction layers exist
+
+*Source: Product Owner (Answer to Q-009)*
+
+---
+
+
+**NFR-003: Auditability (UPDATED)**
+
+**Description:** All planning outputs must be traceable back to specific requirements. Auditability is defined as every milestone referencing at least one requirement ID, every issue referencing a milestone and requirement ID, all planning decisions captured in version-controlled files, and git history providing a complete change record.
+
+**Priority:** High  
+**Source:** Product Owner (Answer to Q-010)
+
+**Measurement Criteria:**
+- 100% of milestones reference at least one requirement ID
+- 100% of issues reference both milestone and requirement ID
+- All planning decisions exist in version-controlled files
+- Git history provides complete audit trail
+
+**Acceptance Criteria:**
+- [ ] Every milestone contains explicit requirement ID references
+- [ ] Every issue traces to both milestone and requirement
+- [ ] All planning artifacts are version-controlled
+- [ ] Git log provides complete planning decision history
+
+*Source: Product Owner (Answer to Q-010)*
+
+---
+
 ### NFR-001: [Category] - [Requirement Name]
 
 **Description:** [Clear description of the quality attribute or constraint]  
@@ -323,6 +555,26 @@ NFR-004: Failure Safety
 
 ## 10. Interfaces and Integrations
 
+
+### External Systems
+
+| System | Purpose | Interface Type | Dependencies |
+|--------|---------|----------------|--------------|
+| GitHub API | Create milestones and issues from approved planning artifacts | REST API | Planning artifacts approved; GitHub authentication credentials |
+| Git Repository | Store and version-control all planning artifacts | File system | Git installed; repository initialized |
+
+### Data Exchange
+
+| Integration Point | Data Flow | Format | Frequency |
+|-------------------|-----------|--------|-----------|
+| Requirements → Planning Agent | In | Markdown (requirements.md) | On-demand (human-triggered) |
+| Planning Agent → Planning Artifacts | Out | Markdown (milestones.md, issues structure) | On-demand (per agent invocation) |
+| Planning Artifacts → GitHub API | Out | JSON (GitHub API format) | Manual (post-approval only) |
+
+*Source: Product Owner (Answer to Q-006)*
+
+---
+
 ### External Systems
 
 <!-- List all external systems this project integrates with -->
@@ -342,6 +594,30 @@ NFR-004: Failure Safety
 ---
 
 ## 11. Data Considerations
+
+
+### Data Requirements
+
+- **Requirements Document:** Structured markdown with defined sections, approval status, requirement IDs, and traceability metadata
+- **Planning Artifacts:** Milestone definitions (name, description, requirement references, sequence), issue specifications (title, description, acceptance criteria, milestone assignment)
+- **Traceability Data:** Requirement ID to milestone mappings, milestone to issue mappings, audit trail of planning decisions
+
+### Privacy & Security
+
+- No personally identifiable information (PII) stored in planning artifacts
+- GitHub API credentials must be securely managed (not stored in repository)
+- Planning artifacts are public within repository scope (no sensitive data)
+
+### Data Retention
+
+- Planning artifacts retained indefinitely in git history (version-controlled)
+- GitHub milestones/issues follow GitHub retention policies
+- No automated deletion of planning artifacts
+- Superseded planning versions preserved via git history
+
+*Source: Product Owner (Answer to Q-006)*
+
+---
 
 ### Data Requirements
 
@@ -378,11 +654,24 @@ NFR-004: Failure Safety
 |---------|-------------|-------------|--------|---------------------| Resolved |
 | R-001 | [Initial template state - no risks identified yet] | Low | Low | Risks will be identified by Requirements Agent during first review | Requirements Agent |
 
+
+| Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
+|---------|-------------|-------------|--------|---------------------|-------|
+| R-001 | Template baseline state resolved - project-specific content integrated | Low | Low | Questions Q-001 through Q-011 answered and integrated; document now contains project-specific requirements | Requirements Agent |
+| R-002 | Planning artifact approval gate ambiguity | Medium | High | **MITIGATED by Q-002, Q-005 answers:** Planning artifacts stored in-repo with explicit approval workflow; separate script for GitHub API calls prevents premature execution | Product Owner |
+| R-003 | Scope creep during planning agent execution | Medium | High | **MITIGATED by Q-007 answer:** Explicit Non-Goals section defines boundaries; agent restricted to planning artifacts only; no code generation or supplemental documentation | Product Owner |
+| R-004 | Unpredictable planning outputs | Medium | Medium | **MITIGATED by Q-008 answer:** Deterministic output criteria defined; identical inputs must produce identical outputs except timestamps | Product Owner |
+| R-005 | Planning complexity spiral | Low | Medium | **MITIGATED by Q-009 answer:** Simplicity criteria enforce single-responsibility scripts, linear control flow, no abstraction layers | Product Owner |
+| R-006 | Lost traceability between requirements and plans | Medium | High | **MITIGATED by Q-010 answer:** Auditability criteria require 100% requirement ID references in milestones and issues; git history provides audit trail | Product Owner |
+| R-007 | Unclear project success definition | Medium | Medium | **MITIGATED by Q-011 answer:** Specific success criteria defined with measurable acceptance criteria; clear approval gates established | Product Owner |
+
+---
+
 ### Open Questions
 
 #### Q-001: Approved Status Mechanism
 
-**Status:** Open  
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -399,7 +688,7 @@ What constitutes "Approved" status mechanically? Who has authority to set it (Pr
 
 #### Q-002: Planning Artifacts Storage
 
-**Status:** Open  
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -417,7 +706,7 @@ Planning artifacts (milestones, issues, sequencing) must be authored and maintai
 
 #### Q-003: Planning Agent Idempotency
 
-**Status:** Open  
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -452,7 +741,7 @@ The Planning Agent must detect drift between requirements.md and existing planni
 
 #### Q-005: GitHub Issue Creation Safety
 
-**Status:** Open  
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -486,7 +775,7 @@ Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Consid
 
 #### Q-007: Non-Goals Section Content
 
-**Status:** Open 
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -503,7 +792,7 @@ Section 4 (Non-Goals) must explicitly list items the system will not do, includi
 
 #### Q-008: Predictability Measurement
 
-**Status:** Open
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -520,7 +809,7 @@ Predictability is defined as: •	Consistent output structure across repeated ru
 
 #### Q-009: Simplicity Measurement
 
-**Status:** Open
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -537,7 +826,7 @@ Simplicity is defined as: •	Single responsibility per script. •	No dynamic a
 
 #### Q-010: Auditability Measurement
 
-**Status:** Open
+**Status:** Resolved
 **Asked by:** Requirements Agent  
 **Date:** 2026-02-06  
 
@@ -630,6 +919,49 @@ CANONICAL QUESTION FORMAT (REQUIRED):
 <!-- Must be specific, measurable, achievable, relevant, and time-bound (SMART) -->
 <!-- This section MUST be populated before document can be approved -->
 
+
+**Drift Handling Success Criterion:**
+
+The Planning Agent successfully detects and flags requirement drift without automatically regenerating plans. Stale planning artifacts are marked clearly, and humans retain control over when re-planning occurs.
+
+*Source: Product Owner (Answer to Q-004)*
+
+---
+
+
+### Project Success Criteria
+
+1. **Requirements Approval:** Requirements document reaches "Approved" status through explicit human Product Owner action.
+
+2. **Planning Artifact Generation:** Planning Agent successfully generates milestones and issues from approved requirements with full traceability.
+
+3. **Scope Containment:** No out-of-scope files, scripts, or modifications created during planning phase.
+
+4. **GitHub Integration:** GitHub milestones and issues created only after planning artifact approval, via separate manual invocation.
+
+5. **Zero Manual Cleanup:** No post-execution cleanup required; all agent outputs are intentional and bounded.
+
+*Source: Product Owner (Answer to Q-011)*
+
+### Acceptance Criteria
+
+- [ ] Requirements document status set to "Approved" by Product Owner
+- [ ] Planning Agent invoked successfully after requirements approval
+- [ ] Planning artifacts (milestones, issues) generated and stored in /planning/ directory
+- [ ] All planning artifacts trace back to specific requirements sections
+- [ ] GitHub milestones and issues created via separate approved script
+- [ ] No files created outside designated planning directories
+- [ ] No manual cleanup or correction required after agent execution
+- [ ] All functional requirements have passing acceptance tests
+- [ ] All non-functional requirements meet specified measurement criteria
+- [ ] Product Owner has validated system behavior meets expectations
+- [ ] No High or Medium severity defects remain open
+- [ ] Documentation is complete
+
+*Source: Product Owner (Answer to Q-011)*
+
+---
+
 ### Project Success Criteria
 
 <!-- Define the overall measures of project success -->
@@ -677,6 +1009,25 @@ The following items are explicitly OUT OF SCOPE for this project:
 | Approved By | Pending |
 | Approval Date | Pending |
 | Review Notes | Template baseline - not ready for approval until populated with project-specific content |
+
+
+**Integration Note:** Added explicit approval authority and mechanism definition to Approval Record section.
+
+**Approval Authority and Mechanism:**
+
+"Approved" status is set exclusively by a human Product Owner through explicit modification of this requirements document. The approval mechanism requires:
+
+1. **Authority:** Only the Product Owner has authority to set "Approved" status
+2. **Mechanism:** Approval is indicated by:
+   - Status field in this Approval Record explicitly set to "Approved"
+   - Corresponding git commit authored by a human (not an agent or script)
+   - Approved By and Approval Date fields populated
+
+No agent or script may infer, recommend, or autonomously set "Approved" status. The Requirements Agent may only recommend "Ready for Approval" when quality criteria are met.
+
+*Source: Product Owner (Answer to Q-001)*
+
+---
 
 ### Approval Status Definitions
 
