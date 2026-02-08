@@ -384,6 +384,7 @@ INTAKE_PLACEHOLDER = (
     "[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted "
     "to formal Open Questions by the Requirements Agent.]"
 )
+STATUS_TABLE_FIELDS = ("| Approval Status |", "| Current Status |")
 
 
 
@@ -510,17 +511,18 @@ def _update_status(lines: List[str], status_update: str) -> None:
             in_header = False
         if in_header and line.startswith("**Status:**"):
             lines[i] = f"**Status:** {status_value}"
-        elif "| Approval Status |" in line:
-            lines[i] = f"| Approval Status | {status_value} |"
-        elif "| Current Status |" in line:
-            lines[i] = f"| Current Status | {status_value} |"
+        else:
+            for field in STATUS_TABLE_FIELDS:
+                if field in line:
+                    lines[i] = f"{field} {status_value} |"
+                    break
 
 
-def _should_apply_patch(content: str, sentinels: tuple[str, ...]) -> bool:
+def _should_apply_patch(content: str, skip_phrases: tuple[str, ...]) -> bool:
     if not content:
         return False
     normalized = content.strip().lower()
-    return all(sentinel not in normalized for sentinel in sentinels)
+    return all(phrase not in normalized for phrase in skip_phrases)
 
 
 def _replace_subsection(lines: List[str], header: str, content: str) -> bool:
@@ -576,6 +578,8 @@ def _apply_integrated_sections(lines: List[str], integrated_content: str) -> Non
     # - Question ID: Q-XXX
     # - Section: ## N. Section Title
     # <content to append>
+    # The pattern captures the section heading and all following content until the
+    # next Question ID/Section marker or end of the block.
     section_pattern = re.compile(
         r'- Question ID:[^\n]*\n- Section:\s*(.+?)\n(.*?)(?=\n\s*(?:- Question ID:|- Section:)|\Z)',
         re.DOTALL
@@ -718,12 +722,15 @@ Your output will be parsed and applied as patches.
     print("✓ Document updated")
 
     if not args.no_commit:
-        has_changes = subprocess.call(
+        diff_status = subprocess.call(
             ["git", "diff", "--quiet", "--", "docs/requirements.md"],
             cwd=REPO_ROOT
-        ) != 0
-        if not has_changes:
+        )
+        if diff_status == 0:
             print("\n[Commit] No changes detected; skipping commit")
+        elif diff_status != 1:
+            print("\n[Commit] Unable to determine git diff status")
+            sys.exit(1)
         else:
             print("\n[Commit] Staging requirements changes...")
             subprocess.check_call(

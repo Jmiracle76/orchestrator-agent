@@ -6,7 +6,8 @@ This script tests that:
 1. Version fields are not modified by patch application
 2. Document Control and header versions remain consistent
 
-Note: Version management is now handled outside the invocation script.
+Note: Version management is now handled by human authors or downstream tooling;
+the invocation script no longer mutates version fields.
 """
 
 import sys
