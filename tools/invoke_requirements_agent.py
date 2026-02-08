@@ -638,6 +638,36 @@ def commit_planning_marker() -> bool:
         print(f"✗ State marker commit failed: {e}")
         return False
 
+def revoke_approval_state() -> bool:
+    """
+    Revoke approval by deleting the planning state marker file.
+    
+    Returns True if the marker was deleted (existed and was removed).
+    Returns False if the marker didn't exist.
+    """
+    if PLANNING_STATE_MARKER.exists():
+        PLANNING_STATE_MARKER.unlink()
+        return True
+    return False
+
+def update_approval_status_to_pending(requirements: str) -> str:
+    """
+    Update the Approval Status field in requirements.md to "Pending - Revisions Required".
+    
+    This is used when new human input (Intake content) invalidates previous approval.
+    
+    Returns the updated requirements document text.
+    """
+    lines = requirements.splitlines(keepends=True)
+    
+    # Find and update the Approval Status field in Document Control table
+    for i, line in enumerate(lines):
+        if '| Approval Status |' in line:
+            lines[i] = '| Approval Status | Pending - Revisions Required |\n'
+            break
+    
+    return ''.join(lines)
+
 # ---------- Agent Instructions ----------
 def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "") -> str:
     """
@@ -1207,6 +1237,72 @@ def main():
     if intake_content:
         print(f"✓ Found Intake content ({len(intake_content)} chars)")
         print("  → Will be converted to Open Questions")
+        
+        # New human input invalidates approval - enforce closed-loop re-review
+        print("\n[Approval Revocation] New human input detected in Intake section")
+        
+        # Check if requirements were previously approved
+        if is_requirements_approved(requirements):
+            print("  ⚠️  Requirements were previously approved")
+            print("  → Revoking approval due to new unresolved input")
+            
+            # Update approval status in document to "Pending"
+            requirements = update_approval_status_to_pending(requirements)
+            REQ_FILE.write_text(requirements, encoding="utf-8")
+            print("  ✓ Approval status updated to 'Pending - Revisions Required'")
+            
+            # Delete planning state marker if it exists
+            if revoke_approval_state():
+                print("  ✓ Planning state marker deleted")
+                
+                # Commit the revocation
+                try:
+                    subprocess.check_call(
+                        ["git", "add", str(REQ_FILE)],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    subprocess.check_call(
+                        ["git", "add", "-u", ".agent_state/"],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    subprocess.check_call(
+                        ["git", "commit", "-m", "revoke: approval invalidated by new human input in Intake section"],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    print("  ✓ Approval revocation committed")
+                except subprocess.CalledProcessError as e:
+                    print(f"  ✗ Failed to commit revocation: {e}")
+            else:
+                # No state marker exists, just commit the document change
+                try:
+                    subprocess.check_call(
+                        ["git", "add", str(REQ_FILE)],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    subprocess.check_call(
+                        ["git", "commit", "-m", "revoke: approval status updated to Pending due to new human input"],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    print("  ✓ Approval status change committed")
+                except subprocess.CalledProcessError as e:
+                    print(f"  ✗ Failed to commit status change: {e}")
+        else:
+            print("  ✓ Requirements not currently approved - no revocation needed")
+        
+        print("  → New input will trigger question generation and require re-approval")
+        
+        # Re-read requirements after modification
+        requirements = REQ_FILE.read_text(encoding="utf-8")
     else:
         print("✓ Intake section is empty")
     
