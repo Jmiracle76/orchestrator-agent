@@ -64,11 +64,17 @@ Complete guide including:
 
 ### 3. Acceptance Criteria Met ✅
 
-| Criterion | Status | Implementation |
-|-----------|--------|----------------|
-| Agent prompt text explicitly forbids table creation | ✅ Complete | Added to all 6 agent profiles in "MUST NOT" sections |
-| Agents instructed to use section-based narrative structures | ✅ Complete | Added "Formatting and Structure" guidance with examples |
-| Validation mechanism to reject table creation | ✅ Complete | Created validation script with test suite |
+#### Agent prompt text explicitly forbids table creation
+- **Status:** ✅ Complete
+- **Implementation:** Added to all 6 agent profiles in "MUST NOT" sections
+
+#### Agents instructed to use section-based narrative structures
+- **Status:** ✅ Complete
+- **Implementation:** Added "Formatting and Structure" guidance with examples
+
+#### Validation mechanism to reject table creation
+- **Status:** ✅ Complete
+- **Implementation:** Created validation script with test suite
 
 ## Usage
 
