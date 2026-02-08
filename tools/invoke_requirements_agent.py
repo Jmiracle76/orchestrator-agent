@@ -322,6 +322,114 @@ def is_template_baseline(requirements: str) -> bool:
     _, major, minor = get_document_version(requirements)
     return major == 0 and minor == 0
 
+# ---------- Human Edit Detection ----------
+def get_last_commit_message(file_path: Path) -> Optional[str]:
+    """
+    Get the last commit message for a specific file.
+    
+    Returns:
+        Commit message or None if no commits exist
+    """
+    try:
+        msg = subprocess.check_output(
+            ["git", "log", "-1", "--format=%B", "--", str(file_path.relative_to(REPO_ROOT))],
+            cwd=REPO_ROOT,
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return msg if msg else None
+    except subprocess.CalledProcessError:
+        return None
+
+def is_last_commit_by_agent(file_path: Path) -> bool:
+    """
+    Check if the last commit to a file was made by the agent.
+    
+    Agent commits contain "Agent mode: review" or "Agent mode: integrate" in the message.
+    
+    Returns:
+        True if last commit was by agent, False otherwise
+    """
+    msg = get_last_commit_message(file_path)
+    if not msg:
+        # No commits yet, consider it safe (initial state)
+        return True
+    
+    # Check for agent signature in commit message
+    return "Agent mode:" in msg
+
+def has_unauthorized_human_edits_to_protected_sections() -> tuple[bool, str]:
+    """
+    Detect if humans have directly edited protected sections (2-14) of requirements.md.
+    
+    Protected sections are "agent-owned" and humans must not edit them directly
+    once requirements development begins (i.e., after the first agent commit).
+    
+    Detection logic:
+    1. Check if requirements.md exists and has commit history
+    2. If the last commit to requirements.md was NOT by the agent, it's a human edit
+    3. If human edit detected, check if protected sections (2-14) were modified
+    
+    Returns:
+        (has_violations, message)
+    """
+    if not REQ_FILE.exists():
+        return False, "Requirements file does not exist yet"
+    
+    # Check if this is the first commit (no previous commits)
+    try:
+        subprocess.check_output(
+            ["git", "log", "-1", "--", "docs/requirements.md"],
+            cwd=REPO_ROOT,
+            stderr=subprocess.DEVNULL
+        )
+    except subprocess.CalledProcessError:
+        # No commits yet, safe to proceed
+        return False, "No previous commits, initial state is safe"
+    
+    # Check if last commit was by agent
+    if is_last_commit_by_agent(REQ_FILE):
+        return False, "Last commit was by agent"
+    
+    # Last commit was by human - check if protected sections were modified
+    # Get the diff of the last commit to see what changed
+    try:
+        diff_output = subprocess.check_output(
+            ["git", "diff", "HEAD~1", "HEAD", "--", "docs/requirements.md"],
+            cwd=REPO_ROOT
+        ).decode()
+        
+        # Parse diff to see if any lines in sections 2-14 were modified
+        # Look for section headers in the diff context
+        in_protected_section = False
+        has_protected_changes = False
+        
+        for line in diff_output.splitlines():
+            # Check for section headers in diff context
+            if line.startswith('@@') or line.startswith('+++') or line.startswith('---'):
+                continue
+                
+            # Detect section boundaries (context lines or modified lines)
+            section_match = re.search(r'##\s+(\d+)\.\s+', line)
+            if section_match:
+                section_num = int(section_match.group(1))
+                in_protected_section = (2 <= section_num <= 14)
+            
+            # If we're in a protected section and see a modification (+ or -)
+            if in_protected_section and (line.startswith('+') or line.startswith('-')):
+                # Ignore section headers themselves
+                if not re.search(r'##\s+\d+\.\s+', line):
+                    has_protected_changes = True
+                    break
+        
+        if has_protected_changes:
+            return True, "Human edits detected in protected sections (2-14)"
+        else:
+            return False, "Human edits only in non-protected sections"
+            
+    except subprocess.CalledProcessError as e:
+        # If we can't get the diff, be conservative and allow it
+        return False, f"Could not verify edit source: {e}"
+
 # ---------- Mode Determination ----------
 def determine_mode(requirements: str) -> str:
     """
@@ -891,6 +999,23 @@ def main():
         print(git_status_porcelain())
         sys.exit(1)
     print("✓ Working tree is clean")
+    
+    # Check for unauthorized human edits to protected sections
+    print("\n[Protection] Checking for direct human edits to agent-owned sections...")
+    has_violations, violation_msg = has_unauthorized_human_edits_to_protected_sections()
+    if has_violations:
+        print("ERROR: Direct human edits to protected sections detected")
+        print(f"\n{violation_msg}")
+        print("\nSections 2-14 are agent-owned and must not be edited directly by humans.")
+        print("To make changes to these sections:")
+        print("  1. Add questions to Section 1 (Document Control) Open Questions")
+        print("  2. Provide answers to those questions")
+        print("  3. Run this script to let the agent integrate the changes")
+        print("\nHuman edits are only allowed in:")
+        print("  - Section 1 (Document Control)")
+        print("  - Section 15 (Approval Record)")
+        sys.exit(1)
+    print(f"✓ {violation_msg}")
     
     # Get user context
     print("\nOptional context (Ctrl+D to finish):")
