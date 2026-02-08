@@ -379,62 +379,236 @@ NFR-004: Failure Safety
 
 ### Open Questions
 
+#### Q-001: Approved Status Mechanism
 
-| Question ID | Question | Asked By | Date | Answer | Resolution Status |
-|-------------|----------|----------|------|--------| Resolved |
-| Q-001 | What constitutes "Approved" status mechanically? Who has authority to set it (Product Owner only? Script? Agent recommendation sufficient?), and what is the exact trigger mechanism? | Requirements Agent | 2026-02-06 | “Approved” status is set explicitly by a human by updating the requirements document to mark the status as Approved. Authority to approve rests solely with the Product Owner. Approval is indicated by: A clearly defined approval field or status marker in the requirements document. A corresponding git commit authored by a human. No agent or script may infer, recommend, or autonomously set Approved status. | Resolved |
-| Q-002 | Should planning artifacts (milestones, issues) live in-repo as files (e.g., /planning/milestones.md) or be API-only (GitHub issues)? This affects version control, auditability, and rollback capabilities. | Requirements Agent | 2026-02-06 |Planning artifacts (milestones, issues, sequencing) must be authored and maintained in-repo as files until explicitly approved by a human. Once planning artifacts are marked Approved, a separate script may be manually triggered to create GitHub milestones and issues via API. GitHub is the execution system of record, but the repository is the planning system of record. Key benefit: •	Git history becomes your rollback button. •	GitHub API calls are gated and intentional | Resolved |
-| Q-003 | Should re-running the Planning Agent overwrite existing plans, generate diffs, or error if plans already exist? What is the idempotency model? | Requirements Agent | 2026-02-06 | Re-running the Planning Agent must generate diff-based updates to existing planning artifacts. The agent must: •	Preserve existing structure. •	Highlight additions, removals, and modifications. •	Never overwrite planning artifacts wholesale Planning Agent runs may be triggered by human edits to planning artifacts or requirement changes. | Resolved |
-| Q-004 | How should requirement changes invalidate existing plans? Should the Planning Agent detect drift between requirements.md and existing planning artifacts? Is manual re-planning required or automatic? | Requirements Agent | 2026-02-06 | The Planning Agent must detect drift between requirements.md and existing planning artifacts. When drift is detected: •	Existing plans are marked Stale. •	No automatic re-planning occurs. •	A human must explicitly re-run the Planning Agent. Automatic invalidation without regeneration is permitted; automatic regeneration is not. | Resolved |
-| Q-005 | Is manual confirmation required before GitHub issue creation, or can the Planning Agent autonomously create issues? What is the safety gate? | Requirements Agent | 2026-02-06 | GitHub milestone and issue creation may only occur after planning artifacts are explicitly marked Approved by a human. The Planning Agent must never autonomously create GitHub artifacts. Issue creation requires a separate, manual invocation step. | Resolved |
-| Q-006 | Are Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) intentionally omitted as "Not Applicable" for this project, or do they need to be populated? If N/A, should sections explicitly state this with justification? | Requirements Agent | 2026-02-06 | Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) are required and must be populated. The Requirements Agent may continue asking targeted questions until each section is satisfactorily complete. If any section is ultimately not applicable, it must explicitly state “Not Applicable” with justification. | Resolved |
-| Q-007 | Section 4 (Non-Goals) is placeholder - should this explicitly list items like "not implementing downstream agents", "not executing development work", etc., or are Non-Goals already sufficiently covered in Section 3 Out of Scope? | Requirements Agent | 2026-02-06 |Section 4 (Non-Goals) must explicitly list items the system will not do, including but not limited to: •	Not implementing downstream agents. •	Not executing development work. •	Not modifying code beyond planning artifacts. •	Not making architectural decisions | Resolved |
-| Q-008 | What measurable criteria define "predictability" (NFR-001)? E.g., "identical output structure across N runs", "deterministic milestone ordering", "reproducible issue IDs"? | Requirements Agent | 2026-02-06 | Predictability is defined as: •	Consistent output structure across repeated runs. •	Deterministic milestone ordering given identical inputs. •	No variation in generated content beyond timestamps or metadata. Given unchanged inputs, outputs must be materially identical. | Resolved |
-| Q-009 | What measurable criteria define "simplicity" (NFR-002)? E.g., "orchestrator logic under X lines of code", "fewer than Y decision branches", "zero abstraction layers"? | Requirements Agent | 2026-02-06 | Simplicity is defined as: •	Single responsibility per script. •	No dynamic agent invocation chains. •	No abstract orchestration layers. •	Clear, linear control flow. Complexity reduction takes precedence over feature completeness. | Resolved |
-| Q-010 | What measurable criteria define "auditability" (NFR-003)? E.g., "every milestone references at least one FR-XXX ID", "100% of issues trace to requirements sections", "planning log captures all decisions"? | Requirements Agent | 2026-02-06 | Auditability is defined as: •	Every milestone references at least one requirement ID. •	Every issue references a milestone and requirement ID. •	All planning decisions are captured in version-controlled files. •	Git history provides a complete change record | Resolved |
-| Q-011 | What specific outputs constitute "project success" for Section 13? E.g., "Planning Agent successfully invoked after requirements approval", "X milestones generated", "Y issues created in GitHub", "zero out-of-scope file modifications detected"? | Requirements Agent | 2026-02-06 | Project success is achieved when: •	Requirements reach Approved status via human action. •	Planning Agent generates milestones and issues from approved requirements. •	Planning artifacts remain fully traceable to requirements. •	GitHub milestones and issues are created only after approval. •	No out-of-scope files or scripts are created. •	No manual cleanup is required after agent execution | Resolved |
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+What constitutes "Approved" status mechanically? Who has authority to set it (Product Owner only? Script? Agent recommendation sufficient?), and what is the exact trigger mechanism?
+
+**Answer:**  
+“Approved” status is set explicitly by a human by updating the requirements document to mark the status as Approved. Authority to approve rests solely with the Product Owner. Approval is indicated by: A clearly defined approval field or status marker in the requirements document. A corresponding git commit authored by a human. No agent or script may infer, recommend, or autonomously set Approved status.
+
+**Integration Targets:**  
+- Section 15: Approval Record
+
+---
+
+#### Q-002: Planning Artifacts Storage
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+Should planning artifacts (milestones, issues) live in-repo as files (e.g., /planning/milestones.md) or be API-only (GitHub issues)? This affects version control, auditability, and rollback capabilities.
+
+**Answer:**  
+Planning artifacts (milestones, issues, sequencing) must be authored and maintained in-repo as files until explicitly approved by a human. Once planning artifacts are marked Approved, a separate script may be manually triggered to create GitHub milestones and issues via API. GitHub is the execution system of record, but the repository is the planning system of record. Key benefit: •	Git history becomes your rollback button. •	GitHub API calls are gated and intentional
+
+**Integration Targets:**  
+- Section 8: Functional Requirements
+- Section 9: Non-Functional Requirements
+
+---
+
+#### Q-003: Planning Agent Idempotency
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+Should re-running the Planning Agent overwrite existing plans, generate diffs, or error if plans already exist? What is the idempotency model?
+
+**Answer:**  
+Re-running the Planning Agent must generate diff-based updates to existing planning artifacts. The agent must: •	Preserve existing structure. •	Highlight additions, removals, and modifications. •	Never overwrite planning artifacts wholesale Planning Agent runs may be triggered by human edits to planning artifacts or requirement changes.
+
+**Integration Targets:**  
+- Section 8: Functional Requirements
+
+---
+
+#### Q-004: Requirement Drift Handling
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+How should requirement changes invalidate existing plans? Should the Planning Agent detect drift between requirements.md and existing planning artifacts? Is manual re-planning required or automatic?
+
+**Answer:**  
+The Planning Agent must detect drift between requirements.md and existing planning artifacts. When drift is detected: •	Existing plans are marked Stale. •	No automatic re-planning occurs. •	A human must explicitly re-run the Planning Agent. Automatic invalidation without regeneration is permitted; automatic regeneration is not.
+
+**Integration Targets:**  
+- Section 8: Functional Requirements
+- Section 13: Success Criteria
+
+---
+
+#### Q-005: GitHub Issue Creation Safety
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+Is manual confirmation required before GitHub issue creation, or can the Planning Agent autonomously create issues? What is the safety gate?
+
+**Answer:**  
+GitHub milestone and issue creation may only occur after planning artifacts are explicitly marked Approved by a human. The Planning Agent must never autonomously create GitHub artifacts. Issue creation requires a separate, manual invocation step.
+
+**Integration Targets:**  
+- Section 8: Functional Requirements
+
+---
+
+#### Q-006: Section Completeness
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+Are Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) intentionally omitted as "Not Applicable" for this project, or do they need to be populated? If N/A, should sections explicitly state this with justification?
+
+**Answer:**  
+Sections 5 (Stakeholders), 7 (Constraints), 10 (Interfaces), and 11 (Data Considerations) are required and must be populated. The Requirements Agent may continue asking targeted questions until each section is satisfactorily complete. If any section is ultimately not applicable, it must explicitly state “Not Applicable” with justification.
+
+**Integration Targets:**  
+- All content sections (2-14)
+
+---
+
+#### Q-007: Non-Goals Section Content
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+Section 4 (Non-Goals) is placeholder - should this explicitly list items like "not implementing downstream agents", "not executing development work", etc., or are Non-Goals already sufficiently covered in Section 3 Out of Scope?
+
+**Answer:**  
+Section 4 (Non-Goals) must explicitly list items the system will not do, including but not limited to: •	Not implementing downstream agents. •	Not executing development work. •	Not modifying code beyond planning artifacts. •	Not making architectural decisions
+
+**Integration Targets:**  
+- Section 4: Non-Goals
+
+---
+
+#### Q-008: Predictability Measurement
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+What measurable criteria define "predictability" (NFR-001)? E.g., "identical output structure across N runs", "deterministic milestone ordering", "reproducible issue IDs"?
+
+**Answer:**  
+Predictability is defined as: •	Consistent output structure across repeated runs. •	Deterministic milestone ordering given identical inputs. •	No variation in generated content beyond timestamps or metadata. Given unchanged inputs, outputs must be materially identical.
+
+**Integration Targets:**  
+- Section 9: Non-Functional Requirements
+
+---
+
+#### Q-009: Simplicity Measurement
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+What measurable criteria define "simplicity" (NFR-002)? E.g., "orchestrator logic under X lines of code", "fewer than Y decision branches", "zero abstraction layers"?
+
+**Answer:**  
+Simplicity is defined as: •	Single responsibility per script. •	No dynamic agent invocation chains. •	No abstract orchestration layers. •	Clear, linear control flow. Complexity reduction takes precedence over feature completeness.
+
+**Integration Targets:**  
+- Section 9: Non-Functional Requirements
+
+---
+
+#### Q-010: Auditability Measurement
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+What measurable criteria define "auditability" (NFR-003)? E.g., "every milestone references at least one FR-XXX ID", "100% of issues trace to requirements sections", "planning log captures all decisions"?
+
+**Answer:**  
+Auditability is defined as: •	Every milestone references at least one requirement ID. •	Every issue references a milestone and requirement ID. •	All planning decisions are captured in version-controlled files. •	Git history provides a complete change record
+
+**Integration Targets:**  
+- Section 9: Non-Functional Requirements
+
+---
+
+#### Q-011: Project Success Definition
+
+**Status:** Resolved  
+**Asked by:** Requirements Agent  
+**Date:** 2026-02-06  
+
+**Question:**  
+What specific outputs constitute "project success" for Section 13? E.g., "Planning Agent successfully invoked after requirements approval", "X milestones generated", "Y issues created in GitHub", "zero out-of-scope file modifications detected"?
+
+**Answer:**  
+Project success is achieved when: •	Requirements reach Approved status via human action. •	Planning Agent generates milestones and issues from approved requirements. •	Planning artifacts remain fully traceable to requirements. •	GitHub milestones and issues are created only after approval. •	No out-of-scope files or scripts are created. •	No manual cleanup is required after agent execution
+
+**Integration Targets:**  
+- Section 13: Success Criteria
 
 <!-- ANSWER INTEGRATION WORKFLOW -->
 <!-- This section captures questions that require clarification before approval -->
 <!-- 
 HUMAN WORKFLOW:
-1. Requirements Agent identifies questions during review and adds them to this table with empty Answer field
+1. Requirements Agent identifies questions during review and adds them as new subsections with Status: Open and empty Answer field
 2. Human (Product Owner or stakeholder) provides answer by filling in the Answer field
 3. Human invokes Requirements Agent: tools/invoke_requirements_agent.py
 4. Script automatically detects answered-but-unintegrated questions and runs in integrate_answers mode
-5. Agent integrates the answer into appropriate section(s) and marks question as "Resolved"
+5. Agent integrates the answer into appropriate section(s) and marks question Status as "Resolved"
 6. Agent updates Revision History to document the integration
 
 MODE DETECTION (Automatic):
-- Script scans this table for questions with:
+- Script scans Open Questions subsections for questions with:
   * Non-empty Answer field (human has provided answer)
-  * Resolution Status is NOT "Resolved" (not yet integrated)
+  * Status is NOT "Resolved" (not yet integrated)
 - If such questions exist → integrate_answers mode
 - Otherwise → review_only mode
 - No manual mode selection required
 
 AGENT WORKFLOW (integrate_answers mode only):
-- Scan for questions with non-empty Answer fields and non-Resolved status
+- Scan for questions with non-empty Answer fields and Status not "Resolved"
 - Integrate answer content into appropriate sections (Sections 2-11, 13-14)
 - Add source traceability reference (e.g., "Source: Product Owner (Answer to Q-003)")
-- Mark question as "Resolved" with integration reference
+- Update question Status to "Resolved"
 - Update Revision History to document integration activity
 - Downgrade (not delete) mitigated risks, add new risks if answers introduce them
 
 APPROVAL GATE:
-- This table must be empty OR all questions must have "Resolved" status before document can be approved
-- Requirements Agent will recommend "Pending - Revisions Required" if any questions remain "Open"
+- All questions in the Open Questions section must have Status "Resolved" before document can be approved
+- Requirements Agent will recommend "Pending - Revisions Required" if any questions have Status "Open"
 
-CANONICAL TABLE SCHEMA (IMMUTABLE):
-- The Open Questions table MUST always use this exact schema with columns in this order:
-  | Question ID | Question | Asked By | Date | Answer | Resolution Status |
-- All six columns are REQUIRED and MUST be present
-- The Answer column may be empty for new/unanswered questions
-- The Resolution Status must be one of: "Open", "Resolved", or "Deferred"
-- Column order MUST NOT be changed
-- Columns MUST NOT be removed, renamed, or replaced
-- The invocation script will detect and auto-repair schema violations before agent execution
-- Any schema repairs are logged in git diff and Revision History
+CANONICAL QUESTION FORMAT (REQUIRED):
+- Each question MUST be a subsection (####) with format: #### Q-XXX: [Title]
+- Required fields in this exact order:
+  * **Status:** [Open | Resolved | Deferred]
+  * **Asked by:** [Agent or Person name]
+  * **Date:** [YYYY-MM-DD]
+  * **Question:** [The question text]
+  * **Answer:** [Human-authored answer, may be empty for new questions]
+  * **Integration Targets:** [Bulleted list of target sections]
+- Question IDs (Q-XXX) MUST remain stable across edits
+- The invocation script will validate and process this format
+- Any format violations should be logged in git diff and Revision History
 -->
 
 ---
