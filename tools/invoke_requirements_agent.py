@@ -677,6 +677,7 @@ def revoke_approval_and_commit(requirements: str, reason: str, commit_message: s
     2. Writes updated document to disk
     3. Deletes planning state marker if it exists
     4. Commits changes to git
+    5. Rolls back all changes if commit fails
     
     Args:
         requirements: The current requirements document text
@@ -699,7 +700,11 @@ def revoke_approval_and_commit(requirements: str, reason: str, commit_message: s
         ["git", "add", str(REQ_FILE)]
     ]
     
-    # Delete planning state marker if it exists
+    # Delete planning state marker if it exists (save original content for rollback)
+    marker_original_content = None
+    if PLANNING_STATE_MARKER.exists():
+        marker_original_content = PLANNING_STATE_MARKER.read_text(encoding="utf-8")
+    
     marker_deleted = revoke_approval_state()
     if marker_deleted:
         print("  ✓ Planning state marker deleted")
@@ -733,9 +738,14 @@ def revoke_approval_and_commit(requirements: str, reason: str, commit_message: s
             print("  ℹ️  No changes to commit (approval already pending)")
     except subprocess.CalledProcessError as e:
         print(f"  ✗ Failed to commit revocation: {e}")
-        # Revert the file write on failure
+        # Rollback: revert document changes
         REQ_FILE.write_text(requirements, encoding="utf-8")
         print("  → Reverted document changes due to commit failure")
+        # Rollback: restore marker if it was deleted
+        if marker_deleted and marker_original_content is not None:
+            PLANNING_STATE_MARKER.parent.mkdir(parents=True, exist_ok=True)
+            PLANNING_STATE_MARKER.write_text(marker_original_content, encoding="utf-8")
+            print("  → Restored planning state marker")
         return requirements
     
     # Re-read requirements after successful commit
@@ -1312,7 +1322,7 @@ def main():
         if is_requirements_approved(requirements):
             requirements = revoke_approval_and_commit(
                 requirements,
-                "unresolved answered questions",
+                "answered questions pending integration",
                 "revoke: approval invalidated by answered questions pending integration"
             )
     
@@ -1330,7 +1340,7 @@ def main():
         if is_requirements_approved(requirements):
             requirements = revoke_approval_and_commit(
                 requirements,
-                "new unresolved input",
+                "new human input in Intake section",
                 "revoke: approval invalidated by new human input in Intake section"
             )
         else:
