@@ -554,6 +554,9 @@ CANONICAL_SECTIONS = [
     (14, "Out of Scope"),
 ]
 
+# Maximum section number (includes Section 15: Approval Record which comes after CANONICAL_SECTIONS)
+MAX_SECTION_NUM = 15
+
 def get_canonical_section_template(section_num: int, section_name: str) -> str:
     """
     Get the canonical template for a section.
@@ -692,7 +695,7 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
         inserted = False
         
         # First, try to find a section after this one
-        for check_num in range(section_num + 1, 16):  # Check sections after this one
+        for check_num in range(section_num + 1, MAX_SECTION_NUM + 1):  # Check sections after this one
             pattern = rf'^##\s+{check_num}\.\s+'
             for i, line in enumerate(lines):
                 if re.match(pattern, line):
@@ -1685,6 +1688,8 @@ Your output will be parsed and applied as patches.
             # Auto-commit if changes exist
             if not args.no_commit:
                 print("\n[Commit] Committing schema repair...")
+                # Note: Using "review" mode for commit message since schema_repair
+                # operates similarly (adds risks, questions, updates sections)
                 if commit_changes("review"):
                     print("✓ Schema repair committed")
                 else:
