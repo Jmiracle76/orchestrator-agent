@@ -813,6 +813,12 @@ Your output will be parsed and applied as patches.
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
+            subprocess.check_call(
+                ["git", "push", "origin", "main"],
+                cwd=REPO_ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
             print("✓ Changes committed")
     else:
         print("\n--no-commit specified, skipping auto-commit")
