@@ -667,6 +667,18 @@ NFR-004: Failure Safety
 
 ---
 
+### Intake
+
+<!-- Human-editable section for unstructured thoughts and notes -->
+<!-- This section is NON-AUTHORITATIVE and excluded from approval criteria -->
+<!-- The Requirements Agent reads this section and converts ambiguities into formal Open Questions -->
+<!-- Once questions are created, notes are drained/cleared from this section -->
+<!-- DO NOT integrate raw Intake text directly into content sections -->
+
+[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
+
+---
+
 ### Open Questions
 
 #### Q-001: Approved Status Mechanism

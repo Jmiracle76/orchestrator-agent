@@ -31,6 +31,51 @@ REQ_FILE = REPO_ROOT / "docs" / "requirements.md"
 AGENT_PROFILE = REPO_ROOT / "agent-profiles" / "requirements-agent.md"
 PLANNING_STATE_MARKER = REPO_ROOT / ".agent_state" / "requirements_approved"
 
+# ---------- Intake Section Parsing ----------
+def _parse_intake_section(content: str) -> str:
+    """
+    Parse and extract the Intake section content.
+    
+    Returns:
+        The Intake section content (or empty string if none/empty)
+    """
+    # Find the Intake section
+    intake_match = re.search(r'### Intake\n', content)
+    if not intake_match:
+        return ""
+    
+    start_pos = intake_match.end()
+    
+    # Find the end of the Intake section (next ### or ---)
+    rest = content[start_pos:]
+    
+    # Skip comments at the beginning of the section
+    while rest.startswith('<!--'):
+        comment_end = rest.find('-->')
+        if comment_end == -1:
+            break
+        rest = rest[comment_end + 3:].lstrip('\n')
+        start_pos = start_pos + comment_end + 3
+    
+    # Find the end marker (next subsection or horizontal rule)
+    end_pattern = r'\n---\n\n###'
+    end_match = re.search(end_pattern, rest)
+    if end_match:
+        end_pos = end_match.start()
+    else:
+        # Fallback: next major section
+        next_section = re.search(r'\n---\n\n## \d+\.', rest)
+        end_pos = next_section.start() if next_section else len(rest)
+    
+    section_content = rest[:end_pos].strip()
+    
+    # Check if content is just the placeholder text
+    if section_content.startswith('[Empty'):
+        return ""
+    
+    return section_content
+
+
 # ---------- Open Questions Parsing (Section-Based Format) ----------
 def _parse_open_questions_section(content: str) -> List[Dict[str, str]]:
     """
@@ -594,14 +639,36 @@ def commit_planning_marker() -> bool:
         return False
 
 # ---------- Agent Instructions ----------
-def get_agent_instructions(mode: str, is_template: bool) -> str:
+def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "") -> str:
     """
     Get mode-specific instructions for the agent.
     
     Args:
         mode: "review" or "integrate"
         is_template: True if document is version 0.0 (template baseline)
+        intake_content: Content from the Intake section (if any)
     """
+    intake_notice = ""
+    if intake_content:
+        intake_notice = f"""
+⚠️  INTAKE SECTION HAS CONTENT ⚠️
+
+The following unstructured notes were found in the Intake section:
+---
+{intake_content}
+---
+
+You MUST:
+1. Read and analyze these notes for ambiguities, questions, or concerns
+2. Convert them into formal Open Questions in the Open Questions section
+3. Clear the Intake section after processing (replace with placeholder text)
+4. NEVER integrate raw Intake text directly into content sections
+
+After processing, the Intake section should contain only:
+[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
+
+"""
+    
     template_warning = ""
     if is_template:
         template_warning = """
@@ -611,20 +678,26 @@ This is a template baseline document. Special safeguards apply:
 - Content sections (Sections 2-14) are READ-ONLY
 - DO NOT modify, delete, or alter placeholder text in these sections
 - DO NOT recommend "Ready for Approval" (templates cannot be approved)
-- You may ONLY modify: Risks, Open Questions, and Status fields
+- You may ONLY modify: Intake, Risks, Open Questions, and Status fields
 - Template baselines require human engagement before approval is possible
 
 """
     
     if mode == "review":
-        return f"""{template_warning}MODE: review
+        intake_instructions = ""
+        if intake_content:
+            intake_instructions = """
+- Process Intake section: Convert unstructured notes into formal Open Questions
+- Clear the Intake section after processing
+"""
+        return f"""{intake_notice}{template_warning}MODE: review
 
 In review mode, you MUST output ONLY structured patches (NOT a full document).
 
 You may:
 - Review document quality and completeness
 - Identify new risks to add
-- Identify new open questions
+- Identify new open questions{intake_instructions}
 - Recommend approval status{' (BUT NOT for template baselines - version 0.0)' if is_template else ''}
 
 OUTPUT FORMAT (required):
@@ -656,6 +729,9 @@ For each new question, use this format:
 
 **Integration Targets:**  
 - [Target section]
+
+{"### INTAKE_CLEAR" if intake_content else ""}
+{"[Clear the Intake section and replace with: '[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]']" if intake_content else ""}
 
 DO NOT output the full document.
 """
@@ -819,13 +895,44 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         status_match = re.search(r'### STATUS_UPDATE\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
         risks_match = re.search(r'### RISKS\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
         questions_match = re.search(r'### OPEN_QUESTIONS\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
+        intake_clear_match = re.search(r'### INTAKE_CLEAR\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
         
         status_update = status_match.group(1).strip() if status_match else ""
         risks_content = risks_match.group(1).strip() if risks_match else ""
         questions_content = questions_match.group(1).strip() if questions_match else ""
+        intake_clear = intake_clear_match.group(1).strip() if intake_clear_match else ""
         
         # Update approval status if provided
         _update_approval_status(lines, status_update)
+        
+        # Clear Intake section if requested
+        if intake_clear or "INTAKE_CLEAR" in agent_output:
+            for i, line in enumerate(lines):
+                if '### Intake' in line:
+                    # Find the end of the Intake section
+                    start_pos = i
+                    end_pos = None
+                    for j in range(i + 1, len(lines)):
+                        if lines[j].strip().startswith('---') and j + 2 < len(lines) and '###' in lines[j + 2]:
+                            end_pos = j
+                            break
+                    
+                    if end_pos:
+                        # Replace content between header and separator with placeholder
+                        placeholder = "\n[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]\n"
+                        # Find where comments end
+                        comment_end = start_pos + 1
+                        while comment_end < end_pos:
+                            stripped_line = lines[comment_end].strip()
+                            if not stripped_line.startswith('<!--') and not stripped_line.startswith('-->') and '-->' not in stripped_line:
+                                break
+                            comment_end += 1
+                        
+                        # Delete content between comment_end and end_pos
+                        del lines[comment_end:end_pos]
+                        # Insert placeholder
+                        lines.insert(comment_end, placeholder)
+                    break
         
         # Append new risks
         if risks_content and "No new risks" not in risks_content:
@@ -1094,6 +1201,15 @@ def main():
     print(f"  - {resolved_count} resolved")
     print(f"  - {pending_count} pending integration")
     
+    # Parse Intake section
+    print("\n[Intake] Parsing Intake section...")
+    intake_content = _parse_intake_section(requirements)
+    if intake_content:
+        print(f"✓ Found Intake content ({len(intake_content)} chars)")
+        print("  → Will be converted to Open Questions")
+    else:
+        print("✓ Intake section is empty")
+    
     # Check document version for template baseline detection
     version_str, major, minor = get_document_version(requirements)
     is_template = is_template_baseline(requirements)
@@ -1106,7 +1222,7 @@ def main():
     print(f"\n[Mode] Running in {mode} mode")
     
     # Build prompt
-    instructions = get_agent_instructions(mode, is_template)
+    instructions = get_agent_instructions(mode, is_template, intake_content)
     prompt = f"""You are the Requirements Agent.
 
 Agent profile:
