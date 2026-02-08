@@ -331,8 +331,15 @@ def get_last_commit_message(file_path: Path) -> Optional[str]:
         Commit message or None if no commits exist
     """
     try:
+        # Convert to relative path safely
+        try:
+            rel_path = file_path.relative_to(REPO_ROOT)
+        except ValueError:
+            # If relative_to fails, try using absolute path
+            rel_path = file_path
+        
         msg = subprocess.check_output(
-            ["git", "log", "-1", "--format=%B", "--", str(file_path.relative_to(REPO_ROOT))],
+            ["git", "log", "-1", "--format=%B", "--", str(rel_path)],
             cwd=REPO_ROOT,
             stderr=subprocess.DEVNULL
         ).decode().strip()
@@ -347,11 +354,12 @@ def is_last_commit_by_agent(file_path: Path) -> bool:
     Agent commits contain "Agent mode: review" or "Agent mode: integrate" in the message.
     
     Returns:
-        True if last commit was by agent, False otherwise
+        True if last commit was by agent or no commits exist yet (safe initial state)
     """
     msg = get_last_commit_message(file_path)
     if not msg:
-        # No commits yet, consider it safe (initial state)
+        # No commits yet - this is the initial state before any changes
+        # Treat as safe since there's nothing to protect yet
         return True
     
     # Check for agent signature in commit message
@@ -393,33 +401,56 @@ def has_unauthorized_human_edits_to_protected_sections() -> tuple[bool, str]:
     # Last commit was by human - check if protected sections were modified
     # Get the diff of the last commit to see what changed
     try:
+        # Check if HEAD~1 exists (not an initial commit)
+        try:
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD~1"],
+                cwd=REPO_ROOT,
+                stderr=subprocess.DEVNULL
+            )
+        except subprocess.CalledProcessError:
+            # This is the initial commit, no parent to compare
+            # Since we already checked last commit was not by agent, this is a human's initial commit
+            # Check if it contains content in sections 2-14
+            content = REQ_FILE.read_text(encoding="utf-8")
+            if has_content_in_protected_sections(content):
+                return True, "Human edits detected in protected sections (2-14)"
+            return False, "Human edits only in non-protected sections"
+        
         diff_output = subprocess.check_output(
             ["git", "diff", "HEAD~1", "HEAD", "--", "docs/requirements.md"],
             cwd=REPO_ROOT
         ).decode()
         
         # Parse diff to see if any lines in sections 2-14 were modified
-        # Look for section headers in the diff context
-        in_protected_section = False
+        # Track section context based on diff lines
+        current_section = None
         has_protected_changes = False
         
         for line in diff_output.splitlines():
-            # Check for section headers in diff context
+            # Skip diff metadata lines
             if line.startswith('@@') or line.startswith('+++') or line.startswith('---'):
                 continue
-                
-            # Detect section boundaries (context lines or modified lines)
-            section_match = re.search(r'##\s+(\d+)\.\s+', line)
-            if section_match:
-                section_num = int(section_match.group(1))
-                in_protected_section = (2 <= section_num <= 14)
             
-            # If we're in a protected section and see a modification (+ or -)
-            if in_protected_section and (line.startswith('+') or line.startswith('-')):
-                # Ignore section headers themselves
-                if not re.search(r'##\s+\d+\.\s+', line):
-                    has_protected_changes = True
-                    break
+            # Extract the actual content by removing diff prefix
+            # Diff lines start with ' ' (context), '+' (added), or '-' (removed)
+            if len(line) > 0 and line[0] in [' ', '+', '-']:
+                content_line = line[1:] if len(line) > 1 else ''
+                
+                # Check if this is a section header
+                section_match = re.match(r'##\s+(\d+)\.\s+', content_line)
+                if section_match:
+                    section_num = int(section_match.group(1))
+                    current_section = section_num
+                
+                # If we're in a protected section and this line is added or removed
+                # (not just context), we have a protected change
+                if current_section is not None and 2 <= current_section <= 14:
+                    if line.startswith('+') or line.startswith('-'):
+                        # Ignore the section header line itself
+                        if not re.match(r'##\s+\d+\.\s+', content_line):
+                            has_protected_changes = True
+                            break
         
         if has_protected_changes:
             return True, "Human edits detected in protected sections (2-14)"
@@ -429,6 +460,35 @@ def has_unauthorized_human_edits_to_protected_sections() -> tuple[bool, str]:
     except subprocess.CalledProcessError as e:
         # If we can't get the diff, be conservative and allow it
         return False, f"Could not verify edit source: {e}"
+
+def has_content_in_protected_sections(content: str) -> bool:
+    """
+    Check if there is actual content in protected sections 2-14.
+    Used for initial commits to detect if human added content to protected sections.
+    
+    Returns:
+        True if protected sections have content beyond headers and comments
+    """
+    lines = content.splitlines()
+    in_protected_section = False
+    has_content = False
+    
+    for line in lines:
+        # Detect section headers
+        section_match = re.match(r'##\s+(\d+)\.\s+', line)
+        if section_match:
+            section_num = int(section_match.group(1))
+            in_protected_section = (2 <= section_num <= 14)
+        
+        # If in protected section, check for non-trivial content
+        if in_protected_section:
+            stripped = line.strip()
+            # Skip empty lines, comments, headers, and horizontal rules
+            if stripped and not stripped.startswith('#') and not stripped.startswith('<!--') and stripped != '---':
+                has_content = True
+                break
+    
+    return has_content
 
 # ---------- Mode Determination ----------
 def determine_mode(requirements: str) -> str:
