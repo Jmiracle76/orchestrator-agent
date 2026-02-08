@@ -1,124 +1,58 @@
 #!/usr/bin/env python3
 """
-Test script to validate Open Questions parsing.
+Test script to validate required section enforcement helpers.
 
 Ghost question detection and repair is now the agent's responsibility.
-This test validates the parsing functions that remain in the invocation script.
+This test validates the minimal helpers that remain in the invocation script.
 """
 
 import sys
-import re
 from pathlib import Path
 
 # Add tools directory to path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
-from invoke_requirements_agent import _parse_open_questions_section
+from invoke_requirements_agent import missing_required_sections, has_answered_questions
 
 
-def test_parse_open_questions():
-    """Test extraction of Open Questions from a document."""
-    sample_doc = """
-## 12. Risks and Open Issues
+def test_missing_required_sections():
+    """Test that missing required sections are detected."""
+    sample_doc = "## 1. Document Control\n"
+    missing = missing_required_sections(sample_doc)
+    assert "## 1. Document Control" not in missing, "Existing section should not be missing"
+    assert "## 2. Problem Statement" in missing, "Missing section should be reported"
+    print("✓ Required section detection test passed")
 
+
+def test_has_answered_questions():
+    """Test detection of answered questions for mode selection."""
+    unanswered_doc = """
 ### Open Questions
 
-#### Q-001: Test Question One
+#### Q-001: Test Question
 
-**Status:** Open  
-**Asked by:** Test  
-**Date:** 2026-02-08  
-
-**Question:**  
-This is question 1.
-
-**Answer:**  
+**Answer:**
 [Awaiting response]
 
-**Integration Targets:**  
+**Integration Targets:**
 - Section 8: Functional Requirements
-
----
-
-#### Q-003: Test Question Three
-
-**Status:** Resolved  
-**Asked by:** Test  
-**Date:** 2026-02-08  
-
-**Question:**  
-This is question 3.
-
-**Answer:**  
-Answer provided.
-
-**Integration Targets:**  
-- Section 9: Non-Functional Requirements
-
----
 """
-    
-    questions = _parse_open_questions_section(sample_doc)
-    q_ids = {q['id'] for q in questions}
-    assert q_ids == {'Q-001', 'Q-003'}, f"Expected Q-001 and Q-003, got {q_ids}"
-    
-    print("✓ Parse Open Questions test passed")
-
-
-def test_parse_empty_questions():
-    """Test parsing when no questions exist."""
-    sample_doc = """
-## 12. Risks and Open Issues
-
+    answered_doc = """
 ### Open Questions
 
-[No open questions at this time]
+#### Q-002: Test Question
 
----
+**Answer:**
+Provide a concrete answer.
+
+**Integration Targets:**
+- Section 8: Functional Requirements
 """
-    
-    questions = _parse_open_questions_section(sample_doc)
-    assert len(questions) == 0, f"Expected 0 questions, got {len(questions)}"
-    
-    print("✓ Parse empty questions test passed")
 
-
-def test_parse_question_fields():
-    """Test that all question fields are parsed correctly."""
-    sample_doc = """
-### Open Questions
-
-#### Q-001: Detailed Question
-
-**Status:** Open  
-**Asked by:** Product Owner  
-**Date:** 2026-02-08  
-
-**Question:**  
-What is the expected throughput?
-
-**Answer:**  
-1000 requests per second.
-
-**Integration Targets:**  
-- Section 9: Non-Functional Requirements
-
----
-"""
-    
-    questions = _parse_open_questions_section(sample_doc)
-    assert len(questions) == 1, f"Expected 1 question, got {len(questions)}"
-    
-    q = questions[0]
-    assert q['id'] == 'Q-001', f"Expected Q-001, got {q['id']}"
-    assert q['title'] == 'Detailed Question', f"Expected 'Detailed Question', got {q['title']}"
-    assert q['status'] == 'Open', f"Expected Open, got {q['status']}"
-    assert q['asked_by'] == 'Product Owner', f"Expected Product Owner, got {q['asked_by']}"
-    assert '1000 requests per second' in q['answer'], f"Answer not parsed correctly: {q['answer']}"
-    assert len(q['targets']) == 1, f"Expected 1 target, got {len(q['targets'])}"
-    
-    print("✓ Parse question fields test passed")
+    assert not has_answered_questions(unanswered_doc), "Placeholder answers should not trigger integrate mode"
+    assert has_answered_questions(answered_doc), "Concrete answers should trigger integrate mode"
+    print("✓ Answered question detection test passed")
 
 
 def main():
@@ -128,9 +62,8 @@ def main():
     print("=" * 60 + "\n")
     
     try:
-        test_parse_open_questions()
-        test_parse_empty_questions()
-        test_parse_question_fields()
+        test_missing_required_sections()
+        test_has_answered_questions()
         
         print("\n" + "=" * 60)
         print("All tests passed!")

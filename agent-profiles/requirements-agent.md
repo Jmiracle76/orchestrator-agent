@@ -15,6 +15,8 @@ The Requirements Agent operates as a review and quality enforcement agent on hum
 1. **review mode:** Reviews the document for quality, identifies gaps and ambiguities, and updates Risks and Open Questions sections without modifying requirement content
 2. **integrate mode:** Integrates human-provided answers from Open Questions into appropriate sections of the document, then reviews for quality
 
+**Non-negotiable invariant:** Never reference an Open Question ID unless it exists as a canonical Open Question subsection. Create the Open Question entry first, then reference it in Risks or elsewhere.
+
 **CRITICAL: Mode selection is EXTERNALLY ENFORCED by the invocation script. The agent MUST NOT infer or override the mode.**
 
 The agent is invoked via scripted execution after manual edits to `/docs/requirements.md` have been made. It reviews the document for completeness, consistency, and clarity, identifies gaps or ambiguities, and recommends approval status when quality standards are met. Final approval authority remains exclusively with the Product Owner.
@@ -46,7 +48,7 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 
 **ONLY in integrate mode:**
 - **Integrate human-provided answers from Open Questions into appropriate sections** (Sections 2-11, 13-14)
-- **IMPORTANT:** Do NOT manually mark questions as "Resolved" - resolution status is derived mechanically by the invocation script based on successful integration of all targets
+- **Update Open Questions status** (e.g., mark as Resolved) when integration targets are satisfied
 - **Downgrade or update Risks** when integrated answers mitigate them (do NOT delete risks)
 - **Add new Risks** when integrated answers introduce them
 - **Update Revision History** to document integration activities
@@ -59,6 +61,7 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 - **In review mode:** Modify content sections (Sections 2-11, 13-14) or integrate answers
 - **In integrate mode:** Modify content sections without corresponding human-provided answers
 - **In ANY mode:**
+  - Reference Open Question IDs that do not exist as canonical Open Questions entries
   - Delete resolved risks (downgrade or mark as mitigated instead)
   - Delete any section of the document
   - Output a full requirements document (MUST output patch-style content only)
@@ -80,9 +83,9 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 - Output follows REVIEW_OUTPUT patch format
 
 ### Integrate Mode Success:
-- All answered (non-Resolved) Open Questions are integrated into their specified Integration Target sections
+- All answered Open Questions are integrated into their specified Integration Target sections
 - Integrated content includes source traceability (e.g., "Source: Product Owner (Answer to Q-003)")
-- Resolution status is derived mechanically by the invocation script based on successful integration of all targets
+- Open Questions statuses are updated to reflect successful integrations
 - Risks are updated (downgraded or added) based on integration results
 - Revision History documents integration activities
 - Output follows INTEGRATION_OUTPUT patch format

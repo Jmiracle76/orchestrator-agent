@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """
-Test script to validate document version update behavior.
+Test script to validate that version fields remain unchanged.
 
 This script tests that:
-1. Version History is updated with new version
-2. Document Control table fields are updated atomically
-3. Header version field is updated
-4. All fields are consistent
+1. Version fields are not modified by patch application
+2. Document Control and header versions remain consistent
 """
 
 import sys
@@ -19,8 +17,8 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from invoke_requirements_agent import apply_patches
 
 
-def test_version_update_review_mode():
-    """Test that version updates work correctly in review mode."""
+def test_version_unchanged_review_mode():
+    """Test that version fields are unchanged in review mode."""
     sample_doc = """# Requirements Document
 
 **Version:** 0.0
@@ -52,32 +50,17 @@ No new risks
 No new questions
 """
     
-    # Apply patches in review mode
-    updated_doc, _ = apply_patches(sample_doc, agent_output, "review")
-    
-    # Verify Version History was updated
-    assert "| 0.1 |" in updated_doc, "Version History should contain 0.1"
-    assert "Requirements Agent" in updated_doc, "Version History should credit Requirements Agent"
-    
-    # Verify Document Control table was updated
-    assert "| Current Version | 0.1 |" in updated_doc, "Current Version should be updated to 0.1"
-    
-    # Verify Last Modified contains today's date in the Document Control table
-    import re
-    dc_last_modified = re.search(r'\| Last Modified \| ([\d-]+) \|', updated_doc)
-    assert dc_last_modified, "Last Modified should exist in Document Control table"
-    assert "2026-" in dc_last_modified.group(1), "Last Modified should contain current date"
-    
-    assert "| Modified By | Requirements Agent |" in updated_doc, "Modified By should be updated"
-    
-    # Verify header version was updated
-    assert "**Version:** 0.1" in updated_doc, "Header version should be updated to 0.1"
-    
-    print("✓ Review mode version update test passed")
+    updated_doc = apply_patches(sample_doc, agent_output, "review")
+
+    assert "| 0.0 |" in updated_doc, "Version History should remain unchanged"
+    assert "| Current Version | 0.0 |" in updated_doc, "Current Version should remain unchanged"
+    assert "**Version:** 0.0" in updated_doc, "Header version should remain unchanged"
+
+    print("✓ Review mode version unchanged test passed")
 
 
-def test_version_increment():
-    """Test that version increments correctly."""
+def test_version_unchanged_integrate_mode():
+    """Test that version fields are unchanged in integrate mode."""
     sample_doc = """# Requirements Document
 
 **Version:** 0.5
@@ -103,23 +86,21 @@ def test_version_increment():
 ### STATUS_UPDATE
 Pending
 
-### PATCHES
-No patches
+### INTEGRATED_SECTIONS
+No updates
 """
-    
-    # Apply patches in integrate mode
-    updated_doc, _ = apply_patches(sample_doc, agent_output, "integrate")
-    
-    # Verify version was incremented to 0.6
-    assert "| 0.6 |" in updated_doc, "Version should be incremented to 0.6"
-    assert "| Current Version | 0.6 |" in updated_doc, "Current Version should be 0.6"
-    assert "**Version:** 0.6" in updated_doc, "Header version should be 0.6"
-    
-    print("✓ Version increment test passed")
+
+    updated_doc = apply_patches(sample_doc, agent_output, "integrate")
+
+    assert "| 0.5 |" in updated_doc, "Version History should remain unchanged"
+    assert "| Current Version | 0.5 |" in updated_doc, "Current Version should remain unchanged"
+    assert "**Version:** 0.5" in updated_doc, "Header version should remain unchanged"
+
+    print("✓ Integrate mode version unchanged test passed")
 
 
 def test_consistency():
-    """Test that all version references are consistent."""
+    """Test that all version references remain consistent."""
     sample_doc = """# Requirements Document
 
 **Version:** 1.2
@@ -145,14 +126,14 @@ def test_consistency():
 Ready for Approval
 """
     
-    updated_doc, _ = apply_patches(sample_doc, agent_output, "review")
+    updated_doc = apply_patches(sample_doc, agent_output, "review")
     
     # Extract version from different locations
     import re
     
     # Version History
-    vh_match = re.search(r'\| (\d+\.\d+) \|.*?\| Requirements Agent \|', updated_doc)
-    assert vh_match, "Version History should have new entry"
+    vh_match = re.search(r'\| (\d+\.\d+) \|.*?\| Human \|', updated_doc)
+    assert vh_match, "Version History should have existing entry"
     vh_version = vh_match.group(1)
     
     # Document Control
@@ -166,16 +147,16 @@ Ready for Approval
     hdr_version = hdr_match.group(1)
     
     # All should be the same
-    assert vh_version == dc_version == hdr_version == "1.3", \
+    assert vh_version == dc_version == hdr_version == "1.2", \
         f"All versions should be consistent: VH={vh_version}, DC={dc_version}, HDR={hdr_version}"
-    
+
     print("✓ Consistency test passed")
 
 
 if __name__ == "__main__":
     try:
-        test_version_update_review_mode()
-        test_version_increment()
+        test_version_unchanged_review_mode()
+        test_version_unchanged_integrate_mode()
         test_consistency()
         print("\n✓ All version update tests passed!")
         sys.exit(0)

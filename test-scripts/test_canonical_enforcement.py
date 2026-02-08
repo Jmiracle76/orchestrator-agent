@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Integration test for canonical question enforcement.
+Integration test for deterministic Open Questions patching.
 
 This test validates that:
-1. Agent cannot create duplicate Question IDs
-2. Patch application correctly handles question deduplication
+1. Open Questions content is replaced deterministically
+2. Patch application does not attempt to deduplicate entries
 """
 
 import sys
@@ -17,8 +17,8 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from invoke_requirements_agent import apply_patches
 
 
-def test_agent_duplicate_prevention():
-    """Test that agent cannot create duplicate Question IDs."""
+def test_open_questions_replacement():
+    """Test that Open Questions content is replaced deterministically."""
     requirements_doc = """
 ## 12. Risks and Open Issues
 
@@ -48,7 +48,7 @@ ANSWER INTEGRATION WORKFLOW
 ---
 """
     
-    # Agent output attempting to create duplicate Q-001
+    # Agent output replacing the Open Questions section
     agent_output = """
 ## REVIEW_OUTPUT
 
@@ -59,23 +59,6 @@ Pending - Revisions Required
 No new risks identified
 
 ### OPEN_QUESTIONS
-#### Q-001: Duplicate Question Attempt
-
-**Status:** Open
-**Asked by:** Agent
-**Date:** 2026-02-08
-
-**Question:**
-This is a duplicate.
-
-**Answer:**
-[Awaiting response]
-
-**Integration Targets:**
-- Section 9: Non-Functional Requirements
-
----
-
 #### Q-002: New Valid Question
 
 **Status:** Open
@@ -95,16 +78,15 @@ This is new.
 """
     
     # Apply patches
-    updated_doc, _ = apply_patches(requirements_doc, agent_output, "review")
-    
-    # Q-001 should still exist only once
-    q001_count = updated_doc.count('#### Q-001:')
-    assert q001_count == 1, f"Q-001 should appear exactly once, found {q001_count}"
-    
-    # Q-002 should be added
-    assert '#### Q-002:' in updated_doc, "Q-002 should be added"
-    
-    print("✓ Agent duplicate prevention test passed")
+    updated_doc = apply_patches(requirements_doc, agent_output, "review")
+
+    # Q-001 should be removed since the section is replaced
+    assert '#### Q-001:' not in updated_doc, "Q-001 should be replaced by new content"
+
+    # Q-002 should be present
+    assert '#### Q-002:' in updated_doc, "Q-002 should be present after replacement"
+
+    print("✓ Open Questions replacement test passed")
 
 
 def main():
@@ -114,7 +96,7 @@ def main():
     print("=" * 60 + "\n")
     
     try:
-        test_agent_duplicate_prevention()
+        test_open_questions_replacement()
         
         print("\n" + "=" * 60)
         print("All integration tests passed!")
