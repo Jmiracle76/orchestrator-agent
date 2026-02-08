@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
 """
-Simplified Requirements Agent Invoker
+Minimal Deterministic Requirements Agent Invoker
 
-This script invokes an AI agent to review or integrate changes into requirements.md.
-It relies on Git as the primary safety mechanism rather than complex internal validation.
+This script is a thin, deterministic wrapper whose only job is lifecycle
+gating and safety checks. All document understanding and repair is
+delegated to the Requirements Agent.
 
-Key principles:
-- Linear, readable control flow
-- Minimal validation (only what prevents corruption)
-- Git is the safety net
-- Auto-commit on any document change
-- State-based handoff: Records approval state for future orchestration
+Control flow:
+1. Load document
+2. Run minimal structural checks (file exists, valid format)
+3. Invoke agent with full context
+4. Apply returned changes
+5. Exit
+
+Responsibilities of this script (ONLY):
+- Load requirements document
+- Detect high-level document state (Template vs Active)
+- Enforce lifecycle gates (e.g., Approved cannot be auto-set)
+- Invoke the Requirements Agent
+- Apply agent output to the document
+- Fail fast on catastrophic errors (file missing, invalid format)
+
+All semantic validation, schema repair, ghost question detection,
+cross-reference checking, and human edit normalization belong to the agent.
 """
 
 import os
@@ -20,7 +32,7 @@ import subprocess
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # ---------- Configuration ----------
 MODEL = "claude-sonnet-4-5-20250929"
@@ -523,94 +535,6 @@ def _has_pending_answers(content: str) -> bool:
     return False
 
 
-def _get_canonical_question_ids(content: str) -> set:
-    """
-    Extract all canonical Question IDs from the Open Questions section.
-    
-    Returns a set of Question IDs (e.g., {'Q-001', 'Q-002', ...})
-    """
-    questions = _parse_open_questions_section(content)
-    return {q['id'] for q in questions}
-
-
-def _find_question_id_references(content: str) -> dict:
-    """
-    Find all Question ID references in the document outside of the Open Questions section.
-    
-    Searches for patterns like:
-    - Q-001, Q-002, etc. in text
-    - (Answer to Q-003)
-    - Q-004 through Q-010
-    - References in risks, source attributions, etc.
-    
-    Returns:
-        Dictionary mapping question IDs to list of contexts where they appear
-        Format: {'Q-001': ['line 150: Source: Product Owner (Answer to Q-001)', ...], ...}
-    """
-    references = {}
-    
-    # Remove the Open Questions section to avoid counting definitions as references
-    open_q_match = re.search(r'### Open Questions\n', content)
-    if open_q_match:
-        start_pos = open_q_match.start()
-        # Find end of Open Questions section
-        rest = content[start_pos:]
-        # Look for next subsection (###) or major section (##)
-        end_pattern = r'\n###\s'
-        end_match = re.search(end_pattern, rest)
-        if end_match:
-            end_pos = start_pos + end_match.start()
-        else:
-            # Find next major section
-            next_section = re.search(r'\n## \d+\.', rest)
-            end_pos = start_pos + next_section.start() if next_section else len(content)
-        
-        # Search only outside Open Questions section
-        search_content = content[:start_pos] + content[end_pos:]
-    else:
-        search_content = content
-    
-    # Pattern to match Question IDs: Q-XXX where XXX is digits
-    pattern = r'Q-(\d+)'
-    
-    lines = search_content.splitlines()
-    for line_num, line in enumerate(lines, 1):
-        matches = re.finditer(pattern, line)
-        for match in matches:
-            q_id = match.group(0)
-            context = f"line {line_num}: {line.strip()[:100]}"  # First 100 chars of line
-            if q_id not in references:
-                references[q_id] = []
-            references[q_id].append(context)
-    
-    return references
-
-
-def _validate_question_references(content: str) -> tuple[bool, list, list]:
-    """
-    Validate that all Question ID references point to canonical Open Questions.
-    
-    Returns:
-        (is_valid, ghost_questions, all_references)
-        - is_valid: True if all references are valid
-        - ghost_questions: List of Question IDs that are referenced but don't exist
-        - all_references: List of all referenced Question IDs with their contexts
-    """
-    canonical_ids = _get_canonical_question_ids(content)
-    references = _find_question_id_references(content)
-    
-    ghost_questions = []
-    all_references = []
-    
-    for q_id, contexts in references.items():
-        all_references.append((q_id, contexts))
-        if q_id not in canonical_ids:
-            ghost_questions.append(q_id)
-    
-    is_valid = len(ghost_questions) == 0
-    return is_valid, ghost_questions, all_references
-
-
 # ---------- Git Helpers ----------
 def git_status_porcelain() -> str:
     """Get git status in porcelain format."""
@@ -747,9 +671,6 @@ Agent mode: review"""
         print(f"✗ Commit failed: {e}")
         return False
 
-# ---------- Constants ----------
-EMPTY_ANSWER_PLACEHOLDER = '-'
-
 # ---------- Version Detection ----------
 def get_document_version(requirements: str) -> tuple[str, int, int]:
     """
@@ -787,508 +708,6 @@ def is_template_baseline(requirements: str) -> bool:
     """
     _, major, minor = get_document_version(requirements)
     return major == 0 and minor == 0
-
-# ---------- Human Edit Detection ----------
-def get_last_commit_message(file_path: Path) -> Optional[str]:
-    """
-    Get the last commit message for a specific file.
-    
-    Returns:
-        Commit message or None if no commits exist
-    """
-    try:
-        # Convert to relative path safely
-        try:
-            rel_path = file_path.relative_to(REPO_ROOT)
-        except ValueError:
-            # If relative_to fails, try using absolute path
-            rel_path = file_path
-        
-        msg = subprocess.check_output(
-            ["git", "log", "-1", "--format=%B", "--", str(rel_path)],
-            cwd=REPO_ROOT,
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        return msg if msg else None
-    except subprocess.CalledProcessError:
-        return None
-
-def is_last_commit_by_agent(file_path: Path) -> bool:
-    """
-    Check if the last commit to a file was made by the agent.
-    
-    Agent commits contain "Agent mode: review" or "Agent mode: integrate" in the message.
-    
-    Returns:
-        True if last commit was by agent or no commits exist yet (safe initial state)
-    """
-    msg = get_last_commit_message(file_path)
-    if not msg:
-        # No commits yet - this is the initial state before any changes
-        # Treat as safe since there's nothing to protect yet
-        return True
-    
-    # Check for agent signature in commit message
-    return "Agent mode:" in msg
-
-def detect_human_edits_to_protected_sections() -> tuple[bool, str]:
-    """
-    Detect if humans have directly edited protected sections (2-14) of requirements.md.
-    
-    Protected sections are "agent-owned". When humans edit them, the agent will
-    normalize/refactor the edits rather than blocking execution.
-    
-    Detection logic:
-    1. Check if requirements.md exists and has commit history
-    2. If the last commit to requirements.md was NOT by the agent, it's a human edit
-    3. If human edit detected, check if protected sections (2-14) were modified
-    
-    Returns:
-        (has_edits, message) - True if human edits detected in protected sections
-    """
-    if not REQ_FILE.exists():
-        return False, "Requirements file does not exist yet"
-    
-    # Check if this is the first commit (no previous commits)
-    try:
-        subprocess.check_output(
-            ["git", "log", "-1", "--", "docs/requirements.md"],
-            cwd=REPO_ROOT,
-            stderr=subprocess.DEVNULL
-        )
-    except subprocess.CalledProcessError:
-        # No commits yet, safe to proceed
-        return False, "No previous commits, initial state is safe"
-    
-    # Check if last commit was by agent
-    if is_last_commit_by_agent(REQ_FILE):
-        return False, "Last commit was by agent"
-    
-    # Last commit was by human - check if protected sections were modified
-    # Get the diff of the last commit to see what changed
-    try:
-        # Check if HEAD~1 exists (not an initial commit)
-        try:
-            subprocess.check_output(
-                ["git", "rev-parse", "HEAD~1"],
-                cwd=REPO_ROOT,
-                stderr=subprocess.DEVNULL
-            )
-        except subprocess.CalledProcessError:
-            # This is the initial commit, no parent to compare
-            # Since we already checked last commit was not by agent, this is a human's initial commit
-            # Check if it contains content in sections 2-14
-            content = REQ_FILE.read_text(encoding="utf-8")
-            if has_content_in_protected_sections(content):
-                return True, "Human edits detected in protected sections (2-14)"
-            return False, "Human edits only in non-protected sections"
-        
-        diff_output = subprocess.check_output(
-            ["git", "diff", "HEAD~1", "HEAD", "--", "docs/requirements.md"],
-            cwd=REPO_ROOT
-        ).decode()
-        
-        # Parse diff to see if any lines in sections 2-14 were modified
-        # Track section context based on diff lines
-        current_section = None
-        has_protected_changes = False
-        
-        for line in diff_output.splitlines():
-            # Skip diff metadata lines
-            if line.startswith('@@') or line.startswith('+++') or line.startswith('---'):
-                continue
-            
-            # Extract the actual content by removing diff prefix
-            # Diff lines start with ' ' (context), '+' (added), or '-' (removed)
-            if len(line) > 0 and line[0] in [' ', '+', '-']:
-                content_line = line[1:] if len(line) > 1 else ''
-                
-                # Check if this is a section header
-                section_match = re.match(r'##\s+(\d+)\.\s+', content_line)
-                if section_match:
-                    section_num = int(section_match.group(1))
-                    current_section = section_num
-                
-                # If we're in a protected section and this line is added or removed
-                # (not just context), we have a protected change
-                if current_section is not None and 2 <= current_section <= 14:
-                    if line.startswith('+') or line.startswith('-'):
-                        # Ignore the section header line itself
-                        if not re.match(r'##\s+\d+\.\s+', content_line):
-                            has_protected_changes = True
-                            break
-        
-        if has_protected_changes:
-            return True, "Human edits detected in protected sections (2-14)"
-        else:
-            return False, "Human edits only in non-protected sections"
-            
-    except subprocess.CalledProcessError as e:
-        # If we can't get the diff, be conservative and allow it
-        return False, f"Could not verify edit source: {e}"
-
-def has_content_in_protected_sections(content: str) -> bool:
-    """
-    Check if there is actual content in protected sections 2-14.
-    Used for initial commits to detect if human added content to protected sections.
-    
-    Returns:
-        True if protected sections have content beyond headers and comments
-    """
-    lines = content.splitlines()
-    in_protected_section = False
-    has_content = False
-    
-    for line in lines:
-        # Detect section headers
-        section_match = re.match(r'##\s+(\d+)\.\s+', line)
-        if section_match:
-            section_num = int(section_match.group(1))
-            in_protected_section = (2 <= section_num <= 14)
-        
-        # If in protected section, check for non-trivial content
-        if in_protected_section:
-            stripped = line.strip()
-            # Skip empty lines, comments, headers, and horizontal rules
-            if stripped and not stripped.startswith('#') and not stripped.startswith('<!--') and stripped != '---':
-                has_content = True
-                break
-    
-    return has_content
-
-# ---------- Schema Validation and Repair ----------
-
-# Canonical section list (sections 2-14 that must always be present)
-CANONICAL_SECTIONS = [
-    (2, "Problem Statement"),
-    (3, "Goals and Objectives"),
-    (4, "Non-Goals"),
-    (5, "Stakeholders and Users"),
-    (6, "Assumptions"),
-    (7, "Constraints"),
-    (8, "Functional Requirements"),
-    (9, "Non-Functional Requirements"),
-    (10, "Interfaces and Integrations"),
-    (11, "Data Considerations"),
-    (12, "Risks and Open Issues"),
-    (13, "Success Criteria and Acceptance"),
-    (14, "Out of Scope"),
-]
-
-# Maximum section number (includes Section 15: Approval Record which comes after CANONICAL_SECTIONS)
-MAX_SECTION_NUM = 15
-
-def get_canonical_section_template(section_num: int, section_name: str) -> str:
-    """
-    Get the canonical template for a section.
-    
-    Returns a string with the section header and placeholder content.
-    """
-    header = f"## {section_num}. {section_name}\n\n"
-    placeholder = f"<!-- This section requires content. Please provide details for {section_name}. -->\n\n[Content needed for {section_name}]\n\n"
-    return header + placeholder
-
-def validate_document_schema(requirements: str) -> tuple[bool, str, list]:
-    """
-    Validate critical document structure and schema.
-    
-    This function classifies violations into:
-    - Repairable: Missing sections, empty sections, corrupted formatting
-    - Fatal: Approval misuse, invalid question IDs, structural ambiguity
-    
-    Returns:
-        (is_valid, error_message, repairable_violations)
-        - is_valid: False if fatal violations found
-        - error_message: Description of the issue
-        - repairable_violations: List of (section_num, section_name) tuples for missing sections
-    """
-    lines = requirements.splitlines()
-    repairable_violations = []
-    
-    # Check for required section headers (2-14)
-    for section_num, section_name in CANONICAL_SECTIONS:
-        # Check both section number and name to avoid false positives
-        pattern = rf'##\s+{section_num}\.\s+{re.escape(section_name)}'
-        if not re.search(pattern, requirements):
-            # This is a REPAIRABLE violation - missing section
-            repairable_violations.append((section_num, section_name))
-    
-    # If there are missing sections, this is repairable
-    if repairable_violations:
-        section_list = ", ".join([f"Section {num} ({name})" for num, name in repairable_violations])
-        return False, f"REPAIRABLE: Missing required sections: {section_list}", repairable_violations
-    
-    # Check for FATAL violations: Invalid approval status
-    # Approval status set without meeting criteria or by non-human
-    approval_section_match = re.search(r'## 15\. Approval Record.*?(?=## \d+\.|$)', requirements, re.DOTALL)
-    if approval_section_match:
-        section_text = approval_section_match.group()
-        # Check if status is "Approved" 
-        if re.search(r'Current Status.*Approved', section_text):
-            # This is approved - verify it's legitimate
-            # For now, we'll allow it (assuming it was set by human)
-            # In a future enhancement, we could add more checks here
-            pass
-    
-    # Validate Open Questions schema for FATAL violations
-    open_q_match = re.search(r'### Open Questions\s*\n', requirements)
-    if open_q_match:
-        # Extract Open Questions section
-        start_pos = open_q_match.end()
-        rest = requirements[start_pos:]
-        
-        # Find end of section
-        end_pattern = r'\n---\n\n###'
-        end_match = re.search(end_pattern, rest)
-        if end_match:
-            section_content = rest[:end_match.start()]
-        else:
-            next_section = re.search(r'\n---\n\n## \d+\.', rest)
-            section_content = rest[:next_section.start()] if next_section else rest
-        
-        # Find all question blocks
-        question_blocks = re.finditer(r'####\s+(Q-\d+):', section_content)
-        for q_match in question_blocks:
-            q_id = q_match.group(1)
-            # Extract question block (until next #### or ---)
-            q_start = q_match.start()
-            next_q = re.search(r'\n####\s+Q-\d+:', section_content[q_start + 1:])
-            next_sep = re.search(r'\n---\n', section_content[q_start + 1:])
-            
-            if next_q and next_sep:
-                q_end = min(next_q.start(), next_sep.start()) + q_start + 1
-            elif next_q:
-                q_end = next_q.start() + q_start + 1
-            elif next_sep:
-                q_end = next_sep.start() + q_start + 1
-            else:
-                q_end = len(section_content)
-            
-            q_text = section_content[q_start:q_end]
-            
-            # Validate required fields exist
-            required_fields = ["**Status:**", "**Asked by:**", "**Date:**", 
-                             "**Question:**", "**Answer:**", "**Integration Targets:**"]
-            for field in required_fields:
-                if field not in q_text:
-                    # FATAL: Corrupted question schema
-                    return False, f"FATAL: Question {q_id} missing required field: {field}", []
-            
-            # Validate Status field value
-            status_match = re.search(r'\*\*Status:\*\*\s*(\w+)', q_text)
-            if status_match:
-                status = status_match.group(1)
-                if status not in ["Open", "Resolved", "Deferred"]:
-                    # FATAL: Invalid status value
-                    return False, f"FATAL: Question {q_id} has invalid status: {status} (must be Open, Resolved, or Deferred)", []
-    
-    # Validate that all Question ID references point to canonical Open Questions
-    is_valid, ghost_questions, all_refs = _validate_question_references(requirements)
-    if not is_valid:
-        ghost_list = ", ".join(ghost_questions)
-        return False, f"FATAL: Ghost question references detected - {ghost_list} are referenced but do not exist as canonical Open Questions", []
-    
-    return True, "Schema validation passed", []
-
-def repair_missing_sections(requirements: str, missing_sections: list) -> str:
-    """
-    Repair document by inserting missing sections in correct canonical order.
-    
-    Args:
-        requirements: The current requirements document text
-        missing_sections: List of (section_num, section_name) tuples
-    
-    Returns:
-        Updated requirements document with missing sections inserted
-    """
-    def insert_section_at_index(lines_list: list, index: int, section_num: int, section_name: str) -> None:
-        """Helper to insert a section with proper formatting at the given index.
-        
-        Inserts in reverse order so that all content appears at the target index
-        without manual index adjustment. Order: content lines (reversed), separator, empty line.
-        Final result at index: empty line, separator, section content.
-        """
-        section_content = get_canonical_section_template(section_num, section_name)
-        # Split section_content into individual lines
-        section_lines = section_content.split('\n')
-        # Insert in reverse order to avoid index shifting issues
-        # Each insert pushes previous inserts down, so we end up with correct order
-        for content_line in reversed(section_lines):
-            lines_list.insert(index, content_line)
-        lines_list.insert(index, "---")
-        lines_list.insert(index, "")  # Empty line before separator
-    
-    lines = requirements.split('\n')
-    
-    # Find where each section should be inserted
-    # We need to insert sections in the correct order
-    for section_num, section_name in sorted(missing_sections):
-        # Find the correct insertion point
-        # Look for the section before or after this one
-        inserted = False
-        
-        # First, try to find a section after this one
-        for check_num in range(section_num + 1, MAX_SECTION_NUM + 1):  # Check sections after this one
-            pattern = rf'^##\s+{check_num}\.\s+'
-            for i, line in enumerate(lines):
-                if re.match(pattern, line):
-                    # Found a later section, insert before it
-                    insert_section_at_index(lines, i, section_num, section_name)
-                    inserted = True
-                    break
-            if inserted:
-                break
-        
-        # If not inserted yet, try to find a section before this one
-        if not inserted:
-            for check_num in range(section_num - 1, 0, -1):  # Check sections before this one
-                pattern = rf'^##\s+{check_num}\.\s+'
-                for i, line in enumerate(lines):
-                    if re.match(pattern, line):
-                        # Found an earlier section, insert after it
-                        # Find the end of this section (next ## or end of file)
-                        j = i + 1
-                        while j < len(lines) and not lines[j].strip().startswith('## '):
-                            j += 1
-                        # Insert before the separator or next section
-                        insert_section_at_index(lines, j, section_num, section_name)
-                        inserted = True
-                        break
-                if inserted:
-                    break
-        
-        # If still not inserted, append at the end before section 15 (Approval Record)
-        if not inserted:
-            pattern = r'^##\s+15\.\s+'
-            for i, line in enumerate(lines):
-                if re.match(pattern, line):
-                    insert_section_at_index(lines, i, section_num, section_name)
-                    inserted = True
-                    break
-    
-    return '\n'.join(lines)
-
-
-def repair_ghost_questions(requirements: str, ghost_questions: list) -> str:
-    """
-    Repair ghost questions by creating canonical Open Question entries.
-    
-    Args:
-        requirements: The current requirements document text
-        ghost_questions: List of Question IDs that are referenced but don't exist
-    
-    Returns:
-        Updated requirements document with new Open Question entries
-    """
-    lines = requirements.split('\n')
-    
-    # Find the Open Questions section
-    open_q_index = None
-    for i, line in enumerate(lines):
-        if '### Open Questions' in line:
-            open_q_index = i
-            break
-    
-    if open_q_index is None:
-        # Open Questions section doesn't exist - this should not happen in a valid document
-        # but we'll handle it by creating one
-        # Find the Risks and Open Issues section (Section 12)
-        for i, line in enumerate(lines):
-            if re.match(r'^##\s+12\.\s+Risks and Open Issues', line):
-                # Insert Open Questions subsection after Risks subsection
-                # Find where to insert
-                j = i + 1
-                while j < len(lines):
-                    if lines[j].strip().startswith('###'):
-                        # Found next subsection, insert before it
-                        break
-                    j += 1
-                # Insert the Open Questions header
-                lines.insert(j, "")
-                lines.insert(j + 1, "### Open Questions")
-                lines.insert(j + 2, "")
-                open_q_index = j + 1
-                break
-    
-    if open_q_index is None:
-        # Still no section - shouldn't happen, but fail gracefully
-        return requirements
-    
-    # Find the end of the Open Questions section
-    # Look for the next subsection (###) or separator (---)
-    insert_index = open_q_index + 1
-    found_end = False
-    for i in range(open_q_index + 1, len(lines)):
-        line = lines[i].strip()
-        if line.startswith('###') or line.startswith('---'):
-            insert_index = i
-            found_end = True
-            break
-    
-    if not found_end:
-        insert_index = len(lines)
-    
-    # Get current date
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    
-    # Create all Open Question entries for ghost questions
-    new_entries = []
-    for q_id in sorted(ghost_questions, key=lambda x: int(x.split('-')[1])):
-        # Create the question entry
-        question_entry = f"""#### {q_id}: [Question Title - To Be Provided]
-
-**Status:** Open
-**Asked by:** System (Auto-generated from reference)
-**Date:** {current_date}
-
-**Question:**
-This question was referenced in the document but did not have a canonical definition. Please provide:
-1. A descriptive title for this question
-2. The actual question text
-3. Integration targets where the answer should be applied
-
-**Answer:**
-[Awaiting response]
-
-**Integration Targets:**
-- [To be specified]
-
----
-
-"""
-        new_entries.append(question_entry)
-    
-    # Insert all entries at once
-    if new_entries:
-        combined_entry = ''.join(new_entries)
-        lines.insert(insert_index, combined_entry)
-    
-    return '\n'.join(lines)
-
-
-def is_document_at_approval_gate(requirements: str) -> bool:
-    """
-    Check if document is at approval gate (Ready for Approval or Approved).
-    
-    At this stage, human edits to agent-controlled sections must be rejected.
-    
-    Returns:
-        True if document is Ready for Approval or Approved
-    """
-    # Check Document Control table for approval status
-    # Match more precisely to avoid false positives like "Not Ready for Approval"
-    approval_status_match = re.search(r'\|\s*Approval Status\s*\|\s*([^|]+)\s*\|', requirements)
-    if approval_status_match:
-        status = approval_status_match.group(1).strip()
-        # Exact match for approved states to avoid false positives
-        if status == "Ready for Approval" or status == "Approved":
-            return True
-    
-    # Also check Section 15 (Approval Record) using existing function
-    if is_requirements_approved(requirements):
-        return True
-    
-    return False
 
 # ---------- Mode Determination ----------
 def determine_mode(requirements: str) -> str:
@@ -1509,101 +928,15 @@ def revoke_approval_and_commit(requirements: str, reason: str, commit_message: s
     return REQ_FILE.read_text(encoding="utf-8")
 
 # ---------- Agent Instructions ----------
-def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "", 
-                          human_edits_detected: bool = False, missing_sections: list = None) -> str:
+def get_agent_instructions(mode: str, is_template: bool, intake_content: str = "") -> str:
     """
     Get mode-specific instructions for the agent.
     
     Args:
-        mode: "review", "integrate", or "schema_repair"
+        mode: "review" or "integrate"
         is_template: True if document is version 0.0 (template baseline)
         intake_content: Content from the Intake section (if any)
-        human_edits_detected: True if human edits to protected sections were detected
-        missing_sections: List of (section_num, section_name) tuples for missing sections
     """
-    # Schema repair mode - only used when missing sections detected
-    if mode == "schema_repair":
-        section_list = "\n".join([f"- Section {num}: {name}" for num, name in missing_sections]) if missing_sections else ""
-        return f"""MODE: schema_repair
-
-⚠️  SCHEMA REPAIR REQUIRED ⚠️
-
-The document is missing required sections. These sections have been restored with placeholder content:
-
-{section_list}
-
-Your task:
-1. Review the restored sections with placeholder content
-2. Check if content can be inferred from:
-   - Open Questions (answered or in discussion)
-   - Scratchpad notes (if present in Section 1)
-   - Intake section (if present)
-3. For each restored section:
-   - If content can be safely inferred, populate the section appropriately
-   - If content cannot be inferred, create an Open Question asking for it
-   - NEVER invent requirements or make assumptions
-4. Update Risks and Open Questions as needed
-5. Update Version History to document the repair
-
-OUTPUT FORMAT (required):
-
-## REPAIR_OUTPUT
-
-### POPULATED_SECTIONS
-[For each section you populated with inferred content:]
-- Section: <section heading>
-<content you added>
-
-If no sections could be populated: "No sections populated - all require human input"
-
-### OPEN_QUESTIONS
-[New questions for sections that need human input, in standard format]
-
-If no new questions: "No new questions"
-
-### RISKS
-[Any risks identified during repair]
-
-If no new risks: "No new risks identified"
-
-### VERSION_HISTORY_ENTRY
-Schema repair: Restored missing sections [list section numbers]
-
-DO NOT output the full document.
-DO NOT make up requirements content.
-"""
-    
-    human_edit_notice = ""
-    if human_edits_detected:
-        human_edit_notice = """
-⚠️  HUMAN EDITS DETECTED IN AGENT-CONTROLLED SECTIONS ⚠️
-
-Human edits have been detected in sections 2-14 (agent-controlled).
-
-You MUST normalize and refactor these edits:
-1. Validate structural schema (section headers, question format)
-2. Restore canonical formatting
-3. Extract valuable content and integrate appropriately
-4. Convert ambiguous or unclear edits into Open Questions
-5. Discard edits that violate schema or add no value
-
-CRITICAL RULES:
-- Human edits DO NOT mark questions as resolved
-- Human edits DO NOT satisfy acceptance criteria  
-- Human edits DO NOT advance approval status
-- Human edits DO NOT update version numbers
-- Only YOU may reconcile edits into structured requirements
-- Only YOU may update version fields
-- Only YOU may resolve questions (mechanically, based on integration)
-- Only YOU may recommend approval
-
-If an edit is unclear, partial, or ambiguous:
-- Extract it into a new Open Question
-- Do NOT integrate it directly into requirements
-- Ask for clarification
-
-"""
-    
     intake_notice = ""
     if intake_content:
         intake_notice = f"""
@@ -1639,6 +972,21 @@ This is a template baseline document. Special safeguards apply:
 
 """
     
+    schema_repair_notice = """
+SCHEMA AND CONSISTENCY RESPONSIBILITIES:
+
+You own all document understanding and repair. You MUST:
+1. Detect and repair missing or malformed sections
+2. Detect ghost question references (Q-IDs referenced but not defined) and create entries for them
+3. Validate cross-references between Risks and Open Questions
+4. Ensure internal consistency across all sections
+5. Maintain canonical formatting for all sections
+
+If you find structural issues, repair them in your output.
+Do NOT create Risks that reference non-existent Open Questions.
+Every Q-ID referenced anywhere in the document MUST have a canonical Open Questions entry.
+"""
+    
     if mode == "review":
         intake_instructions = ""
         if intake_content:
@@ -1646,7 +994,7 @@ This is a template baseline document. Special safeguards apply:
 - Process Intake section: Convert unstructured notes into formal Open Questions
 - Clear the Intake section after processing
 """
-        return f"""{human_edit_notice}{intake_notice}{template_warning}MODE: review
+        return f"""{intake_notice}{template_warning}{schema_repair_notice}MODE: review
 
 In review mode, you MUST output ONLY structured patches (NOT a full document).
 
@@ -1654,6 +1002,7 @@ You may:
 - Review document quality and completeness
 - Identify new risks to add
 - Identify new open questions{intake_instructions}
+- Repair missing sections or malformed content
 - Recommend approval status{' (BUT NOT for template baselines - version 0.0)' if is_template else ''}
 
 OUTPUT FORMAT (required):
@@ -1692,7 +1041,7 @@ For each new question, use this format:
 DO NOT output the full document.
 """
     else:  # integrate
-        return f"""{human_edit_notice}MODE: integrate
+        return f"""{schema_repair_notice}MODE: integrate
 
 In integrate mode, you MUST output ONLY structured patches (NOT a full document).
 
@@ -1930,7 +1279,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         # Append new questions (section-based format)
         if questions_content and "No new questions" not in questions_content:
             # Validate that new questions don't have duplicate IDs
-            existing_q_ids = _get_canonical_question_ids('\n'.join(lines))
+            existing_q_ids = {m.group(1) for m in re.finditer(r'####\s+(Q-\d+):', '\n'.join(lines))}
             
             # Extract Q-IDs from new questions
             new_q_ids = set(re.findall(r'####\s+(Q-\d+):', questions_content))
@@ -2008,19 +1357,6 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         
         # Apply integrated sections and track successful integrations
         if integrated_content:
-            # First, validate that all Question IDs referenced in integration exist
-            canonical_q_ids = _get_canonical_question_ids('\n'.join(lines))
-            referenced_q_ids = set(re.findall(r'- Question ID:\s*(Q-\d+)', integrated_content))
-            
-            invalid_q_ids = referenced_q_ids - canonical_q_ids
-            if invalid_q_ids:
-                invalid_list = ", ".join(sorted(invalid_q_ids))
-                print(f"ERROR: Agent referenced non-existent Question IDs during integration: {invalid_list}")
-                print("Integration cannot proceed with ghost question references.")
-                print("These questions must exist as canonical Open Questions before integration.")
-                # Skip integration to prevent ghost references
-                integrated_content = ""
-            
             # Parse section updates with question IDs
             # Updated pattern to match: "- Question ID: Q-XXX\n- Section: ..."
             section_pattern = re.compile(
@@ -2248,15 +1584,21 @@ def main():
     # Handle reset mode - this happens BEFORE any other checks
     if args.reset_template:
         reset_requirements_document()
-        # Exit after reset - no further processing needed
         sys.exit(0)
     
-    # Check API key
+    # --- Pre-flight checks (fail fast on catastrophic errors) ---
     if not os.getenv("ANTHROPIC_API_KEY"):
         print("ERROR: ANTHROPIC_API_KEY not set")
         sys.exit(1)
     
-    # Verify clean working tree
+    if not REQ_FILE.exists():
+        print(f"ERROR: Requirements file not found: {REQ_FILE}")
+        sys.exit(1)
+    
+    if not AGENT_PROFILE.exists():
+        print(f"ERROR: Agent profile not found: {AGENT_PROFILE}")
+        sys.exit(1)
+    
     print("\n[Pre-flight] Checking git status...")
     if not is_working_tree_clean():
         print("ERROR: Working tree has uncommitted changes")
@@ -2266,252 +1608,40 @@ def main():
         sys.exit(1)
     print("✓ Working tree is clean")
     
-    # Read files first (needed for schema validation)
+    # --- Load document ---
     requirements = REQ_FILE.read_text(encoding="utf-8")
     agent_profile = AGENT_PROFILE.read_text(encoding="utf-8")
     
-    # Validate document schema and check for repairable violations
-    print("\n[Schema] Validating document structure...")
-    is_valid, schema_msg, repairable_violations = validate_document_schema(requirements)
-    
-    # Check for ghost questions separately (they're FATAL but repairable)
-    ghost_check_valid, ghost_questions, all_refs = _validate_question_references(requirements)
-    
-    if not is_valid:
-        # Check if this is due to ghost questions
-        if "Ghost question references detected" in schema_msg and ghost_questions:
-            # REPAIRABLE: Ghost questions - create Open Question entries
-            print(f"⚠️  {schema_msg}")
-            print("\n[Ghost Question Repair] Creating canonical Open Question entries...")
-            
-            # Repair ghost questions
-            requirements = repair_ghost_questions(requirements, ghost_questions)
-            REQ_FILE.write_text(requirements, encoding="utf-8")
-            
-            print("✓ Ghost questions repaired:")
-            for q_id in sorted(ghost_questions):
-                print(f"  - {q_id}: Auto-generated placeholder created")
-            
-            # Auto-commit if changes exist
-            if not args.no_commit:
-                print("\n[Commit] Committing ghost question repair...")
-                ghost_list = ", ".join(sorted(ghost_questions))
-                msg = f"""requirements: ghost question repair
-
-- Created canonical Open Question entries for: {ghost_list}
-- These questions were referenced but did not exist
-- Placeholders created to maintain document integrity
-
-Agent mode: ghost_repair"""
-                subprocess.check_call(
-                    ["git", "add", str(REQ_FILE)],
-                    cwd=REPO_ROOT
-                )
-                subprocess.check_call(
-                    ["git", "commit", "-m", msg],
-                    cwd=REPO_ROOT
-                )
-                print("✓ Ghost question repair committed")
-            
-            print("\n[Ghost Question Repair] Repair completed. Questions now canonical.")
-            print("Please update the auto-generated question entries with actual content.")
-            sys.exit(0)
-        
-        # Check if this is a repairable violation (missing sections)
-        elif repairable_violations:
-            # REPAIRABLE: Missing sections - agent will repair
-            print(f"⚠️  {schema_msg}")
-            print("\n[Schema Repair] Restoring missing sections with placeholders...")
-            
-            # Repair the document structure
-            requirements = repair_missing_sections(requirements, repairable_violations)
-            REQ_FILE.write_text(requirements, encoding="utf-8")
-            
-            print("✓ Missing sections restored with placeholder content")
-            for section_num, section_name in repairable_violations:
-                print(f"  - Section {section_num}: {section_name}")
-            
-            # Now invoke agent in schema_repair mode to populate or ask questions
-            print("\n[Agent] Invoking Requirements Agent in schema_repair mode...")
-            
-            # Get user context
-            print("\nOptional context for repair (Ctrl+D to finish):")
-            user_context = sys.stdin.read().strip()
-            
-            # Build prompt for schema repair
-            instructions = get_agent_instructions("schema_repair", False, "", False, repairable_violations)
-            prompt = f"""You are the Requirements Agent.
-
-Agent profile:
----
-{agent_profile}
----
-
-Current requirements document (with restored sections):
----
-{requirements}
----
-
-Human context:
----
-{user_context}
----
-
-{instructions}
-
-CRITICAL: Output ONLY the structured patch format specified above.
-DO NOT output the full requirements document.
-Your output will be parsed and applied as patches.
-"""
-            
-            # Call agent
-            print(f"\n[Agent] Calling {MODEL} for schema repair...")
-            
-            # Import anthropic only when needed
-            try:
-                from anthropic import Anthropic
-            except ImportError:
-                print("ERROR: anthropic package not installed")
-                print("Install with: pip install anthropic")
-                sys.exit(1)
-            
-            client = Anthropic()
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            agent_output = response.content[0].text
-            
-            # Validate output format
-            if "## REPAIR_OUTPUT" not in agent_output:
-                print("\nERROR: Agent output missing ## REPAIR_OUTPUT")
-                print("Agent must output structured patches for repair.")
-                sys.exit(1)
-            
-            print("✓ Agent output validated")
-            
-            # Apply repair patches (similar to review mode)
-            # Note: We use "review" mode for patching because schema_repair output
-            # uses the same patch structure (RISKS, OPEN_QUESTIONS, etc.)
-            print(f"\n[Patching] Applying repair patches...")
-            updated_doc, _ = apply_patches(requirements, agent_output, "review")
-            
-            # Write updated document
-            REQ_FILE.write_text(updated_doc, encoding="utf-8")
-            print("✓ Document updated with repairs")
-            
-            # Auto-commit if changes exist
-            if not args.no_commit:
-                print("\n[Commit] Committing schema repair...")
-                if commit_changes("schema_repair"):
-                    print("✓ Schema repair committed")
-                else:
-                    print("✗ Commit failed")
-            
-            print("\n[Schema Repair] Repair completed. Document is now structurally valid.")
-            print("You may now run the script again for normal review/integrate workflow.")
-            sys.exit(0)
-            
-        else:
-            # FATAL: Non-repairable violation
-            print(f"ERROR: {schema_msg}")
-            print("\nFatal schema violation detected. This cannot be repaired automatically.")
-            print("Please fix the violations manually before proceeding.")
-            sys.exit(1)
-    
-    print(f"✓ {schema_msg}")
-    
-    # Check for human edits to protected sections
-    print("\n[Edit Detection] Checking for human edits to agent-owned sections...")
-    has_edits, edit_msg = detect_human_edits_to_protected_sections()
-    
-    # If at approval gate, reject human edits
-    if has_edits and is_document_at_approval_gate(requirements):
-        print("ERROR: Document is at approval gate - human edits rejected")
-        print(f"\n{edit_msg}")
-        print("\nOnce a document reaches 'Ready for Approval' or 'Approved' status,")
-        print("human edits to agent-controlled sections are not allowed.")
-        print("\nTo make changes at this stage:")
-        print("  1. Add notes to Scratchpad (Section 1)")
-        print("  2. Convert them to Open Questions via the agent")
-        print("  3. Provide answers")
-        print("  4. Run this script for agent integration")
-        print("  5. Go through a fresh review cycle")
-        sys.exit(1)
-    
-    # Human edits detected but not at approval gate - will be normalized
-    human_edits_detected = False
-    if has_edits:
-        print(f"⚠️  {edit_msg}")
-        print("  → Agent will normalize and refactor these edits")
-        human_edits_detected = True
-    else:
-        print(f"✓ {edit_msg}")
-    
-    # Get user context
-    print("\nOptional context (Ctrl+D to finish):")
-    user_context = sys.stdin.read().strip()
-    
-    # Parse Open Questions to validate format
-    print("\n[Format] Parsing Open Questions section...")
-    questions = _parse_open_questions_section(requirements)
-    print(f"✓ Found {len(questions)} questions")
-    resolved_count = sum(1 for q in questions if q['status'].lower().startswith('resolved'))
-    pending_count = sum(1 for q in questions if q['answer'] and not q['status'].lower().startswith('resolved'))
-    print(f"  - {resolved_count} resolved")
-    print(f"  - {pending_count} pending integration")
-    
-    # Check for new unresolved input (answered questions pending integration)
-    if pending_count > 0:
-        print("\n[Approval Revocation] Answered questions pending integration detected")
-        
-        # Check if requirements were previously approved
-        if is_requirements_approved(requirements):
-            requirements = revoke_approval_and_commit(
-                requirements,
-                "answered questions pending integration",
-                "revoke: answered questions pending integration"
-            )
-    
-    # Parse Intake section
-    print("\n[Intake] Parsing Intake section...")
-    intake_content = _parse_intake_section(requirements)
-    if intake_content:
-        print(f"✓ Found Intake content ({len(intake_content)} chars)")
-        print("  → Will be converted to Open Questions")
-        
-        # New human input invalidates approval - enforce closed-loop re-review
-        print("\n[Approval Revocation] New human input detected in Intake section")
-        
-        # Check if requirements were previously approved
-        if is_requirements_approved(requirements):
-            requirements = revoke_approval_and_commit(
-                requirements,
-                "new human input in Intake section",
-                "revoke: new human input in Intake section"
-            )
-        else:
-            print("  ✓ Requirements not currently approved - no revocation needed")
-        
-        print("  → New input will trigger question generation and require re-approval")
-    else:
-        print("✓ Intake section is empty")
-    
-    # Check document version for template baseline detection
+    # --- Detect high-level document state ---
     version_str, major, minor = get_document_version(requirements)
     is_template = is_template_baseline(requirements)
-    print(f"\n[Version] Document version: {version_str}")
+    print(f"\n[State] Document version: {version_str}")
     if is_template:
         print("  ⚠️  Template baseline detected - special safeguards active")
     
+    # Parse Intake section (needed for agent context)
+    intake_content = _parse_intake_section(requirements)
+    if intake_content:
+        print(f"✓ Found Intake content ({len(intake_content)} chars)")
+    
     # Determine mode
     mode = determine_mode(requirements)
-    print(f"\n[Mode] Running in {mode} mode")
+    print(f"[Mode] Running in {mode} mode")
     
-    # Build prompt
-    instructions = get_agent_instructions(mode, is_template, intake_content, human_edits_detected)
+    # --- Enforce lifecycle gate: revoke approval on new input ---
+    if intake_content or _has_pending_answers(requirements):
+        if is_requirements_approved(requirements):
+            reason = "new human input" if intake_content else "answered questions pending integration"
+            requirements = revoke_approval_and_commit(
+                requirements, reason, f"revoke: {reason}"
+            )
+    
+    # --- Get user context ---
+    print("\nOptional context (Ctrl+D to finish):")
+    user_context = sys.stdin.read().strip()
+    
+    # --- Invoke agent ---
+    instructions = get_agent_instructions(mode, is_template, intake_content)
     prompt = f"""You are the Requirements Agent.
 
 Agent profile:
@@ -2536,10 +1666,8 @@ DO NOT output the full requirements document.
 Your output will be parsed and applied as patches.
 """
     
-    # Call agent
     print(f"\n[Agent] Calling {MODEL}...")
     
-    # Import anthropic only when needed
     try:
         from anthropic import Anthropic
     except ImportError:
@@ -2556,7 +1684,7 @@ Your output will be parsed and applied as patches.
     
     agent_output = response.content[0].text
     
-    # Validate output format (simple check)
+    # Validate output format (simple structural check)
     expected_marker = "## REVIEW_OUTPUT" if mode == "review" else "## INTEGRATION_OUTPUT"
     if expected_marker not in agent_output:
         print(f"\nERROR: Agent output missing {expected_marker}")
@@ -2565,7 +1693,7 @@ Your output will be parsed and applied as patches.
     
     print("✓ Agent output validated")
     
-    # Apply patches
+    # --- Apply patches ---
     print(f"\n[Patching] Applying {mode} patches...")
     updated_doc, integration_info = apply_patches(requirements, agent_output, mode)
     
@@ -2584,7 +1712,7 @@ Your output will be parsed and applied as patches.
     REQ_FILE.write_text(updated_doc, encoding="utf-8")
     print("✓ Document updated")
     
-    # Auto-commit if changes exist
+    # --- Auto-commit ---
     if not args.no_commit:
         print("\n[Commit] Checking for changes to commit...")
         is_valid, msg = verify_only_requirements_modified()
@@ -2603,9 +1731,7 @@ Your output will be parsed and applied as patches.
     
     print(f"\n{mode.capitalize()} pass completed.")
     
-    # Check for approval and record state transition (one-time)
-    # Reload requirements after commit to ensure we have the latest state from disk
-    # (patches may have been applied and committed by commit_changes)
+    # --- Check for approval and record state transition ---
     requirements = REQ_FILE.read_text(encoding="utf-8")
     
     if is_requirements_approved(requirements):
@@ -2617,7 +1743,6 @@ Your output will be parsed and applied as patches.
         else:
             print("→ First-time approval detected. Recording planning handoff readiness...")
             
-            # Create and commit the state marker
             create_planning_state_marker()
             print(f"✓ Created state marker: {PLANNING_STATE_MARKER.relative_to(REPO_ROOT)}")
             

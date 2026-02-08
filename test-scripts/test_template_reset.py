@@ -131,18 +131,32 @@ def test_idempotency():
 
 
 def test_schema_compliance():
-    """Test that template passes basic schema validation requirements."""
+    """Test that template has all required sections present."""
     print("\n[Test] Validating template schema compliance...")
     
-    # Import validation function
-    from invoke_requirements_agent import validate_document_schema
+    import re
     
-    # Validate the template
-    is_valid, message, repairable = validate_document_schema(CANONICAL_TEMPLATE)
+    # Canonical section list (sections 2-14 that must always be present)
+    canonical_sections = [
+        (2, "Problem Statement"),
+        (3, "Goals and Objectives"),
+        (4, "Non-Goals"),
+        (5, "Stakeholders and Users"),
+        (6, "Assumptions"),
+        (7, "Constraints"),
+        (8, "Functional Requirements"),
+        (9, "Non-Functional Requirements"),
+        (10, "Interfaces and Integrations"),
+        (11, "Data Considerations"),
+        (12, "Risks and Open Issues"),
+        (13, "Success Criteria and Acceptance"),
+        (14, "Out of Scope"),
+    ]
     
-    # Template should pass validation (no missing sections, no fatal violations)
-    assert is_valid, f"Template must pass schema validation: {message}"
-    assert len(repairable) == 0, f"Template must have all sections present: {repairable}"
+    for section_num, section_name in canonical_sections:
+        pattern = rf'##\s+{section_num}\.\s+{re.escape(section_name)}'
+        assert re.search(pattern, CANONICAL_TEMPLATE), \
+            f"Template must contain Section {section_num}: {section_name}"
     
     print("✓ Template schema compliance validation passed")
 
