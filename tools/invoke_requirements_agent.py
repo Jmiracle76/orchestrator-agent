@@ -30,6 +30,7 @@ import argparse
 import subprocess
 import re
 from pathlib import Path
+from typing import List
 
 # ---------- Configuration ----------
 MODEL = "claude-sonnet-4-5-20250929"
@@ -38,6 +39,7 @@ MAX_TOKENS = 4000
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQ_FILE = REPO_ROOT / "docs" / "requirements.md"
 AGENT_PROFILE = REPO_ROOT / "agent-profiles" / "requirements-agent.md"
+SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\Z)'
 # ---------- Canonical Template ----------
 CANONICAL_TEMPLATE = """# Requirements Document
 
@@ -383,10 +385,9 @@ INTAKE_PLACEHOLDER = (
     "to formal Open Questions by the Requirements Agent.]"
 )
 
-SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\Z)'
 
 
-def missing_required_sections(content: str) -> list[str]:
+def missing_required_sections(content: str) -> List[str]:
     """Return a list of missing required top-level sections."""
     missing = []
     for section in REQUIRED_SECTIONS:
@@ -499,7 +500,7 @@ def _first_nonempty_line(text: str) -> str:
     return ""
 
 
-def _update_status(lines: list[str], status_update: str) -> None:
+def _update_status(lines: List[str], status_update: str) -> None:
     status_value = _first_nonempty_line(status_update)
     if not status_value:
         return
@@ -522,7 +523,7 @@ def _should_apply_patch(content: str, sentinels: tuple[str, ...]) -> bool:
     return all(sentinel not in normalized for sentinel in sentinels)
 
 
-def _replace_subsection(lines: list[str], header: str, content: str) -> bool:
+def _replace_subsection(lines: List[str], header: str, content: str) -> bool:
     if not content:
         return False
     content_lines = [line.rstrip() for line in content.strip().splitlines()]
@@ -542,10 +543,6 @@ def _replace_subsection(lines: list[str], header: str, content: str) -> bool:
                 end = len(lines)
             replace_start = start
             while replace_start < end and "<!--" in lines[replace_start]:
-                if "-->" in lines[replace_start]:
-                    replace_start += 1
-                    continue
-                replace_start += 1
                 while replace_start < end and "-->" not in lines[replace_start]:
                     replace_start += 1
                 if replace_start < end:
@@ -556,7 +553,7 @@ def _replace_subsection(lines: list[str], header: str, content: str) -> bool:
     return False
 
 
-def _append_to_section(lines: list[str], section_heading: str, content: str) -> bool:
+def _append_to_section(lines: List[str], section_heading: str, content: str) -> bool:
     if not content:
         return False
     content_lines = [line.rstrip() for line in content.strip().splitlines()]
@@ -572,7 +569,7 @@ def _append_to_section(lines: list[str], section_heading: str, content: str) -> 
     return False
 
 
-def _apply_integrated_sections(lines: list[str], integrated_content: str) -> None:
+def _apply_integrated_sections(lines: List[str], integrated_content: str) -> None:
     if not integrated_content:
         return
     # Expected format per block:
@@ -709,16 +706,16 @@ Your output will be parsed and applied as patches.
     print(f"\n[Patching] Applying {mode} patches...")
     updated_doc = apply_patches(requirements, agent_output, mode)
 
-    # Write updated document
-    REQ_FILE.write_text(updated_doc, encoding="utf-8")
-    print("✓ Document updated")
-
     missing_sections = missing_required_sections(updated_doc)
     if missing_sections:
         print("\nERROR: Missing required top-level sections:")
         for section in missing_sections:
             print(f"  - {section}")
         sys.exit(1)
+
+    # Write updated document
+    REQ_FILE.write_text(updated_doc, encoding="utf-8")
+    print("✓ Document updated")
 
     if not args.no_commit:
         has_changes = subprocess.call(
