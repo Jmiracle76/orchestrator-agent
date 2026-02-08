@@ -543,14 +543,14 @@ def _update_approval_status(lines: list, status_update: str) -> None:
 # ---------- Placeholder Cleanup ----------
 def _cleanup_template_placeholders(lines: list) -> None:
     """
-    Clean up template baseline placeholders after transitioning to active document (0.0 → 0.1+).
+    Clean up template baseline placeholders after transitioning to active document (0.0 -> 0.1+).
     
     This function:
     - Removes placeholder text like [Date], [Author], etc. from content sections
     - Removes duplicated scaffolding (redundant template examples)
     - Preserves document structure
     
-    Called once and only once during the 0.0 → 0.1+ version transition.
+    Called once and only once during the 0.0 -> 0.1+ version transition.
     """
     # Identify line ranges for content sections 2-14 (not section 1 or 15)
     # We'll track section boundaries
@@ -830,13 +830,13 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                     break
             break
     
-    # Detect template baseline → active document transition (0.0 → 0.1+)
+    # Detect template baseline -> active document transition (0.0 -> 0.1+)
     # This is the ONE-TIME placeholder cleanup trigger
     is_version_transition = (previous_version == "0.0" and version_to_use != "0.0")
     
     if is_version_transition:
-        print(f"\n[Version Transition] Detected 0.0 → {version_to_use} transition")
-        print("  → Cleaning up template placeholders (one-time operation)")
+        print(f"\n[Version Transition] Detected 0.0 -> {version_to_use} transition")
+        print("  -> Cleaning up template placeholders (one-time operation)")
         _cleanup_template_placeholders(lines)
         print("  ✓ Placeholder cleanup complete")
     
