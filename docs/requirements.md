@@ -13,7 +13,7 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** [Project Name]
-**Version:** 0.1
+**Version:** 0.0
 **Status:** Draft
 **Last Updated:** [Date]
 **Approved By:** Pending
@@ -28,9 +28,9 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.1 |
-| Last Modified | 2026-02-08 |
-| Modified By | Requirements Agent |
+| Current Version | 0.0 |
+| Last Modified | [Date] |
+| Modified By | Template |
 | Approval Status | Pending - Revisions Required |
 | Approved By | Pending |
 | Approval Date | Pending |
@@ -42,7 +42,6 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 0.1 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
 
 ---
@@ -53,7 +52,7 @@
 <!-- Must be specific, observable, and defensible -->
 <!-- Focus on: What is broken? What pain exists? What is the measurable impact? -->
 
-
+[Content needed for Problem Statement]
 
 ---
 
@@ -63,15 +62,15 @@
 
 <!-- The must-have outcomes that define project success -->
 
-1. 
-2. 
+1. [Primary goal 1]
+2. [Primary goal 2]
 
 ### Secondary Goals
 
 <!-- Nice-to-have outcomes that add value but are not success-critical -->
 
-1. 
-2. 
+1. [Secondary goal 1]
+2. [Secondary goal 2]
 
 ---
 
@@ -82,8 +81,8 @@
 
 This project explicitly does NOT include:
 
-1. 
-2. 
+1. [Non-goal 1]
+2. [Non-goal 2]
 
 ---
 
@@ -93,15 +92,15 @@ This project explicitly does NOT include:
 
 <!-- Who are the decision makers and primary interested parties? -->
 
-- 
-- 
+- [Stakeholder 1]
+- [Stakeholder 2]
 
 ### End Users
 
 <!-- Who will directly use or be affected by this system? -->
 
-- 
-- 
+- [User group 1]
+- [User group 2]
 
 ---
 
@@ -110,8 +109,8 @@ This project explicitly does NOT include:
 <!-- List assumptions made during requirements definition -->
 <!-- These are things taken as true but not verified -->
 
-1. 
-2. 
+1. [Assumption 1]
+2. [Assumption 2]
 
 ---
 
@@ -121,40 +120,40 @@ This project explicitly does NOT include:
 
 <!-- Technology or platform limitations -->
 
-- 
-- 
+- [Technical constraint 1]
+- [Technical constraint 2]
 
 ### Business Constraints
 
 <!-- Budget, timeline, or organizational limitations -->
 
-- 
-- 
+- [Business constraint 1]
+- [Business constraint 2]
 
 ### Resource Constraints
 
 <!-- Team, skill, or tooling limitations -->
 
-- 
-- 
+- [Resource constraint 1]
+- [Resource constraint 2]
 
 ---
 
 ## 8. Functional Requirements
 
 <!-- What the system must DO -->
-<!-- Format: FR-XXX:  -->
+<!-- Format: FR-XXX: [Name] -->
 <!-- Each requirement must have: Description, Priority, Acceptance Criteria -->
 
-### FR-001: 
+### FR-001: [Requirement Name]
 
-**Description:** 
+**Description:** [What this requirement delivers]
 
-**Priority:** 
+**Priority:** [High | Medium | Low]
 
 **Acceptance Criteria:**
-- 
-- 
+- [Criterion 1]
+- [Criterion 2]
 
 ---
 
@@ -164,13 +163,13 @@ This project explicitly does NOT include:
 <!-- Quality attributes: performance, security, usability, etc. -->
 <!-- Must be measurable -->
 
-### NFR-001: 
+### NFR-001: [Requirement Name]
 
-**Description:** 
+**Description:** [What quality attribute this addresses]
 
-**Target:** 
+**Target:** [Measurable target or threshold]
 
-**Measurement Method:** 
+**Measurement Method:** [How this will be verified]
 
 ---
 
@@ -180,15 +179,15 @@ This project explicitly does NOT include:
 
 <!-- Systems this project must integrate with -->
 
-- : 
-- : 
+- [System 1]: [Integration purpose]
+- [System 2]: [Integration purpose]
 
 ### Data Exchange
 
 <!-- What data flows in/out and in what format -->
 
-- : 
-- : 
+- [Data flow 1]: [Format and frequency]
+- [Data flow 2]: [Format and frequency]
 
 ---
 
@@ -198,22 +197,22 @@ This project explicitly does NOT include:
 
 <!-- What data is needed, created, or managed -->
 
-- 
-- 
+- [Data requirement 1]
+- [Data requirement 2]
 
 ### Privacy & Security
 
 <!-- Data protection, compliance, and security requirements -->
 
-- 
-- 
+- [Privacy requirement 1]
+- [Security requirement 2]
 
 ### Data Retention
 
 <!-- Define how long data is kept and where -->
 
-- 
-- 
+- [Retention policy 1]
+- [Retention policy 2]
 
 ---
 
@@ -231,16 +230,23 @@ This project explicitly does NOT include:
 
 ---
 
-
-**R-002 Added:**
-
-| Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
-|---------|-------------|-------------|--------|---------------------|-------|
-| R-002 | Unclear orchestration scope and boundaries | High | High | Define explicit scope boundaries for orchestrator agent via Open Questions Q-001 through Q-007. Document what orchestrator DOES and DOES NOT own. | Product Owner |
-| R-003 | Agent interaction model undefined | High | High | Clarify agent execution model, sequencing rules, and handoff protocols via Q-003, Q-004, Q-005 | Product Owner |
-| R-004 | Tooling scope creep mechanism unknown | Medium | Medium | Identify root causes of script bloat and define boundaries via Q-006 | Product Owner |
-
 ### Intake
+
+<!-- Human notes and unstructured thoughts go here -->
+<!-- Requirements Agent processes this section and converts ambiguities into Open Questions -->
+<!-- This section is cleared after processing -->
+
+The project currently consists of multiple AI agents (requirements, planning, orchestration candidates) and supporting invocation scripts that are evolving organically. As functionality grows, agent behavior has become inconsistent, scope boundaries are unclear, and tooling changes frequently exceed intended scope, resulting in bloated scripts, unintended side effects, and manual cleanup.
+
+There is no dedicated planning/orchestrator agent responsible for:
+
+- Interpreting project state
+- Sequencing agent execution
+- Enforcing lifecycle boundaries
+- Translating approved requirements into structured execution plans
+
+Without a formal orchestrator, agent interactions are brittle, difficult to reason about, and prone to uncontrolled expansion.
+
 
 
 
@@ -261,15 +267,15 @@ This project explicitly does NOT include:
 
 <!-- Define the overall measures of project success -->
 
-1. 
-2. 
+1. [Success criterion 1]
+2. [Success criterion 2]
 
 ### Acceptance Criteria
 
 <!-- These are the criteria that must be met for the project to be considered complete -->
 
-- 
-- 
+- [Acceptance criterion 1]
+- [Acceptance criterion 2]
 
 ---
 
@@ -280,8 +286,8 @@ This project explicitly does NOT include:
 
 The following items are explicitly OUT OF SCOPE for this project:
 
-1. 
-2. 
+1. [Out of scope item 1]
+2. [Out of scope item 2]
 
 ---
 
