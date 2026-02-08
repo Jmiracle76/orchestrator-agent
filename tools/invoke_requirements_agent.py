@@ -31,6 +31,8 @@ REQ_FILE = REPO_ROOT / "docs" / "requirements.md"
 AGENT_PROFILE = REPO_ROOT / "agent-profiles" / "requirements-agent.md"
 PLANNING_STATE_MARKER = REPO_ROOT / ".agent_state" / "requirements_approved"
 
+# Regex pattern for detecting section boundaries (### with space or end of string)
+SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\Z)'
 # ---------- Canonical Template ----------
 CANONICAL_TEMPLATE = """# Requirements Document
 
@@ -520,6 +522,95 @@ def _has_pending_answers(content: str) -> bool:
     
     return False
 
+
+def _get_canonical_question_ids(content: str) -> set:
+    """
+    Extract all canonical Question IDs from the Open Questions section.
+    
+    Returns a set of Question IDs (e.g., {'Q-001', 'Q-002', ...})
+    """
+    questions = _parse_open_questions_section(content)
+    return {q['id'] for q in questions}
+
+
+def _find_question_id_references(content: str) -> dict:
+    """
+    Find all Question ID references in the document outside of the Open Questions section.
+    
+    Searches for patterns like:
+    - Q-001, Q-002, etc. in text
+    - (Answer to Q-003)
+    - Q-004 through Q-010
+    - References in risks, source attributions, etc.
+    
+    Returns:
+        Dictionary mapping question IDs to list of contexts where they appear
+        Format: {'Q-001': ['line 150: Source: Product Owner (Answer to Q-001)', ...], ...}
+    """
+    references = {}
+    
+    # Remove the Open Questions section to avoid counting definitions as references
+    open_q_match = re.search(r'### Open Questions\n', content)
+    if open_q_match:
+        start_pos = open_q_match.start()
+        # Find end of Open Questions section
+        rest = content[start_pos:]
+        # Look for next subsection (###) or major section (##)
+        end_pattern = r'\n###\s'
+        end_match = re.search(end_pattern, rest)
+        if end_match:
+            end_pos = start_pos + end_match.start()
+        else:
+            # Find next major section
+            next_section = re.search(r'\n## \d+\.', rest)
+            end_pos = start_pos + next_section.start() if next_section else len(content)
+        
+        # Search only outside Open Questions section
+        search_content = content[:start_pos] + content[end_pos:]
+    else:
+        search_content = content
+    
+    # Pattern to match Question IDs: Q-XXX where XXX is digits
+    pattern = r'Q-(\d+)'
+    
+    lines = search_content.splitlines()
+    for line_num, line in enumerate(lines, 1):
+        matches = re.finditer(pattern, line)
+        for match in matches:
+            q_id = match.group(0)
+            context = f"line {line_num}: {line.strip()[:100]}"  # First 100 chars of line
+            if q_id not in references:
+                references[q_id] = []
+            references[q_id].append(context)
+    
+    return references
+
+
+def _validate_question_references(content: str) -> tuple[bool, list, list]:
+    """
+    Validate that all Question ID references point to canonical Open Questions.
+    
+    Returns:
+        (is_valid, ghost_questions, all_references)
+        - is_valid: True if all references are valid
+        - ghost_questions: List of Question IDs that are referenced but don't exist
+        - all_references: List of all referenced Question IDs with their contexts
+    """
+    canonical_ids = _get_canonical_question_ids(content)
+    references = _find_question_id_references(content)
+    
+    ghost_questions = []
+    all_references = []
+    
+    for q_id, contexts in references.items():
+        all_references.append((q_id, contexts))
+        if q_id not in canonical_ids:
+            ghost_questions.append(q_id)
+    
+    is_valid = len(ghost_questions) == 0
+    return is_valid, ghost_questions, all_references
+
+
 # ---------- Git Helpers ----------
 def git_status_porcelain() -> str:
     """Get git status in porcelain format."""
@@ -991,6 +1082,12 @@ def validate_document_schema(requirements: str) -> tuple[bool, str, list]:
                     # FATAL: Invalid status value
                     return False, f"FATAL: Question {q_id} has invalid status: {status} (must be Open, Resolved, or Deferred)", []
     
+    # Validate that all Question ID references point to canonical Open Questions
+    is_valid, ghost_questions, all_refs = _validate_question_references(requirements)
+    if not is_valid:
+        ghost_list = ", ".join(ghost_questions)
+        return False, f"FATAL: Ghost question references detected - {ghost_list} are referenced but do not exist as canonical Open Questions", []
+    
     return True, "Schema validation passed", []
 
 def repair_missing_sections(requirements: str, missing_sections: list) -> str:
@@ -1070,6 +1167,104 @@ def repair_missing_sections(requirements: str, missing_sections: list) -> str:
                     break
     
     return '\n'.join(lines)
+
+
+def repair_ghost_questions(requirements: str, ghost_questions: list) -> str:
+    """
+    Repair ghost questions by creating canonical Open Question entries.
+    
+    Args:
+        requirements: The current requirements document text
+        ghost_questions: List of Question IDs that are referenced but don't exist
+    
+    Returns:
+        Updated requirements document with new Open Question entries
+    """
+    lines = requirements.split('\n')
+    
+    # Find the Open Questions section
+    open_q_index = None
+    for i, line in enumerate(lines):
+        if '### Open Questions' in line:
+            open_q_index = i
+            break
+    
+    if open_q_index is None:
+        # Open Questions section doesn't exist - this should not happen in a valid document
+        # but we'll handle it by creating one
+        # Find the Risks and Open Issues section (Section 12)
+        for i, line in enumerate(lines):
+            if re.match(r'^##\s+12\.\s+Risks and Open Issues', line):
+                # Insert Open Questions subsection after Risks subsection
+                # Find where to insert
+                j = i + 1
+                while j < len(lines):
+                    if lines[j].strip().startswith('###'):
+                        # Found next subsection, insert before it
+                        break
+                    j += 1
+                # Insert the Open Questions header
+                lines.insert(j, "")
+                lines.insert(j + 1, "### Open Questions")
+                lines.insert(j + 2, "")
+                open_q_index = j + 1
+                break
+    
+    if open_q_index is None:
+        # Still no section - shouldn't happen, but fail gracefully
+        return requirements
+    
+    # Find the end of the Open Questions section
+    # Look for the next subsection (###) or separator (---)
+    insert_index = open_q_index + 1
+    found_end = False
+    for i in range(open_q_index + 1, len(lines)):
+        line = lines[i].strip()
+        if line.startswith('###') or line.startswith('---'):
+            insert_index = i
+            found_end = True
+            break
+    
+    if not found_end:
+        insert_index = len(lines)
+    
+    # Get current date
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    
+    # Create all Open Question entries for ghost questions
+    new_entries = []
+    for q_id in sorted(ghost_questions, key=lambda x: int(x.split('-')[1])):
+        # Create the question entry
+        question_entry = f"""#### {q_id}: [Question Title - To Be Provided]
+
+**Status:** Open
+**Asked by:** System (Auto-generated from reference)
+**Date:** {current_date}
+
+**Question:**
+This question was referenced in the document but did not have a canonical definition. Please provide:
+1. A descriptive title for this question
+2. The actual question text
+3. Integration targets where the answer should be applied
+
+**Answer:**
+[Awaiting response]
+
+**Integration Targets:**
+- [To be specified]
+
+---
+
+"""
+        new_entries.append(question_entry)
+    
+    # Insert all entries at once
+    if new_entries:
+        combined_entry = ''.join(new_entries)
+        lines.insert(insert_index, combined_entry)
+    
+    return '\n'.join(lines)
+
 
 def is_document_at_approval_gate(requirements: str) -> bool:
     """
@@ -1553,35 +1748,61 @@ def _cleanup_template_placeholders(lines: list) -> None:
     - Removes placeholder text like [Date], [Author], etc. from content sections
     - Removes duplicated scaffolding (redundant template examples)
     - Preserves document structure
+    - EXCLUDES Open Questions section (brackets are intentional there)
     
     Called once and only once during the 0.0 -> 0.1+ version transition.
     """
     # Identify line ranges for content sections 2-14 (not section 1 or 15)
-    # We'll track section boundaries
+    # But EXCLUDE the Open Questions subsection within section 12
     section_ranges = []
     current_section = None
     current_start = None
+    in_open_questions = False
     
     for i, line in enumerate(lines):
+        # Check if we're entering Open Questions subsection
+        if '### Open Questions' in line:
+            # Save section up to this point if it was in range 2-14
+            if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+                section_ranges.append((current_start, i))
+            in_open_questions = True
+            current_start = None
+            continue
+        
+        # Check if we're exiting Open Questions subsection (next ### or ##)
+        if in_open_questions and (line.strip().startswith('###') or line.strip().startswith('##')):
+            in_open_questions = False
+            # If this is still in section 12 or another section 2-14, start tracking again
+            section_match = re.match(r'##\s+(\d+)\.\s+', line)
+            if section_match:
+                section_num = int(section_match.group(1))
+                if 2 <= section_num <= 14:
+                    current_section = section_num
+                    current_start = i
+            elif line.strip().startswith('###') and current_section is not None and 2 <= current_section <= 14:
+                # Subsection within same parent section
+                current_start = i
+            continue
+        
         # Detect section headers like "## 2. Problem Statement"
         section_match = re.match(r'##\s+(\d+)\.\s+', line)
         if section_match:
             section_num = int(section_match.group(1))
             
             # Save previous section if it was in range 2-14
-            if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+            if current_section is not None and 2 <= current_section <= 14 and current_start is not None and not in_open_questions:
                 section_ranges.append((current_start, i))
             
             # Start tracking new section if in range 2-14
-            if 2 <= section_num <= 14:
+            if 2 <= section_num <= 14 and not in_open_questions:
                 current_section = section_num
                 current_start = i
             else:
                 current_section = None
                 current_start = None
     
-    # Handle last section if it was in range 2-14
-    if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+    # Handle last section if it was in range 2-14 and not in Open Questions
+    if current_section is not None and 2 <= current_section <= 14 and current_start is not None and not in_open_questions:
         section_ranges.append((current_start, len(lines)))
     
     # Clean up placeholders in identified sections
@@ -1652,10 +1873,11 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     
     if mode == "review":
         # Extract review patches
-        status_match = re.search(r'### STATUS_UPDATE\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
-        risks_match = re.search(r'### RISKS\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
-        questions_match = re.search(r'### OPEN_QUESTIONS\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
-        intake_clear_match = re.search(r'### INTAKE_CLEAR\s*\n(.*?)(?=###|\Z)', agent_output, re.DOTALL)
+        # Note: Use word boundary or space after ### to avoid matching #### headers
+        status_match = re.search(rf'### STATUS_UPDATE\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+        risks_match = re.search(rf'### RISKS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+        questions_match = re.search(rf'### OPEN_QUESTIONS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+        intake_clear_match = re.search(rf'### INTAKE_CLEAR\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
         
         status_update = status_match.group(1).strip() if status_match else ""
         risks_content = risks_match.group(1).strip() if risks_match else ""
@@ -1707,28 +1929,65 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         
         # Append new questions (section-based format)
         if questions_content and "No new questions" not in questions_content:
-            for i, line in enumerate(lines):
-                if '### Open Questions' in line:
-                    # Find the comment block after questions
-                    for j in range(i + 1, len(lines)):
-                        if lines[j].strip().startswith('<!--') and 'ANSWER INTEGRATION WORKFLOW' in lines[j]:
-                            # Insert before the comment block
-                            lines.insert(j, "\n" + questions_content + "\n")
-                            break
-                    break
+            # Validate that new questions don't have duplicate IDs
+            existing_q_ids = _get_canonical_question_ids('\n'.join(lines))
+            
+            # Extract Q-IDs from new questions
+            new_q_ids = set(re.findall(r'####\s+(Q-\d+):', questions_content))
+            
+            # Check for conflicts
+            duplicate_ids = new_q_ids & existing_q_ids
+            if duplicate_ids:
+                dup_list = ", ".join(sorted(duplicate_ids))
+                print(f"WARNING: Agent attempted to create duplicate Question IDs: {dup_list}")
+                print("Skipping duplicate questions to maintain canonical ownership.")
+                # Filter out duplicate questions from questions_content
+                filtered_questions = []
+                for q_block in re.split(r'(?=####\s+Q-\d+:)', questions_content):
+                    q_id_match = re.match(r'####\s+(Q-\d+):', q_block)
+                    if q_id_match:
+                        q_id = q_id_match.group(1)
+                        if q_id not in duplicate_ids:
+                            filtered_questions.append(q_block)
+                    elif q_block.strip():  # Non-empty content without Q-ID header
+                        filtered_questions.append(q_block)
+                
+                questions_content = '\n'.join(filtered_questions).strip()
+            
+            # Only append if there's content after filtering
+            if questions_content:
+                for i, line in enumerate(lines):
+                    if '### Open Questions' in line:
+                        # Find the comment block after questions
+                        # Comment can be multiline, so search for "ANSWER INTEGRATION WORKFLOW"
+                        # anywhere in the next few lines after finding <!--
+                        for j in range(i + 1, len(lines)):
+                            # Check if this line or nearby lines contain the comment
+                            if 'ANSWER INTEGRATION WORKFLOW' in lines[j]:
+                                # Insert before this line (or before the opening <!--)
+                                # Search backwards to find the opening <!--
+                                insert_pos = j
+                                for k in range(j - 1, i, -1):
+                                    if '<!--' in lines[k]:
+                                        insert_pos = k
+                                        break
+                                lines.insert(insert_pos, "\n" + questions_content + "\n")
+                                break
+                        break
     
     else:  # integrate mode
         # Extract integration patches
+        # Note: Use consistent section boundary patterns
         integrated_match = re.search(
-            r'### INTEGRATED_SECTIONS\s*\n(.*?)(?=### RISKS|\Z)',
+            rf'### INTEGRATED_SECTIONS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
             agent_output, re.DOTALL
         )
         risks_match = re.search(
-            r'### RISKS\s*\n(.*?)(?=### STATUS_UPDATE|\Z)',
+            rf'### RISKS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
             agent_output, re.DOTALL
         )
         status_match = re.search(
-            r'### STATUS_UPDATE\s*\n(.*?)(?=###|\Z)',
+            rf'### STATUS_UPDATE\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
             agent_output, re.DOTALL
         )
         
@@ -1749,6 +2008,19 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         
         # Apply integrated sections and track successful integrations
         if integrated_content:
+            # First, validate that all Question IDs referenced in integration exist
+            canonical_q_ids = _get_canonical_question_ids('\n'.join(lines))
+            referenced_q_ids = set(re.findall(r'- Question ID:\s*(Q-\d+)', integrated_content))
+            
+            invalid_q_ids = referenced_q_ids - canonical_q_ids
+            if invalid_q_ids:
+                invalid_list = ", ".join(sorted(invalid_q_ids))
+                print(f"ERROR: Agent referenced non-existent Question IDs during integration: {invalid_list}")
+                print("Integration cannot proceed with ghost question references.")
+                print("These questions must exist as canonical Open Questions before integration.")
+                # Skip integration to prevent ghost references
+                integrated_content = ""
+            
             # Parse section updates with question IDs
             # Updated pattern to match: "- Question ID: Q-XXX\n- Section: ..."
             section_pattern = re.compile(
@@ -2002,9 +2274,51 @@ def main():
     print("\n[Schema] Validating document structure...")
     is_valid, schema_msg, repairable_violations = validate_document_schema(requirements)
     
+    # Check for ghost questions separately (they're FATAL but repairable)
+    ghost_check_valid, ghost_questions, all_refs = _validate_question_references(requirements)
+    
     if not is_valid:
+        # Check if this is due to ghost questions
+        if "Ghost question references detected" in schema_msg and ghost_questions:
+            # REPAIRABLE: Ghost questions - create Open Question entries
+            print(f"⚠️  {schema_msg}")
+            print("\n[Ghost Question Repair] Creating canonical Open Question entries...")
+            
+            # Repair ghost questions
+            requirements = repair_ghost_questions(requirements, ghost_questions)
+            REQ_FILE.write_text(requirements, encoding="utf-8")
+            
+            print("✓ Ghost questions repaired:")
+            for q_id in sorted(ghost_questions):
+                print(f"  - {q_id}: Auto-generated placeholder created")
+            
+            # Auto-commit if changes exist
+            if not args.no_commit:
+                print("\n[Commit] Committing ghost question repair...")
+                ghost_list = ", ".join(sorted(ghost_questions))
+                msg = f"""requirements: ghost question repair
+
+- Created canonical Open Question entries for: {ghost_list}
+- These questions were referenced but did not exist
+- Placeholders created to maintain document integrity
+
+Agent mode: ghost_repair"""
+                subprocess.check_call(
+                    ["git", "add", str(REQ_FILE)],
+                    cwd=REPO_ROOT
+                )
+                subprocess.check_call(
+                    ["git", "commit", "-m", msg],
+                    cwd=REPO_ROOT
+                )
+                print("✓ Ghost question repair committed")
+            
+            print("\n[Ghost Question Repair] Repair completed. Questions now canonical.")
+            print("Please update the auto-generated question entries with actual content.")
+            sys.exit(0)
+        
         # Check if this is a repairable violation (missing sections)
-        if repairable_violations:
+        elif repairable_violations:
             # REPAIRABLE: Missing sections - agent will repair
             print(f"⚠️  {schema_msg}")
             print("\n[Schema Repair] Restoring missing sections with placeholders...")
