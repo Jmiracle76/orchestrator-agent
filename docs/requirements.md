@@ -13,7 +13,7 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** Orchestrator Agent 
-**Version:** 0.1
+**Version:** 0.2
 **Status:** Draft  
 **Last Updated:** [Date]  
 **Approved By:** Pending  
@@ -28,7 +28,7 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.1 |
+| Current Version | 0.2 |
 | Last Modified | 2026-02-08 |
 | Modified By | Requirements Agent |
 | Approval Status | Pending - Revisions Required |
@@ -43,6 +43,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.2 | 2026-02-08 | Requirements Agent | Integrate pass by Requirements Agent |
 | 0.1 | 2026-02-08 | Requirements Agent | Integrate pass by Requirements Agent |
 | 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
 | 0.1 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
@@ -585,6 +586,20 @@ NFR-004: Failure Safety
 - Impact assessments adjusted to reflect reduced residual risk after mitigations
 - R-011 added to track template cleanup task (Q-012)
 - All mitigation strategies updated to reference specific FRs and NFRs that codify protections
+
+---
+
+
+| Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
+|---------|-------------|-------------|--------|---------------------|-------|
+| R-008 | Planning artifact drift undetected | **Very Low** | **Very Low** | **FULLY MITIGATED by Q-004 answer:** Drift detection mechanism defined in FR-013; stale plans marked explicitly; human control over re-planning preserved; automatic invalidation without regeneration prevents silent drift | Product Owner |
+| R-010 | Ambiguous project success definition | **Very Low** | **Very Low** | **FULLY MITIGATED by Q-011 answer:** Six specific success criteria defined with 12 measurable acceptance criteria in Section 13; clear approval gates established; drift handling explicitly included as success criterion | Product Owner |
+| R-011 | Template content not removed | **Medium** | **Low** | **ACTIVE RISK:** Document contains v0.0 template placeholder content that should be removed. Q-012 created to obtain human guidance on what to preserve versus delete; blocking approval until resolved | Requirements Agent |
+
+**Summary of Changes:**
+- R-008 downgraded to Very Low/Very Low (fully mitigated by FR-013)
+- R-010 downgraded to Very Low/Very Low (fully mitigated by comprehensive Section 13 content)
+- R-011 upgraded to Medium/Low (template cleanup now blocking approval)
 
 ---
 
