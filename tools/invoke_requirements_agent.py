@@ -651,7 +651,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     # Add revision history entry (simplified version increment)
     today = datetime.now().strftime("%Y-%m-%d")
     change_desc = f"{mode.capitalize()} pass by Requirements Agent"
-    version_to_use = "0.1"
+    version_to_use = "0.1"  # Default fallback if no previous version found
     
     for i, line in enumerate(lines):
         if '### Version History' in line:
@@ -678,13 +678,21 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
             break
     
     # Update Document Control table fields atomically
+    # Track which fields have been updated to avoid redundant iterations
+    fields_updated = 0
     for i, line in enumerate(lines):
         if '| Current Version |' in line:
             lines[i] = f'| Current Version | {version_to_use} |'
+            fields_updated += 1
         elif '| Last Modified |' in line:
             lines[i] = f'| Last Modified | {today} |'
+            fields_updated += 1
         elif '| Modified By |' in line:
             lines[i] = f'| Modified By | Requirements Agent |'
+            fields_updated += 1
+        # Break early if all three fields have been found and updated
+        if fields_updated >= 3:
+            break
     
     # Update header version field
     for i, line in enumerate(lines):

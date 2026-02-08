@@ -61,7 +61,13 @@ No new questions
     
     # Verify Document Control table was updated
     assert "| Current Version | 0.1 |" in updated_doc, "Current Version should be updated to 0.1"
-    assert "| Last Modified |" in updated_doc and "2026-" in updated_doc, "Last Modified should be updated"
+    
+    # Verify Last Modified contains today's date in the Document Control table
+    import re
+    dc_last_modified = re.search(r'\| Last Modified \| ([\d-]+) \|', updated_doc)
+    assert dc_last_modified, "Last Modified should exist in Document Control table"
+    assert "2026-" in dc_last_modified.group(1), "Last Modified should contain current date"
+    
     assert "| Modified By | Requirements Agent |" in updated_doc, "Modified By should be updated"
     
     # Verify header version was updated
