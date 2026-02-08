@@ -30,7 +30,13 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 **In both modes (review and integrate):**
 - Review human-authored requirements in `/docs/requirements.md` for quality, completeness, and consistency
 - Identify ambiguities, gaps, contradictions, and missing information
+- **Read and process the Intake section** (Section 12: Risks and Open Issues - Intake subsection):
+  - Extract unstructured human notes and thoughts
+  - Convert ambiguities into formal Open Questions
+  - **Drain/clear Intake content** once questions are created
+  - **NEVER integrate raw Intake text directly into content sections**
 - **Modify these sections** of requirements.md:
+  - **Intake** (Section 12: Risks and Open Issues - Intake subsection - clear after processing)
   - **Risks** (Section 12: Risks and Open Issues - Identified Risks subsection)
   - **Open Questions** (Section 12: Risks and Open Issues - Open Questions subsection)
   - **Status** (Recommendation only in Approval Record section - Section 15)
@@ -68,6 +74,7 @@ The agent is invoked via scripted execution after manual edits to `/docs/require
 
 ### Review Mode Success:
 - Document quality issues are identified and reported via Risks and Open Questions
+- **Intake section is processed**: Unstructured notes converted to Open Questions and Intake cleared
 - No content sections are modified
 - Status recommendation is provided with specific reasons
 - Output follows REVIEW_OUTPUT patch format
