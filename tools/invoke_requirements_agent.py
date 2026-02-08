@@ -20,14 +20,7 @@ import subprocess
 import re
 from pathlib import Path
 from datetime import datetime
-
-# Import section-based question parsing
-from parse_questions import (
-    parse_open_questions_section,
-    has_pending_answers_section_based,
-    update_question_status,
-    format_new_question
-)
+from typing import Dict, List, Optional
 
 # ---------- Configuration ----------
 MODEL = "claude-sonnet-4-5-20250929"
@@ -37,6 +30,128 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 REQ_FILE = REPO_ROOT / "docs" / "requirements.md"
 AGENT_PROFILE = REPO_ROOT / "agent-profiles" / "requirements-agent.md"
 PLANNING_STATE_MARKER = REPO_ROOT / ".agent_state" / "requirements_approved"
+
+# ---------- Open Questions Parsing (Section-Based Format) ----------
+def _parse_open_questions_section(content: str) -> List[Dict[str, str]]:
+    """
+    Parse section-based Open Questions format.
+    
+    Returns a list of question dictionaries with fields:
+    - id: Question ID (e.g., "Q-001")
+    - title: Question title
+    - status: Status value (Open, Resolved, Deferred)
+    - asked_by: Who asked the question
+    - date: Date in YYYY-MM-DD format
+    - question: The question text
+    - answer: The answer text (may be empty)
+    - targets: List of integration target strings
+    """
+    questions = []
+    
+    # Find the Open Questions section
+    open_q_match = re.search(r'### Open Questions\n', content)
+    if not open_q_match:
+        return questions
+    
+    start_pos = open_q_match.end()
+    
+    # Find the end of the Open Questions section (comment block, not separator lines)
+    rest = content[start_pos:]
+    end_pattern = r'\n<!--\s*ANSWER INTEGRATION WORKFLOW'
+    
+    end_match = re.search(end_pattern, rest)
+    if end_match:
+        end_pos = end_match.start()
+    else:
+        # Fallback: next major section
+        next_section = re.search(r'\n---\n\n## \d+\.', rest)
+        end_pos = next_section.start() if next_section else len(rest)
+    
+    section_content = rest[:end_pos]
+    
+    # Find all question blocks using a simple approach
+    # Each question starts with #### Q-XXX: and ends before the next #### or ---
+    question_starts = [(m.start(), m.group()) for m in re.finditer(r'####\s+(Q-\d+):\s+(.+)', section_content)]
+    
+    for i, (start, heading_text) in enumerate(question_starts):
+        # Find end of this question block
+        if i + 1 < len(question_starts):
+            end = question_starts[i + 1][0]
+        else:
+            end = len(section_content)
+        
+        # Extract the block
+        block = section_content[start:end]
+        
+        # Parse heading
+        heading_match = re.match(r'####\s+(Q-\d+):\s+(.+)', heading_text)
+        if not heading_match:
+            continue
+        
+        q_id = heading_match.group(1).strip()
+        title = heading_match.group(2).strip()
+        
+        # Parse fields from block
+        status_match = re.search(r'\*\*Status:\*\*\s+(.+?)\s*\n', block)
+        asked_by_match = re.search(r'\*\*Asked by:\*\*\s+(.+?)\s*\n', block)
+        date_match = re.search(r'\*\*Date:\*\*\s+(.+?)\s*\n', block)
+        
+        question_match = re.search(r'\*\*Question:\*\*\s*\n(.+?)\s*\n\*\*Answer:\*\*', block, re.DOTALL)
+        answer_match = re.search(r'\*\*Answer:\*\*\s*\n(.+?)\s*\n\*\*Integration Targets:\*\*', block, re.DOTALL)
+        targets_match = re.search(r'\*\*Integration Targets:\*\*\s*\n((?:- .+\n?)+)', block)
+        
+        if not all([status_match, asked_by_match, date_match, question_match, targets_match]):
+            continue
+        
+        status = status_match.group(1).strip()
+        asked_by = asked_by_match.group(1).strip()
+        date = date_match.group(1).strip()
+        question = question_match.group(1).strip()
+        answer = answer_match.group(1).strip() if answer_match else ""
+        targets_text = targets_match.group(1).strip()
+        
+        # Parse targets list
+        targets = []
+        for line in targets_text.split('\n'):
+            line = line.strip()
+            if line.startswith('- '):
+                target = line[2:].strip()
+                if target:  # Only add non-empty targets
+                    targets.append(target)
+        
+        questions.append({
+            'id': q_id,
+            'title': title,
+            'status': status,
+            'asked_by': asked_by,
+            'date': date,
+            'question': question,
+            'answer': answer,
+            'targets': targets
+        })
+    
+    return questions
+
+
+def _has_pending_answers(content: str) -> bool:
+    """
+    Check if there are answered questions pending integration.
+    
+    Returns True if any question has:
+    - Non-empty Answer field
+    - Status is not "Resolved"
+    """
+    questions = _parse_open_questions_section(content)
+    
+    for q in questions:
+        answer = q['answer'].strip()
+        status = q['status'].strip()
+        
+        # Has answer and not resolved
+        if answer and not status.lower().startswith('resolved'):
+            return True
+    
+    return False
 
 # ---------- Git Helpers ----------
 def git_status_porcelain() -> str:
@@ -174,7 +289,7 @@ def determine_mode(requirements: str) -> str:
     """
     Determine execution mode: integrate if there are pending answers, else review.
     """
-    return "integrate" if has_pending_answers_section_based(requirements) else "review"
+    return "integrate" if _has_pending_answers(requirements) else "review"
 
 # ---------- Approval Detection & State Recording ----------
 def is_requirements_approved(requirements: str) -> bool:
@@ -549,7 +664,7 @@ def main():
     
     # Parse Open Questions to validate format
     print("\n[Format] Parsing Open Questions section...")
-    questions = parse_open_questions_section(requirements)
+    questions = _parse_open_questions_section(requirements)
     print(f"✓ Found {len(questions)} questions")
     resolved_count = sum(1 for q in questions if q['status'].lower().startswith('resolved'))
     pending_count = sum(1 for q in questions if q['answer'] and not q['status'].lower().startswith('resolved'))
