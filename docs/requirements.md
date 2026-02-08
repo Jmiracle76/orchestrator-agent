@@ -301,92 +301,7 @@ The following items are explicitly OUT OF SCOPE for this project:
 
 <!-- Add additional functional requirements as FR-002, FR-003, etc. -->
 
-FR-001: State Detection
 
-**Description:** The Planning Agent must detect project state based on the requirements document, including at minimum:
-- Draft
-- Under Review
-- Approved
-**Priority:** High
-
-**Acceptance Criteria:**
-- [ ] The agent must not proceed unless requirements are explicitly marked Approved.
-
-
-FR-002: Controlled Agent Handoff
-
-**Description:** The Planning Agent must only be invoked:
-- After a successful Requirements Agent run
-- When requirements status transitions to Approved
-- No speculative invocation is allowed.
-**Priority:** High
-
-**Acceptance Criteria:**
-- [ ]    
-
-FR-003: Milestone Generation
-
-**Description:** The Planning Agent must generate a structured list of milestones derived directly from approved requirements, including:
-- Clear milestone names
-- Descriptions tied to requirement IDs or sections
-- Logical sequencing
-**Priority:** High
-
-**Acceptance Criteria:**
-- [ ]  
-
-FR-004: Issue Generation
-
-**Description:** For each milestone, the agent must generate one or more GitHub issues containing:
-- Clear scope boundaries
-- Acceptance criteria
-- Explicit non-goals
-- References back to requirements sections
-**Priority:** High
-  
-**Acceptance Criteria:**
-- [ ] 
-
-FR-005: Scope Enforcement
-
-**Description:** The Planning Agent must not:
-- Add requirements
-- Modify existing requirements
-- Invent features or capabilities
-- Expand scope beyond what is explicitly documented
-**Priority:** High
-  
-**Acceptance Criteria:**
-- [ ] 
-
-FR-006: Repository Safety
-
-**Description:** The Planning Agent must:
-- Only create or modify files explicitly designated for planning output
-- Never create new scripts, tests, documentation, or configuration files
-- Never modify agent code or invocation logic
-**Priority:** High
-
-**Acceptance Criteria:**
-- [ ] 
-
-FR-007: Deterministic Output
-
-Given the same approved requirements, the Planning Agent should produce materially equivalent output across runs, aside from timestamps or ordering metadata.
-
-FR-008: Explainability
-
-**Description:** The Planning Agent must clearly explain:
-- Why each milestone exists
-- Which requirements it satisfies
-- Why sequencing decisions were made
-- Opaque “because it seemed right” planning is not acceptable.
-**Priority:** High
-
-**Acceptance Criteria:**
-- [ ] 
-
----
 
 ## 9. Non-Functional Requirements
 
@@ -652,6 +567,100 @@ NFR-004: Failure Safety
 ### Intake
 
 [Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
+
+All risks need reviewed and updated with more accurate probability/impact assessments after accounting for mitigating answers provided.
+
+Document needs thoroughly reviewed and v0.0 template content needs removed. Leave all integrated and human provided content in place.
+
+The functional requirements listed below need formatted and integrated back into this document.
+
+FR-001: State Detection
+
+**Description:** The Planning Agent must detect project state based on the requirements document, including at minimum:
+- Draft
+- Under Review
+- Approved
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ] The agent must not proceed unless requirements are explicitly marked Approved.
+
+
+FR-002: Controlled Agent Handoff
+
+**Description:** The Planning Agent must only be invoked:
+- After a successful Requirements Agent run
+- When requirements status transitions to Approved
+- No speculative invocation is allowed.
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ]    
+
+FR-003: Milestone Generation
+
+**Description:** The Planning Agent must generate a structured list of milestones derived directly from approved requirements, including:
+- Clear milestone names
+- Descriptions tied to requirement IDs or sections
+- Logical sequencing
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ]  
+
+FR-004: Issue Generation
+
+**Description:** For each milestone, the agent must generate one or more GitHub issues containing:
+- Clear scope boundaries
+- Acceptance criteria
+- Explicit non-goals
+- References back to requirements sections
+**Priority:** High
+  
+**Acceptance Criteria:**
+- [ ] 
+
+FR-005: Scope Enforcement
+
+**Description:** The Planning Agent must not:
+- Add requirements
+- Modify existing requirements
+- Invent features or capabilities
+- Expand scope beyond what is explicitly documented
+**Priority:** High
+  
+**Acceptance Criteria:**
+- [ ] 
+
+FR-006: Repository Safety
+
+**Description:** The Planning Agent must:
+- Only create or modify files explicitly designated for planning output
+- Never create new scripts, tests, documentation, or configuration files
+- Never modify agent code or invocation logic
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ] 
+
+FR-007: Deterministic Output
+
+Given the same approved requirements, the Planning Agent should produce materially equivalent output across runs, aside from timestamps or ordering metadata.
+
+FR-008: Explainability
+
+**Description:** The Planning Agent must clearly explain:
+- Why each milestone exists
+- Which requirements it satisfies
+- Why sequencing decisions were made
+- Opaque “because it seemed right” planning is not acceptable.
+**Priority:** High
+
+**Acceptance Criteria:**
+- [ ] 
+
+---
+
 
 ---
 
