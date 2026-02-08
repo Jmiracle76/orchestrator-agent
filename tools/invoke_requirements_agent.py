@@ -21,6 +21,14 @@ import re
 from pathlib import Path
 from datetime import datetime
 
+# Import section-based question parsing
+from parse_questions import (
+    parse_open_questions_section,
+    has_pending_answers_section_based,
+    update_question_status,
+    format_new_question
+)
+
 # ---------- Configuration ----------
 MODEL = "claude-sonnet-4-5-20250929"
 MAX_TOKENS = 4000
@@ -161,136 +169,12 @@ Agent mode: review"""
 # ---------- Constants ----------
 EMPTY_ANSWER_PLACEHOLDER = '-'
 
-# Canonical Open Questions table schema
-CANONICAL_OPEN_QUESTIONS_COLUMNS = [
-    "Question ID",
-    "Question",
-    "Asked By",
-    "Date",
-    "Answer",
-    "Resolution Status"
-]
-
-# ---------- Schema Validation ----------
-def validate_open_questions_schema(requirements: str) -> tuple[bool, list[str], int]:
-    """
-    Validate the Open Questions table schema.
-
-    Returns:
-        (is_valid, missing_columns, header_line_idx)
-    """
-    lines = requirements.split('\n')
-    in_open_questions = False
-
-    for i, line in enumerate(lines):
-        if '### Open Questions' in line:
-            in_open_questions = True
-            continue
-        if in_open_questions and line.strip().startswith('##') and 'Open Questions' not in line:
-            break
-        if in_open_questions and line.strip().startswith('|') and 'Question ID' in line:
-            header_parts = [col.strip() for col in line.split('|') if col.strip()]
-            missing_columns = [col for col in CANONICAL_OPEN_QUESTIONS_COLUMNS if col not in header_parts]
-            if missing_columns:
-                return False, missing_columns, i
-            if header_parts != CANONICAL_OPEN_QUESTIONS_COLUMNS:
-                return False, ["Column order incorrect"], i
-            return True, [], i
-
-    return True, [], -1
-
-
-def repair_open_questions_schema(requirements: str) -> tuple[str, bool]:
-    """
-    Repair the Open Questions table schema by restoring missing columns.
-
-    Returns:
-        (repaired_requirements, was_repaired)
-    """
-    is_valid, missing_columns, header_idx = validate_open_questions_schema(requirements)
-
-    if is_valid or header_idx == -1:
-        return requirements, False
-
-    lines = requirements.split('\n')
-    existing_header = lines[header_idx]
-    header_parts = [col.strip() for col in existing_header.split('|') if col.strip()]
-
-    # Build canonical header and separator
-    canonical_header = '| ' + ' | '.join(CANONICAL_OPEN_QUESTIONS_COLUMNS) + ' |'
-    canonical_separator = '|' + '|'.join(['-' * (len(col) + 2) for col in CANONICAL_OPEN_QUESTIONS_COLUMNS]) + '|'
-
-    lines[header_idx] = canonical_header
-    if header_idx + 1 < len(lines) and lines[header_idx + 1].strip().startswith('|---'):
-        lines[header_idx + 1] = canonical_separator
-
-    # Repair data rows
-    for i in range(header_idx + 2, len(lines)):
-        line = lines[i]
-        if not line.strip():
-            continue
-        if line.strip().startswith('##') or line.strip().startswith('---'):
-            break
-        if line.strip().startswith('|') and '|---' not in line:
-            row_parts = [col.strip() for col in line.split('|')]
-            columns = row_parts[1:-1] if len(row_parts) > 2 else []
-            column_values = {}
-            for j, col_name in enumerate(header_parts):
-                if j < len(columns):
-                    column_values[col_name] = columns[j]
-            new_columns = []
-            for col_name in CANONICAL_OPEN_QUESTIONS_COLUMNS:
-                if col_name in column_values:
-                    new_columns.append(column_values[col_name])
-                elif col_name == "Answer":
-                    new_columns.append("")
-                elif col_name == "Resolution Status":
-                    new_columns.append("Open")
-                else:
-                    new_columns.append("")
-            lines[i] = '| ' + ' | '.join(new_columns) + ' |'
-
-    return '\n'.join(lines), True
-
 # ---------- Mode Determination ----------
-def has_pending_answers(requirements: str) -> bool:
-    """
-    Check if there are answered questions pending integration.
-    
-    Returns True if any question has a non-empty Answer field
-    and Resolution Status is not "Resolved".
-    """
-    lines = requirements.split('\n')
-    in_questions = False
-    in_table = False
-    
-    for line in lines:
-        if '### Open Questions' in line:
-            in_questions = True
-            continue
-        if in_questions and line.strip().startswith('##'):
-            break
-        if in_questions and '| Question ID |' in line:
-            in_table = True
-            continue
-        if in_table and '|---' in line:
-            continue
-        if in_table and line.strip().startswith('|') and line.count('|') >= 6:
-            parts = [p.strip() for p in line.split('|')]
-            if len(parts) >= 7:
-                answer = parts[5].strip()
-                status = parts[6].strip()
-                # Has answer and not resolved
-                if answer and answer != EMPTY_ANSWER_PLACEHOLDER and not status.lower().startswith('resolved'):
-                    return True
-    
-    return False
-
 def determine_mode(requirements: str) -> str:
     """
     Determine execution mode: integrate if there are pending answers, else review.
     """
-    return "integrate" if has_pending_answers(requirements) else "review"
+    return "integrate" if has_pending_answers_section_based(requirements) else "review"
 
 # ---------- Approval Detection & State Recording ----------
 def is_requirements_approved(requirements: str) -> bool:
@@ -414,8 +298,23 @@ OUTPUT FORMAT (required):
 [New risk rows in markdown table format, or "No new risks identified"]
 
 ### OPEN_QUESTIONS
-[New question rows in markdown table format, or "No new questions"]
-| Question ID | Question | Asked By | Date | Answer | Resolution Status |
+[New question subsections in section-based format, or "No new questions"]
+
+For each new question, use this format:
+#### Q-XXX: [Question Title]
+
+**Status:** Open  
+**Asked by:** Requirements Agent  
+**Date:** [YYYY-MM-DD]  
+
+**Question:**  
+[The question text]
+
+**Answer:**  
+
+
+**Integration Targets:**  
+- [Target section]
 
 DO NOT output the full document.
 """
@@ -426,9 +325,9 @@ MODE: integrate
 In integrate mode, you MUST output ONLY structured patches (NOT a full document).
 
 You must:
-1. Find Open Questions with non-empty Answer fields
+1. Find Open Questions subsections with non-empty Answer fields and Status not "Resolved"
 2. Integrate each answer into the appropriate section
-3. Mark questions as "Resolved"
+3. Mark questions as "Resolved" by updating their Status field
 4. Update risks based on integrated answers
 5. Recommend approval status
 
@@ -497,14 +396,15 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
                             break
                     break
         
-        # Append new questions
+        # Append new questions (section-based format)
         if questions_content and "No new questions" not in questions_content:
             for i, line in enumerate(lines):
                 if '### Open Questions' in line:
-                    # Find end of questions section
+                    # Find the comment block after questions
                     for j in range(i + 1, len(lines)):
-                        if lines[j].strip() and not lines[j].strip().startswith('|'):
-                            lines.insert(j, "\n" + questions_content)
+                        if lines[j].strip().startswith('<!--') and 'ANSWER INTEGRATION WORKFLOW' in lines[j]:
+                            # Insert before the comment block
+                            lines.insert(j, "\n" + questions_content + "\n")
                             break
                     break
     
@@ -550,16 +450,20 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> str:
                                 break
                         break
         
-        # Mark questions as resolved
+        # Mark questions as resolved (section-based format)
         if resolved_questions and "No questions" not in resolved_questions:
             q_ids = [q.strip() for q in resolved_questions.replace(',', ' ').split() if q.strip()]
             for q_id in q_ids:
+                # Find the question subsection and update its status
                 for i, line in enumerate(lines):
-                    if line.startswith('|') and q_id in line:
-                        parts = line.split('|')
-                        if len(parts) >= 7:
-                            parts[6] = ' Resolved '
-                            lines[i] = '|'.join(parts)
+                    if line.strip().startswith(f'#### {q_id}:'):
+                        # Find the Status line in the next few lines
+                        for j in range(i + 1, min(i + 10, len(lines))):
+                            if '**Status:**' in lines[j]:
+                                # Update status to Resolved
+                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S+', '**Status:** Resolved', lines[j])
+                                break
+                        break
         
         # Update risks
         if risks_content and "No risk changes" not in risks_content:
@@ -643,25 +547,14 @@ def main():
     requirements = REQ_FILE.read_text(encoding="utf-8")
     agent_profile = AGENT_PROFILE.read_text(encoding="utf-8")
     
-    # Validate and repair Open Questions schema
-    print("\n[Schema] Validating Open Questions table...")
-    is_valid, missing_columns, header_idx = validate_open_questions_schema(requirements)
-    
-    if not is_valid:
-        print(f"⚠️  Missing columns: {', '.join(missing_columns)}")
-        print("🔧 Auto-repairing schema...")
-        requirements, was_repaired = repair_open_questions_schema(requirements)
-        
-        if was_repaired:
-            REQ_FILE.write_text(requirements, encoding="utf-8")
-            print(f"✓ Schema repaired")
-        else:
-            print("⚠️  Auto-repair failed")
-    else:
-        print("✓ Schema valid")
-    
-    # Reload after potential repair
-    requirements = REQ_FILE.read_text(encoding="utf-8")
+    # Parse Open Questions to validate format
+    print("\n[Format] Parsing Open Questions section...")
+    questions = parse_open_questions_section(requirements)
+    print(f"✓ Found {len(questions)} questions")
+    resolved_count = sum(1 for q in questions if q['status'].lower().startswith('resolved'))
+    pending_count = sum(1 for q in questions if q['answer'] and not q['status'].lower().startswith('resolved'))
+    print(f"  - {resolved_count} resolved")
+    print(f"  - {pending_count} pending integration")
     
     # Determine mode
     mode = determine_mode(requirements)
