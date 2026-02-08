@@ -913,7 +913,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                     start_pos = i
                     end_pos = None
                     for j in range(i + 1, len(lines)):
-                        if lines[j].strip().startswith('---') and j + 1 < len(lines) and '###' in lines[j + 2]:
+                        if lines[j].strip().startswith('---') and j + 2 < len(lines) and '###' in lines[j + 2]:
                             end_pos = j
                             break
                     
@@ -923,7 +923,8 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                         # Find where comments end
                         comment_end = start_pos + 1
                         while comment_end < end_pos:
-                            if not lines[comment_end].strip().startswith('<!--') and not lines[comment_end].strip().startswith('-->') and '-->' not in lines[comment_end]:
+                            stripped_line = lines[comment_end].strip()
+                            if not stripped_line.startswith('<!--') and not stripped_line.startswith('-->') and '-->' not in stripped_line:
                                 break
                             comment_end += 1
                         
@@ -1204,7 +1205,7 @@ def main():
     print("\n[Intake] Parsing Intake section...")
     intake_content = _parse_intake_section(requirements)
     if intake_content:
-        print(f"✓ Found intake content ({len(intake_content)} chars)")
+        print(f"✓ Found Intake content ({len(intake_content)} chars)")
         print("  → Will be converted to Open Questions")
     else:
         print("✓ Intake section is empty")
