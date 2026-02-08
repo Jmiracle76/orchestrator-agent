@@ -573,25 +573,33 @@ HUMAN WORKFLOW:
 1. Requirements Agent identifies questions during review and adds them as new subsections with Status: Open and empty Answer field
 2. Human (Product Owner or stakeholder) provides answer by filling in the Answer field
 3. Human invokes Requirements Agent: tools/invoke_requirements_agent.py
-4. Script automatically detects answered-but-unintegrated questions and runs in integrate_answers mode
-5. Agent integrates the answer into appropriate section(s) and marks question Status as "Resolved"
-6. Agent updates Revision History to document the integration
+4. Script automatically detects answered-but-unintegrated questions and runs in integrate mode
+5. Agent integrates the answer into appropriate section(s) specified in Integration Targets
+6. Script derives resolution status mechanically: questions are marked "Resolved" ONLY if all Integration Targets were successfully updated
+7. Agent updates Revision History to document the integration
 
 MODE DETECTION (Automatic):
 - Script scans Open Questions subsections for questions with:
   * Non-empty Answer field (human has provided answer)
   * Status is NOT "Resolved" (not yet integrated)
-- If such questions exist → integrate_answers mode
-- Otherwise → review_only mode
+- If such questions exist → integrate mode
+- Otherwise → review mode
 - No manual mode selection required
 
-AGENT WORKFLOW (integrate_answers mode only):
+AGENT WORKFLOW (integrate mode only):
 - Scan for questions with non-empty Answer fields and Status not "Resolved"
-- Integrate answer content into appropriate sections (Sections 2-11, 13-14)
+- Integrate answer content into ALL sections specified in Integration Targets field
 - Add source traceability reference (e.g., "Source: Product Owner (Answer to Q-003)")
-- Update question Status to "Resolved"
 - Update Revision History to document integration activity
 - Downgrade (not delete) mitigated risks, add new risks if answers introduce them
+
+RESOLUTION DERIVATION (Automatic by Script):
+- After integration, script checks each question:
+  * Has an Answer present? AND
+  * Were ALL Integration Targets successfully updated in this agent run?
+- If both conditions are true → Status is updated to "Resolved"
+- If any Integration Target was NOT updated → Status remains "Open" (failed integration prevents resolution)
+- Agent does NOT manually set Resolved status - it is derived mechanically
 
 APPROVAL GATE:
 - All questions in the Open Questions section must have Status "Resolved" before document can be approved

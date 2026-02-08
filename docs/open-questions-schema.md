@@ -88,9 +88,10 @@ The invocation script:
 ### Answer Integration
 
 When integrating answers:
-- Agent locates target sections specified in Integration Targets
+- Agent locates ALL target sections specified in Integration Targets
 - Integrates answer content with source traceability
-- Updates question Status to "Resolved"
+- Script derives resolution status mechanically: Status is updated to "Resolved" ONLY if ALL Integration Targets were successfully updated
+- Failed integration of any target prevents resolution
 - Logs integration in Revision History
 
 ## Testing
