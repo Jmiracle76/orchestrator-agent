@@ -284,11 +284,56 @@ Agent mode: review"""
 # ---------- Constants ----------
 EMPTY_ANSWER_PLACEHOLDER = '-'
 
+# ---------- Version Detection ----------
+def get_document_version(requirements: str) -> tuple[str, int, int]:
+    """
+    Extract document version from requirements.md.
+    
+    Returns:
+        tuple: (version_string, major, minor)
+        Returns ("0.0", 0, 0) if version cannot be parsed
+    """
+    version_match = re.search(r'\*\*Version:\*\*\s+([0-9.]+)', requirements)
+    if not version_match:
+        return ("0.0", 0, 0)
+    
+    version_str = version_match.group(1).strip()
+    parts = version_str.split('.')
+    
+    try:
+        major = int(parts[0]) if len(parts) >= 1 else 0
+        minor = int(parts[1]) if len(parts) >= 2 else 0
+        return (version_str, major, minor)
+    except (ValueError, IndexError):
+        return ("0.0", 0, 0)
+
+def is_template_baseline(requirements: str) -> bool:
+    """
+    Check if document is a template baseline (version 0.0).
+    
+    Template baselines have special safeguards:
+    - Content sections (2-14) are read-only
+    - Placeholders must not be altered
+    - No approval recommendations allowed
+    
+    Returns:
+        True if version is 0.0
+    """
+    _, major, minor = get_document_version(requirements)
+    return major == 0 and minor == 0
+
 # ---------- Mode Determination ----------
 def determine_mode(requirements: str) -> str:
     """
     Determine execution mode: integrate if there are pending answers, else review.
+    
+    Template baseline documents (version 0.0) always run in review mode with
+    special safeguards that prevent modification of content sections.
     """
+    # Template baselines (version 0.0) can only be reviewed, never integrated
+    if is_template_baseline(requirements):
+        return "review"
+    
     return "integrate" if _has_pending_answers(requirements) else "review"
 
 # ---------- Approval Detection & State Recording ----------
@@ -381,11 +426,30 @@ def commit_planning_marker() -> bool:
         return False
 
 # ---------- Agent Instructions ----------
-def get_agent_instructions(mode: str) -> str:
-    """Get mode-specific instructions for the agent."""
+def get_agent_instructions(mode: str, is_template: bool) -> str:
+    """
+    Get mode-specific instructions for the agent.
+    
+    Args:
+        mode: "review" or "integrate"
+        is_template: True if document is version 0.0 (template baseline)
+    """
+    template_warning = ""
+    if is_template:
+        template_warning = """
+⚠️  TEMPLATE BASELINE DETECTED (Version 0.0) ⚠️
+
+This is a template baseline document. Special safeguards apply:
+- Content sections (Sections 2-14) are READ-ONLY
+- DO NOT modify, delete, or alter placeholder text in these sections
+- DO NOT recommend "Ready for Approval" (templates cannot be approved)
+- You may ONLY modify: Risks, Open Questions, and Status fields
+- Template baselines require human engagement before approval is possible
+
+"""
+    
     if mode == "review":
-        return """
-MODE: review
+        return f"""{template_warning}MODE: review
 
 In review mode, you MUST output ONLY structured patches (NOT a full document).
 
@@ -393,14 +457,14 @@ You may:
 - Review document quality and completeness
 - Identify new risks to add
 - Identify new open questions
-- Recommend approval status
+- Recommend approval status{' (BUT NOT for template baselines - version 0.0)' if is_template else ''}
 
 OUTPUT FORMAT (required):
 
 ## REVIEW_OUTPUT
 
 ### STATUS_UPDATE
-[Your status recommendation: "Ready for Approval" or "Pending - Revisions Required"]
+[Your status recommendation: {"'Pending - Revisions Required' ONLY (templates cannot be approved)" if is_template else '"Ready for Approval" or "Pending - Revisions Required"'}]
 [Specific reasons]
 
 ### RISKS
@@ -475,6 +539,92 @@ def _update_approval_status(lines: list, status_update: str) -> None:
             elif 'Pending' in status_update:
                 lines[i] = '| Approval Status | Pending - Revisions Required |'
             break
+
+# ---------- Placeholder Cleanup ----------
+def _cleanup_template_placeholders(lines: list) -> None:
+    """
+    Clean up template baseline placeholders after transitioning to active document (0.0 -> 0.1+).
+    
+    This function:
+    - Removes placeholder text like [Date], [Author], etc. from content sections
+    - Removes duplicated scaffolding (redundant template examples)
+    - Preserves document structure
+    
+    Called once and only once during the 0.0 -> 0.1+ version transition.
+    """
+    # Identify line ranges for content sections 2-14 (not section 1 or 15)
+    # We'll track section boundaries
+    section_ranges = []
+    current_section = None
+    current_start = None
+    
+    for i, line in enumerate(lines):
+        # Detect section headers like "## 2. Problem Statement"
+        section_match = re.match(r'##\s+(\d+)\.\s+', line)
+        if section_match:
+            section_num = int(section_match.group(1))
+            
+            # Save previous section if it was in range 2-14
+            if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+                section_ranges.append((current_start, i))
+            
+            # Start tracking new section if in range 2-14
+            if 2 <= section_num <= 14:
+                current_section = section_num
+                current_start = i
+            else:
+                current_section = None
+                current_start = None
+    
+    # Handle last section if it was in range 2-14
+    if current_section is not None and 2 <= current_section <= 14 and current_start is not None:
+        section_ranges.append((current_start, len(lines)))
+    
+    # Clean up placeholders in identified sections
+    # Use a more generic pattern that matches anything in square brackets
+    placeholder_pattern = r'\[([^\]]+)\]'
+    
+    for start, end in section_ranges:
+        for i in range(start, end):
+            # Remove all square bracket placeholders from this line
+            if re.search(placeholder_pattern, lines[i]):
+                lines[i] = re.sub(placeholder_pattern, '', lines[i])
+    
+    # Remove lines that become empty or only whitespace after cleanup
+    # But preserve structural elements (headers, separators, list markers)
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+        # Remove lines that are now empty or only contain punctuation/whitespace
+        # But keep section headers, list markers, separators
+        if stripped and not stripped.startswith('#') and not stripped.startswith('-') and not stripped.startswith('*'):
+            # Check if line is effectively empty after placeholder removal
+            # (e.g., "Version: " with nothing after colon)
+            if re.match(r'^[:\s|]*$', stripped):
+                lines.pop(i)
+                continue
+        i += 1
+    
+    # Remove duplicated scaffolding: look for commented example blocks and remove them
+    # These are typically marked with <!-- Example --> or similar
+    i = 0
+    in_example_block = False
+    example_start = -1
+    
+    while i < len(lines):
+        if '<!-- Example' in lines[i] or '<!-- Template' in lines[i]:
+            in_example_block = True
+            example_start = i
+        elif in_example_block and '-->' in lines[i]:
+            # Remove the entire example block
+            if example_start >= 0:
+                # Delete from example_start to i (inclusive)
+                del lines[example_start:i+1]
+                i = example_start
+                in_example_block = False
+                example_start = -1
+                continue
+        i += 1
 
 # ---------- Patch Application ----------
 def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str, dict]:
@@ -649,9 +799,11 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
         _update_approval_status(lines, status_update)
     
     # Add revision history entry (simplified version increment)
+    # Detect version transition from 0.0 → 0.1+ for placeholder cleanup
     today = datetime.now().strftime("%Y-%m-%d")
     change_desc = f"{mode.capitalize()} pass by Requirements Agent"
     version_to_use = "0.1"  # Default fallback if no previous version found
+    previous_version = "0.0"  # Track previous version for transition detection
     
     for i, line in enumerate(lines):
         if '### Version History' in line:
@@ -666,6 +818,7 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                     parts = lines[j].split('|')
                     if len(parts) >= 2:
                         prev_ver = parts[1].strip()
+                        previous_version = prev_ver  # Track for transition detection
                         # Simple increment: if it's "X.Y", make it "X.Y+1"
                         try:
                             if '.' in prev_ver and prev_ver.count('.') == 1:
@@ -676,6 +829,16 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                     lines.insert(j, f"| {version_to_use} | {today} | Requirements Agent | {change_desc} |")
                     break
             break
+    
+    # Detect template baseline -> active document transition (0.0 -> 0.1+)
+    # This is the ONE-TIME placeholder cleanup trigger
+    is_version_transition = (previous_version == "0.0" and version_to_use != "0.0")
+    
+    if is_version_transition:
+        print(f"\n[Version Transition] Detected 0.0 -> {version_to_use} transition")
+        print("  -> Cleaning up template placeholders (one-time operation)")
+        _cleanup_template_placeholders(lines)
+        print("  ✓ Placeholder cleanup complete")
     
     # Update Document Control table fields atomically
     # Track which fields have been updated to avoid redundant iterations
@@ -746,12 +909,19 @@ def main():
     print(f"  - {resolved_count} resolved")
     print(f"  - {pending_count} pending integration")
     
+    # Check document version for template baseline detection
+    version_str, major, minor = get_document_version(requirements)
+    is_template = is_template_baseline(requirements)
+    print(f"\n[Version] Document version: {version_str}")
+    if is_template:
+        print("  ⚠️  Template baseline detected - special safeguards active")
+    
     # Determine mode
     mode = determine_mode(requirements)
     print(f"\n[Mode] Running in {mode} mode")
     
     # Build prompt
-    instructions = get_agent_instructions(mode)
+    instructions = get_agent_instructions(mode, is_template)
     prompt = f"""You are the Requirements Agent.
 
 Agent profile:
