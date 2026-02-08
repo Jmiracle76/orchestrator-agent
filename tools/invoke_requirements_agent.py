@@ -552,24 +552,6 @@ def _cleanup_template_placeholders(lines: list) -> None:
     
     Called once and only once during the 0.0 → 0.1+ version transition.
     """
-    # Remove common placeholder patterns in content sections (2-14)
-    # We need to be careful not to modify structural elements
-    
-    placeholder_patterns = [
-        r'\[Date\]',
-        r'\[Author\]',
-        r'\[Contact info\]',
-        r'\[YYYY-MM-DD\]',
-        r'\[YYYY-MM-DDTHH:MM:SSZ\]',
-        r'\[Brief project description\]',
-        r'\[Project Name\]',
-        r'\[Their interest/need\]',
-        r'\[User type\]',
-        r'\[Key characteristics\]',
-        r'\[Primary needs\]',
-        r'\[Main use cases\]',
-    ]
-    
     # Identify line ranges for content sections 2-14 (not section 1 or 15)
     # We'll track section boundaries
     section_ranges = []
@@ -599,23 +581,26 @@ def _cleanup_template_placeholders(lines: list) -> None:
         section_ranges.append((current_start, len(lines)))
     
     # Clean up placeholders in identified sections
+    # Use a more generic pattern that matches anything in square brackets
+    placeholder_pattern = r'\[([^\]]+)\]'
+    
     for start, end in section_ranges:
         for i in range(start, end):
-            for pattern in placeholder_patterns:
-                # Only replace if the line contains the placeholder
-                if re.search(pattern, lines[i]):
-                    lines[i] = re.sub(pattern, '', lines[i])
+            # Remove all square bracket placeholders from this line
+            if re.search(placeholder_pattern, lines[i]):
+                lines[i] = re.sub(placeholder_pattern, '', lines[i])
     
-    # Remove lines that become empty or contain only whitespace/markdown symbols after cleanup
+    # Remove lines that become empty or only whitespace after cleanup
     # But preserve structural elements (headers, separators, list markers)
     i = 0
     while i < len(lines):
         stripped = lines[i].strip()
-        # Check if line is now effectively empty (only contains |, -, whitespace)
-        # But don't remove section headers, list items, or separator lines that are intentional
+        # Remove lines that are now empty or only contain punctuation/whitespace
+        # But keep section headers, list markers, separators
         if stripped and not stripped.startswith('#') and not stripped.startswith('-') and not stripped.startswith('*'):
-            # Check if line only contains cleaned-up table cells or markdown that's now empty
-            if re.match(r'^\|\s*\|\s*\|\s*\|$', stripped):  # Empty table row
+            # Check if line is effectively empty after placeholder removal
+            # (e.g., "Version: " with nothing after colon)
+            if re.match(r'^[:\s|]*$', stripped):
                 lines.pop(i)
                 continue
         i += 1
