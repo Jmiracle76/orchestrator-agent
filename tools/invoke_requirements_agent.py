@@ -591,19 +591,25 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                     # Match the target by checking if the section heading appears in any target
                     # The section heading from agent is "## 8. Functional Requirements"
                     # The target is "Section 8: Functional Requirements"
-                    # We need a more flexible match
-                    for target in integration_tracking[q_id]:
-                        # Extract section number and name from both formats
-                        # Target format: "Section X: Name" or "Section X. Name"
-                        # Heading format: "## X. Name"
+                    # Extract section number and name for precise matching
+                    
+                    # Parse section heading: "## 8. Functional Requirements" -> section_num=8, name="Functional Requirements"
+                    heading_match = re.match(r'##\s*(\d+)\.\s*(.+)', section_heading)
+                    if heading_match:
+                        heading_num = heading_match.group(1)
+                        heading_name = heading_match.group(2).strip()
                         
-                        # Simple heuristic: if the key parts (number and name) match
-                        target_normalized = target.lower().replace('section ', '').replace(':', '.').strip()
-                        heading_normalized = section_heading.lower().replace('#', '').strip()
-                        
-                        if target_normalized in heading_normalized or heading_normalized in target_normalized:
-                            integration_tracking[q_id][target] = True
-                            break
+                        for target in integration_tracking[q_id]:
+                            # Parse target: "Section 8: Functional Requirements" -> section_num=8, name="Functional Requirements"
+                            target_match = re.match(r'Section\s+(\d+)[:.]\s*(.+)', target, re.IGNORECASE)
+                            if target_match:
+                                target_num = target_match.group(1)
+                                target_name = target_match.group(2).strip()
+                                
+                                # Match if section numbers are the same and names match (case-insensitive)
+                                if heading_num == target_num and heading_name.lower() == target_name.lower():
+                                    integration_tracking[q_id][target] = True
+                                    break
         
         # Derive resolution status: mark questions as resolved ONLY if all targets were integrated
         for q_id, targets in integration_tracking.items():
@@ -617,7 +623,8 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
                             if '**Status:**' in lines[j]:
                                 # Update status to Resolved
                                 # Match "**Status:** <anything>" and replace with "**Status:** Resolved"
-                                lines[j] = re.sub(r'\*\*Status:\*\*\s+\S+', '**Status:** Resolved', lines[j])
+                                # Use .*? to match the entire status value, then $ to match end of line
+                                lines[j] = re.sub(r'\*\*Status:\*\*\s+.*?$', '**Status:** Resolved', lines[j].rstrip())
                                 break
                         break
             else:
