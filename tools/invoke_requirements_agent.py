@@ -31,6 +31,9 @@ REQ_FILE = REPO_ROOT / "docs" / "requirements.md"
 AGENT_PROFILE = REPO_ROOT / "agent-profiles" / "requirements-agent.md"
 PLANNING_STATE_MARKER = REPO_ROOT / ".agent_state" / "requirements_approved"
 
+# Regex pattern for detecting section boundaries (### with space or end of string)
+SECTION_BOUNDARY_PATTERN = r'(?=\n###\s|\Z)'
+
 # ---------- Intake Section Parsing ----------
 def _parse_intake_section(content: str) -> str:
     """
@@ -231,13 +234,14 @@ def _find_question_id_references(content: str) -> dict:
         start_pos = open_q_match.start()
         # Find end of Open Questions section
         rest = content[start_pos:]
-        end_pattern = r'\n---\n\n###'
+        # Look for next subsection (###) or major section (##)
+        end_pattern = r'\n###\s'
         end_match = re.search(end_pattern, rest)
         if end_match:
-            end_pos = start_pos + end_match.end()
+            end_pos = start_pos + end_match.start()
         else:
             # Find next major section
-            next_section = re.search(r'\n---\n\n## \d+\.', rest)
+            next_section = re.search(r'\n## \d+\.', rest)
             end_pos = start_pos + next_section.start() if next_section else len(content)
         
         # Search only outside Open Questions section
@@ -1549,10 +1553,10 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     if mode == "review":
         # Extract review patches
         # Note: Use word boundary or space after ### to avoid matching #### headers
-        status_match = re.search(r'### STATUS_UPDATE\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
-        risks_match = re.search(r'### RISKS\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
-        questions_match = re.search(r'### OPEN_QUESTIONS\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
-        intake_clear_match = re.search(r'### INTAKE_CLEAR\s*\n(.*?)(?=\n###\s|\Z)', agent_output, re.DOTALL)
+        status_match = re.search(rf'### STATUS_UPDATE\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+        risks_match = re.search(rf'### RISKS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+        questions_match = re.search(rf'### OPEN_QUESTIONS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
+        intake_clear_match = re.search(rf'### INTAKE_CLEAR\s*\n(.*?){SECTION_BOUNDARY_PATTERN}', agent_output, re.DOTALL)
         
         status_update = status_match.group(1).strip() if status_match else ""
         risks_content = risks_match.group(1).strip() if risks_match else ""
@@ -1652,17 +1656,17 @@ def apply_patches(requirements: str, agent_output: str, mode: str) -> tuple[str,
     
     else:  # integrate mode
         # Extract integration patches
-        # Note: Use specific lookahead patterns to avoid matching #### headers
+        # Note: Use consistent section boundary patterns
         integrated_match = re.search(
-            r'### INTEGRATED_SECTIONS\s*\n(.*?)(?=\n### RISKS|\Z)',
+            rf'### INTEGRATED_SECTIONS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
             agent_output, re.DOTALL
         )
         risks_match = re.search(
-            r'### RISKS\s*\n(.*?)(?=\n### STATUS_UPDATE|\Z)',
+            rf'### RISKS\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
             agent_output, re.DOTALL
         )
         status_match = re.search(
-            r'### STATUS_UPDATE\s*\n(.*?)(?=\n###\s|\Z)',
+            rf'### STATUS_UPDATE\s*\n(.*?){SECTION_BOUNDARY_PATTERN}',
             agent_output, re.DOTALL
         )
         
