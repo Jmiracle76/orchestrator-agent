@@ -390,12 +390,12 @@ STATUS_TABLE_FIELDS = ("| Approval Status |", "| Current Status |")
 
 def missing_required_sections(content: str) -> List[str]:
     """Return a list of missing required top-level sections."""
-    missing = []
-    for section in REQUIRED_SECTIONS:
-        pattern = rf'^{re.escape(section)}\s*$'
-        if not re.search(pattern, content, re.MULTILINE):
-            missing.append(section)
-    return missing
+    headers = {
+        line.strip()
+        for line in content.splitlines()
+        if line.strip().startswith("## ")
+    }
+    return [section for section in REQUIRED_SECTIONS if section not in headers]
 
 
 def has_answered_questions(content: str) -> bool:
@@ -406,6 +406,7 @@ def has_answered_questions(content: str) -> bool:
         "[pending]",
         "[tbd]",
     }
+    # Expected format: Answer block followed by Integration Targets.
     answer_pattern = re.compile(
         r'\*\*Answer:\*\*\s*\n(.*?)(?=\n\*\*Integration Targets:\*\*|\Z)',
         re.DOTALL
@@ -526,8 +527,7 @@ def _should_apply_patch(content: str, skip_phrases: tuple[str, ...]) -> bool:
 
 
 def _replace_subsection(lines: List[str], header: str, content: str) -> bool:
-    if not content:
-        return False
+    content = content or ""
     content_lines = [line.rstrip() for line in content.strip().splitlines()]
     header_text = header.strip()
     for i, line in enumerate(lines):
@@ -545,10 +545,12 @@ def _replace_subsection(lines: List[str], header: str, content: str) -> bool:
                 end = len(lines)
             replace_start = start
             while replace_start < end and "<!--" in lines[replace_start]:
-                while replace_start < end and "-->" not in lines[replace_start]:
-                    replace_start += 1
-                if replace_start < end:
-                    replace_start += 1
+                comment_end = replace_start
+                while comment_end < end and "-->" not in lines[comment_end]:
+                    comment_end += 1
+                if comment_end >= end:
+                    break
+                replace_start = comment_end + 1
             replacement = [""] + content_lines + [""]
             lines[replace_start:end] = replacement
             return True
@@ -722,14 +724,17 @@ Your output will be parsed and applied as patches.
     print("✓ Document updated")
 
     if not args.no_commit:
-        diff_status = subprocess.call(
+        diff_result = subprocess.run(
             ["git", "diff", "--quiet", "--", "docs/requirements.md"],
-            cwd=REPO_ROOT
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True
         )
-        if diff_status == 0:
+        if diff_result.returncode == 0:
             print("\n[Commit] No changes detected; skipping commit")
-        elif diff_status != 1:
-            print("\n[Commit] Unable to determine git diff status")
+        elif diff_result.returncode != 1:
+            detail = diff_result.stderr.strip() or "git diff returned unexpected status"
+            print(f"\n[Commit] Unable to determine git diff status: {detail}")
             sys.exit(1)
         else:
             print("\n[Commit] Staging requirements changes...")

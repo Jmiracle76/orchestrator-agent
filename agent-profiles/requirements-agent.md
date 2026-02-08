@@ -22,6 +22,14 @@ Example canonical subsection:
 **Status:** Open
 **Asked by:** Requirements Agent
 **Date:** 2026-02-08
+
+**Question:**
+What is the required data retention window?
+
+**Answer:**
+
+**Integration Targets:**
+- Section 11: Data Considerations
 ```
 
 **CRITICAL: Mode selection is EXTERNALLY ENFORCED by the invocation script. The agent MUST NOT infer or override the mode.**

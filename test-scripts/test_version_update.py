@@ -39,6 +39,10 @@ def test_version_unchanged_review_mode():
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.0 | 2026-01-01 | Template | Initial version |
+
+## 2. Problem Statement
+
+Sample problem statement.
 """
     
     agent_output = """## REVIEW_OUTPUT
@@ -84,6 +88,10 @@ def test_version_unchanged_integrate_mode():
 |---------|------|--------|---------|
 | 0.5 | 2026-01-15 | Previous Agent | Previous change |
 | 0.0 | 2026-01-01 | Template | Initial version |
+
+## 2. Problem Statement
+
+Sample problem statement.
 """
     
     agent_output = """## INTEGRATION_OUTPUT
@@ -125,6 +133,10 @@ def test_consistency():
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.2 | 2026-01-20 | Human | Some changes |
+
+## 2. Problem Statement
+
+Sample problem statement.
 """
     
     agent_output = """## REVIEW_OUTPUT

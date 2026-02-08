@@ -27,17 +27,23 @@ def test_missing_required_sections():
 
 def test_has_answered_questions():
     """Test detection of answered questions for mode selection."""
-    unanswered_doc = """
+    placeholders = ["[Awaiting response]", "[awaiting answer]", "[pending]", "[tbd]"]
+    for placeholder in placeholders:
+        unanswered_doc = f"""
 ### Open Questions
 
 #### Q-001: Test Question
 
 **Answer:**
-[Awaiting response]
+{placeholder}
 
 **Integration Targets:**
 - Section 8: Functional Requirements
 """
+        assert not has_answered_questions(unanswered_doc), (
+            f"Placeholder answer '{placeholder}' should not trigger integrate mode"
+        )
+
     answered_doc = """
 ### Open Questions
 
@@ -50,7 +56,6 @@ Provide a concrete answer.
 - Section 8: Functional Requirements
 """
 
-    assert not has_answered_questions(unanswered_doc), "Placeholder answers should not trigger integrate mode"
     assert has_answered_questions(answered_doc), "Concrete answers should trigger integrate mode"
     print("✓ Answered question detection test passed")
 
