@@ -1231,6 +1231,89 @@ def main():
     print(f"  - {resolved_count} resolved")
     print(f"  - {pending_count} pending integration")
     
+    # Check for new unresolved input (answered questions pending integration)
+    if pending_count > 0:
+        print("\n[Approval Revocation] Answered questions pending integration detected")
+        
+        # Check if requirements were previously approved
+        if is_requirements_approved(requirements):
+            print("  ⚠️  Requirements were previously approved")
+            print("  → Revoking approval due to unresolved answered questions")
+            
+            # Update approval status in document to "Pending"
+            requirements = update_approval_status_to_pending(requirements)
+            REQ_FILE.write_text(requirements, encoding="utf-8")
+            print("  ✓ Approval status updated to 'Pending - Revisions Required'")
+            
+            # Delete planning state marker if it exists
+            if revoke_approval_state():
+                print("  ✓ Planning state marker deleted")
+                
+                # Commit the revocation
+                try:
+                    subprocess.check_call(
+                        ["git", "add", str(REQ_FILE)],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    subprocess.check_call(
+                        ["git", "add", "-u", ".agent_state/"],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    
+                    # Check if there are actually changes to commit
+                    status = subprocess.check_output(
+                        ["git", "diff", "--cached", "--name-only"],
+                        cwd=REPO_ROOT
+                    ).decode().strip()
+                    
+                    if status:
+                        subprocess.check_call(
+                            ["git", "commit", "-m", "revoke: approval invalidated by answered questions pending integration"],
+                            cwd=REPO_ROOT,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        print("  ✓ Approval revocation committed")
+                    else:
+                        print("  ℹ️  No changes to commit (approval already pending)")
+                except subprocess.CalledProcessError as e:
+                    print(f"  ✗ Failed to commit revocation: {e}")
+            else:
+                # No state marker exists, just commit the document change if needed
+                try:
+                    subprocess.check_call(
+                        ["git", "add", str(REQ_FILE)],
+                        cwd=REPO_ROOT,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    
+                    # Check if there are actually changes to commit
+                    status = subprocess.check_output(
+                        ["git", "diff", "--cached", "--name-only"],
+                        cwd=REPO_ROOT
+                    ).decode().strip()
+                    
+                    if status:
+                        subprocess.check_call(
+                            ["git", "commit", "-m", "revoke: approval status updated to Pending due to pending questions"],
+                            cwd=REPO_ROOT,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        print("  ✓ Approval status change committed")
+                    else:
+                        print("  ℹ️  No changes to commit (approval already pending)")
+                except subprocess.CalledProcessError as e:
+                    print(f"  ✗ Failed to commit status change: {e}")
+        
+            # Re-read requirements after modification
+            requirements = REQ_FILE.read_text(encoding="utf-8")
+    
     # Parse Intake section
     print("\n[Intake] Parsing Intake section...")
     intake_content = _parse_intake_section(requirements)
