@@ -13,7 +13,7 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** Orchestrator Agent 
-**Version:** 0.0  
+**Version:** 0.3
 **Status:** Draft  
 **Last Updated:** [Date]  
 **Approved By:** Pending  
@@ -28,10 +28,10 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.0 |
-| Last Modified | [Date] |
-| Modified By | [Author] |
-| Approval Status | Pending |
+| Current Version | 0.3 |
+| Last Modified | 2026-02-08 |
+| Modified By | Requirements Agent |
+| Approval Status | Pending - Revisions Required |
 | Approved By | Pending |
 | Approval Date | Pending |
 
@@ -40,6 +40,7 @@
 <!-- Requirements Agent updates this section when integrating answers in integrate_answers mode -->
 <!-- Each integration must document: which Question IDs were integrated, which sections were updated, and nature of changes -->
 
+| 0.3 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | 0.2 | 2026-02-08 | Requirements Agent | Integrate pass by Requirements Agent |
 | 0.1 | 2026-02-08 | Requirements Agent | Review pass by Requirements Agent |
 | Version | Date | Author | Changes |
@@ -664,12 +665,6 @@ NFR-004: Failure Safety
 ---
 
 ### Intake
-
-<!-- Human-editable section for unstructured thoughts and notes -->
-<!-- This section is NON-AUTHORITATIVE and excluded from approval criteria -->
-<!-- The Requirements Agent reads this section and converts ambiguities into formal Open Questions -->
-<!-- Once questions are created, notes are drained/cleared from this section -->
-<!-- DO NOT integrate raw Intake text directly into content sections -->
 
 [Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
 
