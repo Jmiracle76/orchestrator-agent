@@ -244,17 +244,17 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-035 | What are the key measurable outcomes that would indicate this project is successful? | 2026-02-09 |  | success_criteria | Open |
-| Q-036 | What metrics or KPIs will be used to evaluate project success? | 2026-02-09 |  | success_criteria | Open |
-| Q-037 | What are the minimum requirements that must be met for deliverables to be accepted? | 2026-02-09 |  | success_criteria | Open |
+| Q-035 | What are the key measurable outcomes that would indicate this project is successful? | 2026-02-09 | A complete, internally consistent execution plan is generated for approved requirements with no unintended repository changes. | success_criteria | Open |
+| Q-036 | What metrics or KPIs will be used to evaluate project success? | 2026-02-09 | Metrics include plan completeness, number of manual corrections required, and repeatability across similar projects. | success_criteria | Open |
+| Q-037 | What are the minimum requirements that must be met for deliverables to be accepted? | 2026-02-09 | All requirements must be represented in the plan, scope boundaries must be respected, and outputs must be reproducible. | success_criteria | Open |
 | Q-038 | Are there specific performance, quality, or compliance standards that must be satisfied? | 2026-02-09 |  | success_criteria | Open |
 | Q-039 | What stakeholder approval or sign-off processes are required for project acceptance? | 2026-02-09 |  | success_criteria | Open |
-| Q-029 | Who are the primary stakeholders for this project (e.g., project sponsor, business owner, department head)? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-029 | Who are the primary stakeholders for this project (e.g., project sponsor, business owner, department head)? | 2026-02-09 | The primary stakeholders are the project author, future contributors, and any team members responsible for maintaining or extending the automation framework. | stakeholders_users | Open |
 | Q-030 | What are the contact details (email, phone, or department) for each primary stakeholder? | 2026-02-09 |  | stakeholders_users | Open |
-| Q-031 | What types of end users will interact with this system (e.g., administrators, customers, operators)? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-031 | What types of end users will interact with this system (e.g., administrators, customers, operators)? | 2026-02-09 | End users include individual developers, technical leads, and AI agents operating under orchestration control. | stakeholders_users | Open |
 | Q-032 | What are the key characteristics of each end user type (e.g., technical expertise, frequency of use, location)? | 2026-02-09 |  | stakeholders_users | Open |
-| Q-033 | What are the specific needs or requirements of each end user type? | 2026-02-09 |  | stakeholders_users | Open |
-| Q-034 | What are the primary use cases or scenarios for each end user type? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-033 | What are the specific needs or requirements of each end user type? | 2026-02-09 | End users need reliable translation of intent into plans, protection against unintended scope expansion, and transparency into how decisions are made. | stakeholders_users | Open |
+| Q-034 | What are the primary use cases or scenarios for each end user type? | 2026-02-09 | Key use cases include project bootstrapping, requirements-to-plan translation, iterative refinement, and multi-agent coordination. | stakeholders_users | Open |
 | Q-022 | What is the main problem or need this project aims to solve? | 2026-02-09 |  | goals_objectives | Open |
 | Q-023 | What are the top 2-3 measurable outcomes you want to achieve with this project? | 2026-02-09 |  | primary_goals | Open |
 | Q-024 | How will success be measured for each primary goal? | 2026-02-09 |  | primary_goals | Open |
