@@ -81,13 +81,26 @@ DEFAULT_TEMPLATE = REPO_ROOT / "docs" / "templates" / "requirements-template.md"
 DEFAULT_DOC = REPO_ROOT / "docs" / "requirements.md"
 
 PHASES: Dict[str, List[str]] = {
+    # Phase 1: Intent & scope
     "phase_1_intent_scope": [
         "problem_statement",
         "goals_objectives",
         "stakeholders_users",
         "success_criteria",
     ],
+    # Phase 2: Assumptions & constraints
+    "phase_2_assumptions_constraints": [
+        "assumptions",
+        "constraints",
+    ],
 }
+
+# Execute phases in this order; we run ONLY the first incomplete phase each run.
+PHASE_ORDER = [
+    "phase_1_intent_scope",
+    "phase_2_assumptions_constraints",
+]
+
 
 # Open Questions may sometimes (incorrectly) target subsection IDs.
 # Phase 1 only edits whole sections, so we coerce known subsection targets
@@ -1199,6 +1212,166 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
 # Bootstrap helper (optional but useful)
 # -----------------------------
 
+
+def process_phase_2(
+    lines: List[str],
+    llm: LLMClient,
+    dry_run: bool,
+) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+    """
+    Process Phase 2 sections in order:
+    - assumptions
+    - constraints
+
+    Same mechanics as Phase 1:
+    - Skip locked sections
+    - If section blank -> generate Open Questions (but do not draft content)
+    - If answered questions exist -> integrate into target section and resolve them
+    - If human-modified (and not locked) -> review and revise
+
+    Returns:
+    - new_lines
+    - changed
+    - blocked_reasons
+    - needs_human_input
+    - change_summaries (for version history)
+    """
+    changed = False
+    blocked: List[str] = []
+    needs_human_input = False
+    change_summaries: List[str] = []
+
+    spans = find_sections(lines)
+
+    # Parse Open Questions once; we will re-parse after inserts/resolutions.
+    open_qs, _, _ = open_questions_parse(lines)
+
+    revised_sections: Dict[str, int] = {sid: 0 for sid in PHASES["phase_2_assumptions_constraints"]}
+
+    for section_id in PHASES["phase_2_assumptions_constraints"]:
+        span = get_section_span(spans, section_id)
+        if not span:
+            blocked.append(f"Missing required section marker: {section_id}")
+            continue
+
+        if section_is_locked(lines, span):
+            logging.info("Section locked, skipping edits: %s", section_id)
+            continue
+
+        blank = section_is_blank(lines, span)
+
+        answered = [
+            q for q in open_qs
+            if q.section_target.strip() == section_id
+            and q.answer.strip() not in ("", "-", "Pending")
+            and q.status.strip() in ("Open", "Deferred")
+        ]
+
+        human_modified = False  # provenance tracking comes later
+
+        # If blank, only generate questions (unless questions already exist)
+        if blank:
+            if any(q.section_target.strip() == section_id and q.status.strip() == "Open" for q in open_qs):
+                logging.info("Section blank but already has open questions; not generating more: %s", section_id)
+                needs_human_input = True
+                continue
+
+            logging.info("Section blank, generating questions: %s", section_id)
+            needs_human_input = True
+            context = section_text(lines, span)
+
+            try:
+                proposed = llm.generate_open_questions(section_id, context)
+            except Exception as e:
+                logging.error("LLM generate_open_questions failed for %s: %s", section_id, e)
+                proposed = []
+
+            if proposed:
+                new_qs = [(q["question"], q["section_target"], iso_today()) for q in proposed]
+                lines, inserted = insert_open_questions(lines, new_qs)
+                if inserted:
+                    changed = True
+                    change_summaries.append(f"Generated {inserted} open questions for {section_id}")
+                    open_qs, _, _ = open_questions_parse(lines)
+            else:
+                blocked.append(f"{section_id} is blank and no questions were generated.")
+
+            continue
+
+        # If answered questions exist, integrate and resolve
+        if answered and revised_sections[section_id] < 1:
+            logging.info("Integrating answers into section: %s (%d answered)", section_id, len(answered))
+            context = section_text(lines, span)
+
+            try:
+                new_body, resolved_qids = llm.integrate_answers(section_id, context, answered)
+            except Exception as e:
+                logging.error("LLM integrate_answers failed for %s: %s", section_id, e)
+                new_body, resolved_qids = context, []
+
+            if new_body.strip() != context.strip():
+                if not dry_run:
+                    lines = replace_section_data_plane(lines, span, new_body)
+                changed = True
+                revised_sections[section_id] += 1
+                change_summaries.append(f"Section updated: {section_id} (integrated {len(answered)} answers)")
+                open_qs, _, _ = open_questions_parse(lines)
+
+            if resolved_qids:
+                lines, resolved_ct = resolve_open_questions(lines, resolved_qids)
+                if resolved_ct:
+                    changed = True
+                    change_summaries.append(f"Questions resolved: {', '.join(resolved_qids)}")
+                    open_qs, _, _ = open_questions_parse(lines)
+
+        # Human-modified review hook
+        if human_modified and revised_sections[section_id] < 1:
+            logging.info("Human-modified section; reviewing: %s", section_id)
+            context = section_text(lines, span)
+            try:
+                revised = llm.review_and_revise(section_id, context)
+            except Exception as e:
+                logging.error("LLM review_and_revise failed for %s: %s", section_id, e)
+                revised = context
+
+            if revised.strip() != context.strip():
+                if not dry_run:
+                    lines = replace_section_data_plane(lines, span, revised)
+                changed = True
+                revised_sections[section_id] += 1
+                change_summaries.append(f"Section reviewed/revised: {section_id}")
+
+    return lines, changed, blocked, needs_human_input, change_summaries
+
+
+def validate_phase_2_complete(lines: List[str]) -> Tuple[bool, List[str]]:
+    """
+    Phase 2 completeness:
+    - assumptions + constraints sections contain no PLACEHOLDER_TOKEN
+    - No Open Questions with section_target in Phase 2 and status Open
+    """
+    issues: List[str] = []
+    spans = find_sections(lines)
+
+    try:
+        open_qs, _, _ = open_questions_parse(lines)
+    except Exception as e:
+        issues.append(f"Open Questions parse failed: {e}")
+        return False, issues
+
+    for sid in PHASES["phase_2_assumptions_constraints"]:
+        sp = get_section_span(spans, sid)
+        if not sp:
+            issues.append(f"Missing section: {sid}")
+            continue
+        if section_is_blank(lines, sp):
+            issues.append(f"Section still blank: {sid}")
+
+        if any(q.section_target.strip() == sid and q.status.strip() == "Open" for q in open_qs):
+            issues.append(f"Open questions remain for section: {sid}")
+
+    return (len(issues) == 0), issues
+
 def maybe_fill_bootstrap_problem(lines: List[str], problem_text: str) -> Tuple[List[str], bool]:
     """
     If you have a bootstrap question like Q-001 in the Open Questions table,
@@ -1274,7 +1447,34 @@ def main() -> int:
             change_summaries.append("Bootstrap: answered Q-001 from --problem")
 
     lines_before_run = list(lines)
-    complete_before, _ = validate_phase_1_complete(lines_before_run)
+
+    # Determine which phase to run: we run ONLY the first incomplete phase each run.
+    phase_to_run = None
+    complete_before = False
+
+    for ph in PHASE_ORDER:
+        if ph == "phase_1_intent_scope":
+            complete, _issues = validate_phase_1_complete(lines)
+        elif ph == "phase_2_assumptions_constraints":
+            # Phase 2 only matters after Phase 1 is complete.
+            p1_complete, _ = validate_phase_1_complete(lines)
+            if not p1_complete:
+                complete = False
+            else:
+                complete, _issues = validate_phase_2_complete(lines)
+        else:
+            complete = True
+
+        if not complete:
+            phase_to_run = ph
+            complete_before = False
+            break
+
+    if phase_to_run is None:
+        # Everything we currently know about is complete.
+        phase_to_run = "phase_2_assumptions_constraints"
+        complete_before = True
+
     # Initialize real LLM client
     try:
         llm = LLMClient()
@@ -1282,25 +1482,39 @@ def main() -> int:
         print(f"ERROR: LLM client init failed: {e}")
         return 2
 
-    # Phase 1
+    # Run selected phase
     try:
-        lines, phase_changed, blocked, needs_human, phase_summaries = process_phase_1(lines, llm, args.dry_run)
+        if phase_to_run == "phase_1_intent_scope":
+            lines, phase_changed, blocked, needs_human, phase_summaries = process_phase_1(lines, llm, args.dry_run)
+            complete_after, _ = validate_phase_1_complete(lines)
+        elif phase_to_run == "phase_2_assumptions_constraints":
+            lines, phase_changed, blocked, needs_human, phase_summaries = process_phase_2(lines, llm, args.dry_run)
+            complete_after, _ = validate_phase_2_complete(lines)
+        else:
+            phase_changed, blocked, needs_human, phase_summaries, complete_after = False, [], False, [], True
+
         change_summaries.extend(phase_summaries)
         changed = changed or phase_changed
     except Exception as e:
         logging.error("Run failed: %s", e, exc_info=True)
         return 2
 
-    complete_after, _ = validate_phase_1_complete(lines)
+    # A phase completion transition is what triggers a minor version bump (0.x -> 0.(x+1)).
     phase_completed_this_run = (not complete_before) and complete_after
+
     lines, meta_changed = update_automation_owned_fields(lines_before_run, lines, doc_created=doc_created, phase_completed_this_run=phase_completed_this_run, change_summaries=change_summaries)
     changed = changed or meta_changed
-    # Validate Phase 1 completeness
-    complete, issues = validate_phase_1_complete(lines)
-    if not complete:
-        for i in issues:
+    # Validate completeness for phases we know about (informational only).
+    p1_complete, p1_issues = validate_phase_1_complete(lines)
+    if not p1_complete:
+        for i in p1_issues:
             logging.info("PHASE 1 INCOMPLETE: %s", i)
 
+    if p1_complete:
+        p2_complete, p2_issues = validate_phase_2_complete(lines)
+        if not p2_complete:
+            for i in p2_issues:
+                logging.info("PHASE 2 INCOMPLETE: %s", i)
     # Outcome
     if blocked:
         outcome = "blocked"
@@ -1317,7 +1531,7 @@ def main() -> int:
 
     # Commit/push (only if changed and enabled)
     if changed and not args.dry_run and not args.no_commit:
-        commit_msg = "requirements: automation pass (phase 1)"
+        commit_msg = f"requirements: automation pass ({phase_to_run})"
         allow = [str(doc_path.relative_to(REPO_ROOT)).replace("\\", "/")]
         commit_and_push(REPO_ROOT, commit_msg, allow_files=allow)
 
