@@ -13,7 +13,7 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** [Project Name]
-**Version:** 0.1
+**Version:** 0.2
 **Status:** **Recommendation:** Pending - Revisions Required
 **Last Updated:** [Date]
 **Approved By:** Pending
@@ -28,7 +28,7 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.1 |
+| Current Version | 0.2 |
 | Last Modified | [Date] |
 | Modified By | Template |
 | Approval Status | **Recommendation:** Pending - Revisions Required |
@@ -42,6 +42,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.2 | 2026-02-09 | Requirements Agent | Automated update |
 | 0.1 | 2026-02-08 | Requirements Agent | Automated update |
 | 0.0 | [Date] | Template | Template baseline - clean reusable starting point |
 
@@ -54,6 +55,71 @@
 <!-- Focus on: What is broken? What pain exists? What is the measurable impact? -->
 
 [Content needed for Problem Statement]
+
+---
+
+
+The current agent system suffers from unclear responsibility boundaries and inconsistent behavior due to organic growth without formal architectural constraints. Three agents operate in the system (Requirements Agent, Planning Agent, Orchestration Agent), but their authority boundaries, handoff protocols, and decision-making scopes have not been explicitly defined. This ambiguity leads to:
+
+- Scope creep and overlapping responsibilities between agents
+- Risk of circular reasoning when agents invoke each other without clear hierarchy
+- Authority conflicts when multiple agents attempt to modify the same artifacts
+- Unpredictable behavior when upstream/downstream relationships are unclear
+
+**Authority Hierarchy (Source: Product Owner, Answer to Q-001):**
+The system enforces a strict hierarchical authority model:
+- Requirements Agent → Planning Agent → Execution (out of scope)
+- Upstream agents are authoritative; no agent may override or mutate upstream artifacts
+- When ambiguity exists, the upstream agent's output is authoritative
+
+**Agent Responsibility Boundaries (Source: Product Owner, Answer to Q-001):**
+
+*Requirements Agent owns:*
+- Eliciting, structuring, and validating requirements content
+- Managing Open Questions, Risks, Assumptions, and completeness checks
+- Enforcing requirements document schema and section integrity
+- Recommending "Ready for Approval" status (never approving)
+
+*Requirements Agent does NOT:*
+- Generate plans, milestones, or issues
+- Invoke downstream agents
+- Modify non-requirements artifacts
+- Make implementation or sequencing decisions
+
+*Planning Agent owns:*
+- Translating approved requirements into milestones and issues
+- Sequencing work based strictly on documented requirements
+- Producing planning artifacts only (no code, no execution)
+
+*Planning Agent does NOT:*
+- Modify requirements
+- Infer or add requirements
+- Execute development work
+- Invoke other agents or perform orchestration
+
+*Orchestration Agent owns:*
+- Interpreting project lifecycle state
+- Enforcing when agents may or may not run
+- Triggering agent execution based on explicit state transitions
+- Preventing out-of-order or out-of-scope agent activity
+
+*Orchestration Agent does NOT:*
+- Modify requirements or planning content
+- Make design or implementation decisions
+- Review or validate agent outputs
+
+---
+
+
+**Architectural Clarity (Source: Product Owner, Answer to Q-002):**
+The canonical architecture consists of two distinct reasoning agents plus a thin control layer:
+1. **Requirements Agent** (existing) - requirements elicitation and validation
+2. **Planning Agent** (new) - translation of requirements into structured plans
+3. **Orchestrator** - a thin control layer (not a reasoning agent) that may be implemented as either:
+   - A minimal orchestration agent, or
+   - Deterministic invocation logic in a script
+
+There is no combined "planning/orchestrator" reasoning agent. Planning logic and orchestration logic must remain separate to prevent scope creep, circular reasoning, and uncontrolled agent chains.
 
 ---
 
@@ -223,11 +289,13 @@ This project explicitly does NOT include:
 
 | Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
 |---------|-------------|-------------|--------|---------------------|-------|
-| R-001 | Template baseline state | High | High | Process Intake content into Open Questions, await human authoring of project-specific requirements in Sections 2-14 | Requirements Agent |
-| R-002 | Unclear scope boundaries between agents | High | High | Must define explicit responsibility boundaries for Requirements Agent, Planning Agent, and Orchestration Agent before architectural decisions can be made (see Q-001, Q-002) | Requirements Agent |
-| R-003 | Undefined orchestrator agent responsibilities | High | High | Must clarify full scope of orchestrator agent duties, authority boundaries, and handoff protocols (see Q-003) | Requirements Agent |
-| R-004 | Ambiguous problem definition | High | High | Intake describes symptoms (organic growth, inconsistency) but root cause and measurable impact need clarification (see Q-004) | Requirements Agent |
-| R-005 | Missing stakeholder and user identification | High | Medium | Cannot validate requirements completeness without knowing who will use/maintain the orchestrator system (see Q-005) | Requirements Agent |
+| R-001 | Open Questions Q-006, Q-007, Q-008 remain unresolved | High | High | Product Owner must provide answers for success criteria, technical constraints, and data management requirements before requirements can be approved | Requirements Agent |
+| R-002 | Planning Agent does not yet exist | High | High | Planning Agent must be developed with explicit scope boundaries and authority limits as defined in integrated answers; orchestrator cannot function until Planning Agent is operational | Requirements Agent |
+| R-003 | Orchestrator implementation model undecided | Medium | Medium | Must decide between minimal orchestration agent vs deterministic script implementation; decision impacts complexity and maintainability (see Q-002 integrated answer) | Requirements Agent |
+| R-004 | No enforcement mechanism for agent authority boundaries exists | High | High | Orchestrator must implement runtime checks to prevent agents from exceeding defined authority (e.g., Planning Agent modifying requirements.md); technical design required (see FR-004, FR-005) | Requirements Agent |
+| R-005 | State management design not yet defined | High | Medium | Q-008 must be answered to specify state storage, retention, and audit requirements before orchestrator implementation can proceed | Requirements Agent |
+
+---
 
 ---
 
@@ -240,9 +308,11 @@ This project explicitly does NOT include:
 ### Open Questions
 
 #### Q-001: Define explicit scope boundaries between Requirements, Planning, and Orchestration agents
-**Status:** Open
+**Status:** Resolved
 **Asked by:** Requirements Agent
 **Date:** 2026-02-08
+**Resolved by:** Product Owner
+**Resolution Date:** 2026-02-08
 
 **Question:**
 The Intake mentions three agent types (requirements, planning, orchestration) with unclear boundaries. What are the explicit responsibility boundaries and handoff protocols for each agent? Specifically:
@@ -257,7 +327,7 @@ Owns:
 •	Eliciting, structuring, and validating requirements content
 •	Managing Open Questions, Risks, Assumptions, and completeness checks
 •	Enforcing requirements document schema and section integrity
-•	Recommending “Ready for Approval” status (but never approving)
+•	Recommending "Ready for Approval" status (but never approving)
 Does NOT:
 •	Generate plans, milestones, or issues
 •	Invoke downstream agents
@@ -286,14 +356,67 @@ Does NOT:
 Overlap Resolution
 •	Authority is strictly hierarchical:
 Requirements → Planning → Execution (out of scope)
-•	When ambiguity exists, the upstream agent’s output is authoritative.
+•	When ambiguity exists, the upstream agent's output is authoritative.
 •	No agent may override or mutate upstream artifacts.
 
+**Integration Targets:**
+- Section 2: Problem Statement ✓ Integrated
+- Section 5: Stakeholders and Users ✓ Integrated
+- Section 8: Functional Requirements ✓ Integrated
+
+---
+
+#### Q-002: Clarify "planning/orchestrator agent" terminology
+**Status:** Resolved
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+**Resolved by:** Product Owner
+**Resolution Date:** 2026-02-08
+
+**Question:**
+The Intake uses "planning/orchestrator" and "orchestration candidates" terminology. Is this:
+- A single combined Planning-and-Orchestration agent?
+- Two separate agents (Planning Agent + Orchestration Agent)?
+- Multiple candidate implementations being evaluated?
+
+What is the canonical architecture?
+
+**Answer:**
+The canonical architecture consists of two distinct agents:
+•	Requirements Agent (existing)
+•	Planning Agent (new)
+The term "Orchestrator" refers to a thin control layer, not a reasoning agent. It may be implemented as:
+•	A minimal orchestration agent, or
+•	Deterministic invocation logic in a script
+There is no combined "planning/orchestrator" reasoning agent.
+Planning logic and orchestration logic must remain separate to prevent scope creep, circular reasoning, and uncontrolled agent chains.
 
 **Integration Targets:**
-- Section 2: Problem Statement (scope boundary issues)
-- Section 5: Stakeholders and Users (agent roles as system components)
-- Section 8: Functional Requirements (orchestrator must enforce these boundaries)
+- Section 2: Problem Statement ✓ Integrated
+- Section 5: Stakeholders and Users ✓ Integrated
+- Section 8: Functional Requirements ✓ Integrated
+
+---
+
+#### Q-003: Define orchestrator agent core responsibilities
+**Status:** Resolved
+**Asked by:** Requirements Agent
+**Date:** 2026-02-08
+**Resolved by:** Product Owner
+**Resolution Date:** 2026-02-08
+
+**Question:**
+The Intake lists four candidate responsibilities for the orchestrator:
+1. Interpreting project state
+2. Sequencing agent execution
+3. Enforcing lifecycle boundaries
+4. Translating approved requirements into structured execution plans
+
+Are these all in scope? Are there other responsibilities? What is explicitly OUT of scope for the orchestrator?
+
+**Answer:**
+In scope for the Orchestrator:
+•
 
 ---
 
