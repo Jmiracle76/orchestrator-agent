@@ -88,6 +88,16 @@ PHASES: Dict[str, List[str]] = {
     ],
 }
 
+# Open Questions may sometimes (incorrectly) target subsection IDs.
+# Phase 1 only edits whole sections, so we coerce known subsection targets
+# back to their owning section.
+TARGET_CANONICAL_MAP: Dict[str, str] = {
+    # Goals & objectives subsections
+    "primary_goals": "goals_objectives",
+    "secondary_goals": "goals_objectives",
+    "non_goals": "goals_objectives",
+}
+
 # Markers
 SECTION_MARKER_RE = re.compile(r"<!--\s*section:(?P<id>[a-z0-9_]+)\s*-->")
 SECTION_LOCK_RE   = re.compile(r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->")
@@ -238,6 +248,35 @@ def get_section_span(spans: List[SectionSpan], section_id: str) -> Optional[Sect
 
 def section_text(lines: List[str], span: SectionSpan) -> str:
     return "\n".join(lines[span.start_line:span.end_line])
+
+
+def section_body(lines: List[str], span: SectionSpan) -> str:
+    """Return the section *data-plane* text only.
+
+    Strips control-plane markers and headings:
+    - <!-- section:... -->
+    - markdown headers (##, ### ...)
+    - <!-- section_lock:... -->
+    - '---' divider lines
+
+    This keeps the LLM focused on editable content, and prevents it from
+    "learning" and regurgitating markers.
+    """
+    block = lines[span.start_line:span.end_line]
+    body: List[str] = []
+    for ln in block:
+        if SECTION_MARKER_RE.search(ln):
+            continue
+        if SECTION_LOCK_RE.search(ln):
+            continue
+        if ln.lstrip().startswith("##"):
+            continue
+        if ln.strip() == "---":
+            continue
+        body.append(ln)
+    # Trim leading/trailing blank lines
+    text = "\n".join(body).strip("\n")
+    return text
 
 
 def section_is_locked(lines: List[str], span: SectionSpan) -> bool:
@@ -676,27 +715,71 @@ def process_phase_1(
 
         blank = section_is_blank(lines, span)
 
+        # Canonicalize question targets (some earlier runs may have created subsection targets)
+        def canon_target(t: str) -> str:
+            t0 = (t or "").strip()
+            return TARGET_CANONICAL_MAP.get(t0, t0)
+
+        # Any questions (open or answered) targeting this section
+        targeted = [q for q in open_qs if canon_target(q.section_target) == section_id]
+
         answered = [
-            q for q in open_qs
-            if q.section_target.strip() == section_id
-            and q.answer.strip() not in ("", "-", "Pending")
+            q for q in targeted
+            if q.answer.strip() not in ("", "-", "Pending")
             and q.status.strip() in ("Open", "Deferred")
         ]
+
+        open_unanswered_exists = any(
+            q.status.strip() in ("Open", "Deferred") and q.answer.strip() in ("", "-", "Pending")
+            for q in targeted
+        )
 
         # provenance stub
         human_modified = False
 
-        # 1) blank -> generate questions
+        # 1) If we have answers for this section, integrate them FIRST (even if the section is blank).
+        # This prevents the "blank" branch from endlessly generating questions while answers exist.
+        if answered and revised_sections[section_id] < 1:
+            context_body = section_body(lines, span)
+            new_body = llm.integrate_answers(section_id, context_body, answered)
+
+            # Replace if changed (compare to body, not full section block)
+            if new_body.strip() and new_body.strip() != context_body.strip():
+                if not dry_run:
+                    lines = replace_section_data_plane(lines, span, new_body)
+                changed = True
+                revised_sections[section_id] += 1
+
+            # Mark integrated Qs as resolved (automation-owned)
+            qids = [q.question_id for q in answered]
+            if qids and not dry_run:
+                lines, resolved = open_questions_resolve(lines, qids)
+                if resolved:
+                    changed = True
+                    open_qs, _, _ = open_questions_parse(lines)
+
+            # Re-evaluate blankness after integration
+            blank = section_is_blank(lines, span)
+
+        # 2) If still blank, generate questions ONLY if none already exist for this section.
         if blank:
             needs_human_input = True
-            context = section_text(lines, span)
-            proposed = llm.generate_open_questions(section_id, context)
+            if open_unanswered_exists:
+                logging.info("Section blank but already has open questions; not generating more: %s", section_id)
+                continue
+
+            context_body = section_body(lines, span)
+            proposed = llm.generate_open_questions(section_id, context_body)
 
             if proposed:
+                allowed_targets = set(PHASES["phase_1_intent_scope"])
                 new_questions = []
                 for item in proposed:
                     q_text = (item.get("question") or "").strip()
-                    target = (item.get("section_target") or section_id).strip()
+                    target = canon_target((item.get("section_target") or section_id).strip())
+                    # Coerce invalid targets to the current section (keeps Phase 1 deterministic)
+                    if target not in allowed_targets:
+                        target = section_id
                     if q_text:
                         new_questions.append((q_text, target, iso_today()))
                 if new_questions and not dry_run:
@@ -708,29 +791,11 @@ def process_phase_1(
                 blocked.append(f"{section_id} is blank and LLM returned no questions.")
             continue
 
-        # 2) answered -> integrate -> resolve
-        if answered and revised_sections[section_id] < 1:
-            context = section_text(lines, span)
-            new_body = llm.integrate_answers(section_id, context, answered)
-
-            if new_body.strip() != context.strip():
-                if not dry_run:
-                    lines = replace_section_data_plane(lines, span, new_body)
-                changed = True
-                revised_sections[section_id] += 1
-
-                qids = [q.question_id for q in answered]
-                if qids and not dry_run:
-                    lines, resolved = open_questions_resolve(lines, qids)
-                    if resolved:
-                        changed = True
-                        open_qs, _, _ = open_questions_parse(lines)
-
         # 3) human modified -> review (stub)
         if human_modified and revised_sections[section_id] < 1:
-            context = section_text(lines, span)
-            revised = llm.review_and_revise(section_id, context)
-            if revised.strip() != context.strip():
+            context_body = section_body(lines, span)
+            revised = llm.review_and_revise(section_id, context_body)
+            if revised.strip() and revised.strip() != context_body.strip():
                 if not dry_run:
                     lines = replace_section_data_plane(lines, span, revised)
                 changed = True
@@ -752,6 +817,10 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
     except Exception as e:
         return False, [f"Open Questions parse failed: {e}"]
 
+    def canon_target(t: str) -> str:
+        t0 = (t or "").strip()
+        return TARGET_CANONICAL_MAP.get(t0, t0)
+
     for sid in PHASES["phase_1_intent_scope"]:
         sp = get_section_span(spans, sid)
         if not sp:
@@ -759,7 +828,7 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
             continue
         if section_is_blank(lines, sp):
             issues.append(f"Section still blank: {sid}")
-        if any(q.section_target.strip() == sid and q.status.strip() == "Open" for q in open_qs):
+        if any(canon_target(q.section_target) == sid and q.status.strip() == "Open" for q in open_qs):
             issues.append(f"Open questions remain for section: {sid}")
 
     return (len(issues) == 0), issues
