@@ -244,6 +244,22 @@
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
+| Q-029 | Who are the primary stakeholders for this project (e.g., project sponsor, business owner, department head)? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-030 | What are the contact details (email, phone, or department) for each primary stakeholder? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-031 | What types of end users will interact with this system (e.g., administrators, customers, operators)? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-032 | What are the key characteristics of each end user type (e.g., technical expertise, frequency of use, location)? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-033 | What are the specific needs or requirements of each end user type? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-034 | What are the primary use cases or scenarios for each end user type? | 2026-02-09 |  | stakeholders_users | Open |
+| Q-022 | What is the main problem or need this project aims to solve? | 2026-02-09 |  | goals_objectives | Open |
+| Q-023 | What are the top 2-3 measurable outcomes you want to achieve with this project? | 2026-02-09 |  | primary_goals | Open |
+| Q-024 | How will success be measured for each primary goal? | 2026-02-09 |  | primary_goals | Open |
+| Q-025 | What additional benefits or objectives would be valuable but are not critical to success? | 2026-02-09 |  | secondary_goals | Open |
+| Q-026 | What scope boundaries or features are explicitly excluded from this project? | 2026-02-09 |  | non_goals | Open |
+| Q-027 | Are there any common expectations or requests that this project will NOT address? | 2026-02-09 |  | non_goals | Open |
+| Q-028 | What is the target timeline or deadline for achieving the primary goals? | 2026-02-09 |  | primary_goals | Open |
+| Q-019 | Who is affected by this problem (target users, stakeholders, or organizations)? | 2026-02-09 |  | problem_statement | Open |
+| Q-020 | Are there any existing solutions or workarounds currently in use? If so, what are their limitations? | 2026-02-09 |  | problem_statement | Open |
+| Q-021 | What would success look like in terms of solving this problem? | 2026-02-09 |  | problem_statement | Open |
 | Q-012 | Who are the primary stakeholders for this project (e.g., project sponsors, department heads, business owners)? | 2026-02-09 |  | stakeholders_users | Open |
 | Q-013 | What is each primary stakeholder's role in the project and their specific interest or need? | 2026-02-09 |  | stakeholders_users | Open |
 | Q-014 | What are the contact details (email, phone, department) for each primary stakeholder? | 2026-02-09 |  | stakeholders_users | Open |
