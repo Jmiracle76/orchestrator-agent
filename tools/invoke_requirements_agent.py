@@ -186,12 +186,30 @@ def detect_mode(requirements_text: str) -> str:
     return "integrate" if open_q_with_answer else "review"
 
 def validate_agent_output(mode: str, text: str) -> None:
-    # Minimal validation: it must contain the marker and at least one SECTION block.
+    """Validate the agent response is parseable.
+
+    We *prefer* a top-level marker (## REVIEW_OUTPUT / ## INTEGRATE_OUTPUT) because
+    it makes debugging easier, but the only thing we truly need in order to proceed
+    is at least one well-formed SECTION block.
+
+    This avoids hard-failing when the model forgets a header while still keeping
+    the format bounded.
+    """
     marker = REVIEW_MARKER if mode == "review" else INTEGRATE_MARKER
-    if re.search(rf"^##\s*{re.escape(marker)}\s*$", text, re.IGNORECASE | re.MULTILINE) is None:
-        die(f"Agent output missing required top-level marker '## {marker}'.")
-    if not _SECTION_BLOCK_RE.search(text):
-        die("Agent output contained no SECTION blocks. Expected '### SECTION: <Heading>' blocks with fenced markdown.")
+
+    has_marker = re.search(
+        rf"^##\s*{re.escape(marker)}\s*$", text, re.IGNORECASE | re.MULTILINE
+    ) is not None
+    has_sections = _SECTION_BLOCK_RE.search(text) is not None
+
+    if not has_sections:
+        die(
+            "Agent output contained no SECTION blocks. Expected '### SECTION: <Heading>' blocks with fenced markdown."
+        )
+
+    if not has_marker:
+        # Soft failure: warn but proceed.
+        print(f"WARNING: Agent output missing optional top-level marker '## {marker}'. Proceeding because SECTION blocks were found.")
 
 def apply_section_patches(requirements_text: str, patches: List[SectionPatch]) -> Tuple[str, List[str]]:
     """
