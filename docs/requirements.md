@@ -252,6 +252,43 @@ The Intake mentions three agent types (requirements, planning, orchestration) wi
 - Where do their authorities overlap or conflict?
 
 **Answer:**
+Requirements Agent
+Owns:
+•	Eliciting, structuring, and validating requirements content
+•	Managing Open Questions, Risks, Assumptions, and completeness checks
+•	Enforcing requirements document schema and section integrity
+•	Recommending “Ready for Approval” status (but never approving)
+Does NOT:
+•	Generate plans, milestones, or issues
+•	Invoke downstream agents
+•	Modify non-requirements artifacts
+•	Make implementation or sequencing decisions
+Planning Agent
+Owns:
+•	Translating approved requirements into milestones and issues
+•	Sequencing work based strictly on documented requirements
+•	Producing planning artifacts only (no code, no execution)
+Does NOT:
+•	Modify requirements
+•	Infer or add requirements
+•	Execute development work
+•	Invoke other agents or perform orchestration
+Orchestration Agent
+Owns:
+•	Interpreting project lifecycle state
+•	Enforcing when agents may or may not run
+•	Triggering agent execution based on explicit state transitions
+•	Preventing out-of-order or out-of-scope agent activity
+Does NOT:
+•	Modify requirements or planning content
+•	Make design or implementation decisions
+•	Review or validate agent outputs
+Overlap Resolution
+•	Authority is strictly hierarchical:
+Requirements → Planning → Execution (out of scope)
+•	When ambiguity exists, the upstream agent’s output is authoritative.
+•	No agent may override or mutate upstream artifacts.
+
 
 **Integration Targets:**
 - Section 2: Problem Statement (scope boundary issues)
@@ -274,6 +311,14 @@ The Intake uses "planning/orchestrator" and "orchestration candidates" terminolo
 What is the canonical architecture?
 
 **Answer:**
+The canonical architecture consists of two distinct agents:
+•	Requirements Agent (existing)
+•	Planning Agent (new)
+The term “Orchestrator” refers to a thin control layer, not a reasoning agent. It may be implemented as:
+•	A minimal orchestration agent, or
+•	Deterministic invocation logic in a script
+There is no combined “planning/orchestrator” reasoning agent.
+Planning logic and orchestration logic must remain separate to prevent scope creep, circular reasoning, and uncontrolled agent chains.
 
 **Integration Targets:**
 - Section 2: Problem Statement (architectural clarity)
@@ -297,6 +342,18 @@ The Intake lists four candidate responsibilities for the orchestrator:
 Are these all in scope? Are there other responsibilities? What is explicitly OUT of scope for the orchestrator?
 
 **Answer:**
+In scope for the Orchestrator:
+•	Interpreting project state (Draft, Approved, Planned, etc.)
+•	Enforcing lifecycle boundaries between agents
+•	Allowing or blocking agent execution based on explicit state
+•	Triggering Planning Agent execution once requirements are approved
+Explicitly out of scope:
+•	Generating plans, milestones, or issues
+•	Reviewing, validating, or correcting agent output
+•	Executing development work
+•	Modifying repository content beyond invocation metadata
+•	Managing retries, recovery, or optimization
+The Orchestrator is intentionally dumb. It enforces order, not intelligence.
 
 **Integration Targets:**
 - Section 3: Goals and Objectives (orchestrator capabilities)
@@ -320,6 +377,18 @@ The Intake describes symptoms ("inconsistent behavior", "bloated scripts", "unin
 These metrics are needed for Section 2 (Problem Statement) and Section 13 (Success Criteria).
 
 **Answer:**
+Measured impacts to date include:
+•	Manual cleanup time: ~3–6 hours per iteration spent deleting unintended files, scripts, and documentation.
+•	Unintended side effects: Multiple occurrences per iteration, including:
+o	Creation of unauthorized scripts and tools
+o	Modification of out-of-scope files
+o	Silent schema violations
+•	Invocation failure rate: Approximately 30–50% of agent runs require manual rollback or rework.
+•	Evidence of brittleness:
+o	Small prompt or schema changes cause large behavioral divergence
+o	Scripts growing to 2000+ lines to compensate for missing guardrails
+o	Agent confusion when lifecycle boundaries are unclear
+These issues materially slow iteration and increase cognitive load.
 
 **Integration Targets:**
 - Section 2: Problem Statement (quantified problem impact)
@@ -340,6 +409,21 @@ Who are the stakeholders and users of the orchestrator agent system?
 - Who are the "customers" that experience the pain described in Intake?
 
 **Answer:**
+Primary Stakeholder
+•	Product Owner (human)
+o	Owns scope decisions, approval authority, and final acceptance
+Primary Users
+•	Human project initiator (invokes agents manually)
+•	Future agent developers extending the system
+System Actors
+•	Requirements Agent (producer of authoritative requirements)
+•	Planning Agent (consumer of approved requirements)
+Invocation Model
+•	All agents are invoked manually or via explicit scripts
+•	No autonomous or CI/CD-triggered execution
+Authority
+•	Only the Product Owner may approve requirements or planning artifacts
+•	Scope changes require requirements document updates
 
 **Integration Targets:**
 - Section 5: Stakeholders and Users (complete stakeholder map)
