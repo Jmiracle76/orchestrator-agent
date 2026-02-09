@@ -244,7 +244,7 @@ This project explicitly does NOT include:
 ### Open Questions
 
 #### OQ-001: Agent Scope Definition
-**Status:** Resolved
+**Status:** Open
 **Asked By:** Requirements Agent
 **Date:** 2025-01-26
 **Resolved By:** Requirements Agent
@@ -296,7 +296,7 @@ Requirements → Planning → Execution (out of scope)
 ---
 
 #### OQ-002: Current System Problems
-**Status:** Resolved
+**Status:** Open
 **Asked By:** Requirements Agent
 **Date:** 2025-01-26
 **Resolved By:** Requirements Agent
