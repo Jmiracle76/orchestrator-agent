@@ -41,7 +41,7 @@
 ### Version History
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| <!-- PLACEHOLDER --> | - | - | - |
+| 0.1 | 2026-02-09 | requirements-automation | Generated open questions for Phase 1 |
 
 ---
 
