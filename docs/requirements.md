@@ -53,6 +53,11 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 
 **Affected Stakeholders:** Individual developers, small development teams, and technical leads who manage multiple concurrent project ideas and struggle to translate high-level intent into consistent, bounded execution plans.
 
+<!-- section_lock:problem_statement lock=false -->
+
+---
+
+<!-- section:goals_objectives -->
 ## 3. Goals and Objectives
 **Existing Solutions and Limitations:** Current solutions include manual planning using markdown documents, issue trackers, and ad hoc AI prompting. These approaches are time-consuming, inconsistent, and prone to scope creep or unintended changes across repositories.
 
@@ -61,22 +66,22 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 **Milestones:** An initial functional version should be achievable within a few weeks, with incremental capability improvements over subsequent iterations.
 
 <!-- subsection:primary_goals -->
+### Primary Goals
 1. Reduce planning overhead
 2. Increase consistency in execution plans
 3. Enable reliable handoff between automated agents without loss of intent or scope control
 
 <!-- subsection:secondary_goals -->
+### Secondary Goals
 1. Improve traceability between requirements and execution tasks
 2. Support iterative refinement
 3. Enable reuse of planning patterns across projects
 
 <!-- subsection:non_goals -->
+### Non-Goals
 1. Autonomous task execution
 2. Architectural decisions without human input
 3. Modification of production systems
-<!-- section_lock:problem_statement lock=false -->
-1. [Non-goal 1]
-2. [Non-goal 2]
 
 <!-- section_lock:goals_objectives lock=false -->
 ---
