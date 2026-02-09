@@ -32,6 +32,7 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -172,6 +173,207 @@ def backup_file(path: Path) -> Path:
     shutil.copy2(path, backup_path)
     return backup_path
 
+
+
+# -----------------------------
+# Automation-owned updates: meta, document control, version history
+# -----------------------------
+
+AUTOMATION_ACTOR = "requirements-automation"
+
+def _find_meta_value_line(lines: List[str], meta_id: str) -> Optional[int]:
+    """Return index of the line immediately following <!-- meta:<id> --> marker."""
+    marker = re.compile(rf"<!--\s*meta:{re.escape(meta_id)}\s*-->")
+    for i, ln in enumerate(lines):
+        if marker.search(ln):
+            # next non-empty line is the value line
+            j = i + 1
+            while j < len(lines) and lines[j].strip() == "":
+                j += 1
+            return j if j < len(lines) else None
+    return None
+
+def _set_meta_field(lines: List[str], meta_id: str, new_value_line: str) -> Tuple[List[str], bool]:
+    idx = _find_meta_value_line(lines, meta_id)
+    if idx is None:
+        return lines, False
+    if lines[idx].rstrip() == new_value_line.rstrip():
+        return lines, False
+    lines = list(lines)
+    lines[idx] = new_value_line
+    return lines, True
+
+def _find_table_span_by_marker(lines: List[str], table_id: str) -> Optional[Tuple[int, int]]:
+    span = find_table_block(lines, table_id)
+    return span
+
+def _update_document_control_table(lines: List[str], version: str, today: str) -> Tuple[List[str], bool]:
+    """Update table:document_control fields we own."""
+    span = _find_table_span_by_marker(lines, "document_control")
+    if not span:
+        return lines, False
+    start, end = span
+    table_lines = lines[start:end]
+    rows = parse_markdown_table(table_lines)
+    if len(rows) < 2:
+        return lines, False
+
+    changed = False
+    # Rebuild table_lines in-place by editing only known fields
+    for i in range(2, len(rows)):  # data rows only
+        r = rows[i]
+        if len(r) < 2:
+            continue
+        field = r[0].strip()
+        if field == "Current Version":
+            if r[1].strip() != version:
+                r[1] = version; changed = True
+        elif field == "Last Modified":
+            if r[1].strip() != today:
+                r[1] = today; changed = True
+        elif field == "Modified By":
+            if r[1].strip() != AUTOMATION_ACTOR:
+                r[1] = AUTOMATION_ACTOR; changed = True
+        # Leave statuses/approval fields for you/humans for now.
+
+    if not changed:
+        return lines, False
+
+    # Re-emit table lines (preserving original header/separator lines)
+    new_table_lines: List[str] = []
+    new_table_lines.append(table_lines[0])  # header row (as-is)
+    new_table_lines.append(table_lines[1])  # separator (as-is)
+    for i in range(2, len(rows)):
+        # Try to preserve original formatting width? Not worth it. Deterministic output is better.
+        new_table_lines.append("| " + " | ".join(rows[i]) + " |")
+    return lines[:start] + new_table_lines + lines[end:], True
+
+def _parse_version(v: str) -> Tuple[int, int]:
+    m = re.match(r"^(\d+)\.(\d+)$", v.strip())
+    if not m:
+        return (0, 0)
+    return int(m.group(1)), int(m.group(2))
+
+def _format_version(major: int, minor: int) -> str:
+    return f"{major}.{minor}"
+
+def _increment_minor(v: str) -> str:
+    major, minor = _parse_version(v)
+    return _format_version(major, minor + 1)
+
+def _get_current_version(lines: List[str]) -> str:
+    idx = _find_meta_value_line(lines, "version")
+    if idx is None:
+        return "0.0"
+    m = re.search(r"\*\*Version:\*\*\s*([0-9]+\.[0-9]+)", lines[idx])
+    return m.group(1) if m else "0.0"
+
+def _upsert_version_history_row(lines: List[str], version: str, today: str, summary: str) -> Tuple[List[str], bool]:
+    """Insert a new Version History row at top of the table, replacing template placeholder row if present."""
+    # Find the '### Version History' heading
+    vh_idx = None
+    for i, ln in enumerate(lines):
+        if ln.strip() == "### Version History":
+            vh_idx = i
+            break
+    if vh_idx is None:
+        return lines, False
+
+    # Find first table row after heading
+    start = None
+    for j in range(vh_idx + 1, len(lines)):
+        if lines[j].lstrip().startswith("|"):
+            start = j
+            break
+        if SECTION_MARKER_RE.search(lines[j]):  # next section before table
+            return lines, False
+    if start is None:
+        return lines, False
+
+    end = start
+    while end < len(lines) and lines[end].lstrip().startswith("|"):
+        end += 1
+
+    table_lines = lines[start:end]
+    rows = parse_markdown_table(table_lines)
+    if len(rows) < 2:
+        return lines, False
+
+    # Build new row
+    new_row = [version, today, AUTOMATION_ACTOR, summary]
+
+    # Remove placeholder data rows (rows[2:] that are empty or placeholder)
+    data = rows[2:] if len(rows) > 2 else []
+    cleaned = []
+    for r in data:
+        if len(r) != 4:
+            continue
+        if any(PLACEHOLDER_TOKEN in c for c in r):
+            continue
+        if all(c.strip() in ("", "-", "Pending") for c in r):
+            continue
+        cleaned.append(r)
+
+    # Avoid inserting duplicate consecutive entry (same version+date+summary)
+    if cleaned:
+        top = cleaned[0]
+        if top[0].strip() == version and top[1].strip() == today and top[3].strip() == summary.strip():
+            return lines, False
+
+    new_rows = [rows[0], rows[1], new_row] + cleaned
+    # Emit
+    new_table_lines = [
+        "| " + " | ".join(new_rows[0]) + " |",
+        "|" + "|".join(["---------"] * len(new_rows[0])) + "|",
+    ]
+    for r in new_rows[2:]:
+        new_table_lines.append("| " + " | ".join(r) + " |")
+
+    return lines[:start] + new_table_lines + lines[end:], True
+
+def update_automation_owned_fields(
+    lines_before: List[str],
+    lines_after: List[str],
+    *,
+    doc_created: bool,
+    phase_completed_this_run: bool,
+    change_summaries: List[str],
+) -> Tuple[List[str], bool]:
+    """Update meta/version/date + document control + version history, deterministically."""
+    today = iso_today()
+    changed = False
+    lines = list(lines_after)
+
+    # Decide version bump
+    current_version = _get_current_version(lines_before if lines_before else lines)
+    new_version = current_version
+
+    if doc_created and current_version == "0.0":
+        new_version = "0.1"
+    elif phase_completed_this_run:
+        new_version = _increment_minor(current_version)
+
+    # Update meta fields
+    if new_version != current_version:
+        lines, did = _set_meta_field(lines, "version", f"- **Version:** {new_version} ")
+        changed = changed or did
+
+    # Always update last_updated if anything changed in doc content OR version bumped
+    if change_summaries or (new_version != current_version) or doc_created:
+        lines, did = _set_meta_field(lines, "last_updated", f"- **Last Updated:** {today} ")
+        changed = changed or did
+
+    # Update document control table (version/last modified/modified by)
+    lines, did = _update_document_control_table(lines, new_version, today)
+    changed = changed or did
+
+    # Version history row
+    if change_summaries or (new_version != current_version) or doc_created:
+        summary = "; ".join(change_summaries) if change_summaries else "Automation run"
+        lines, did = _upsert_version_history_row(lines, new_version, today, summary)
+        changed = changed or did
+
+    return lines, changed
 
 def split_lines(doc: str) -> List[str]:
     return doc.splitlines()
@@ -691,10 +893,11 @@ def process_phase_1(
     lines: List[str],
     llm: LLMClient,
     dry_run: bool,
-) -> Tuple[List[str], bool, List[str], bool]:
+) -> Tuple[List[str], bool, List[str], bool, List[str]]:
     changed = False
     blocked: List[str] = []
     needs_human_input = False
+    change_summaries: List[str] = []
 
     spans = find_sections(lines)
 
@@ -748,6 +951,7 @@ def process_phase_1(
                 if not dry_run:
                     lines = replace_section_data_plane(lines, span, new_body)
                 changed = True
+                change_summaries.append(f"Section updated: {section_id} (integrated {len(answered)} answers)")
                 revised_sections[section_id] += 1
 
             # Mark integrated Qs as resolved (automation-owned)
@@ -755,6 +959,7 @@ def process_phase_1(
             if qids and not dry_run:
                 lines, resolved = open_questions_resolve(lines, qids)
                 if resolved:
+                    change_summaries.append(f"Questions resolved: {', '.join(qids)}")
                     changed = True
                     open_qs, _, _ = open_questions_parse(lines)
 
@@ -786,6 +991,7 @@ def process_phase_1(
                     lines, inserted = open_questions_insert(lines, new_questions)
                     if inserted:
                         changed = True
+                        change_summaries.append(f"Open questions added for {section_id}: {inserted}")
                         open_qs, _, _ = open_questions_parse(lines)
             else:
                 blocked.append(f"{section_id} is blank and LLM returned no questions.")
@@ -801,7 +1007,7 @@ def process_phase_1(
                 changed = True
                 revised_sections[section_id] += 1
 
-    return lines, changed, blocked, needs_human_input
+    return lines, changed, blocked, needs_human_input, change_summaries
 
 
 # -----------------------------
@@ -874,6 +1080,8 @@ def main() -> int:
     template_path = Path(args.template).resolve()
     doc_path = Path(args.doc).resolve()
 
+    doc_created = False
+    change_summaries: List[str] = []
     # Pre-flight git safety (optional but smart)
     if not args.no_commit:
         if not is_working_tree_clean(REPO_ROOT):
@@ -889,6 +1097,8 @@ def main() -> int:
         logging.info("Doc missing; creating from template: %s -> %s", template_path, doc_path)
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(template_path, doc_path)
+        doc_created = True
+        change_summaries.append("Created requirements doc from template")
 
     doc_text = read_text(doc_path)
     lines = split_lines(doc_text)
@@ -906,7 +1116,10 @@ def main() -> int:
         changed = changed or did
         if did:
             logging.info("Bootstrap: filled Q-001 Answer from --problem input.")
+            change_summaries.append("Bootstrap: answered Q-001 from --problem")
 
+    lines_before_run = list(lines)
+    complete_before, _ = validate_phase_1_complete(lines_before_run)
     # Initialize real LLM client
     try:
         llm = LLMClient()
@@ -916,12 +1129,17 @@ def main() -> int:
 
     # Phase 1
     try:
-        lines, phase_changed, blocked, needs_human = process_phase_1(lines, llm, args.dry_run)
+        lines, phase_changed, blocked, needs_human, phase_summaries = process_phase_1(lines, llm, args.dry_run)
+        change_summaries.extend(phase_summaries)
         changed = changed or phase_changed
     except Exception as e:
         logging.error("Run failed: %s", e, exc_info=True)
         return 2
 
+    complete_after, _ = validate_phase_1_complete(lines)
+    phase_completed_this_run = (not complete_before) and complete_after
+    lines, meta_changed = update_automation_owned_fields(lines_before_run, lines, doc_created=doc_created, phase_completed_this_run=phase_completed_this_run, change_summaries=change_summaries)
+    changed = changed or meta_changed
     # Validate Phase 1 completeness
     complete, issues = validate_phase_1_complete(lines)
     if not complete:
