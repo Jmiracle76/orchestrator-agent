@@ -41,6 +41,7 @@
 ### Version History
 | Version | Date | Author | Changes |
 |---------|---------|---------|---------|
+| 0.1 | 2026-02-09 | requirements-automation | Section updated: stakeholders_users (integrated 4 answers); Questions resolved: Q-029, Q-031, Q-033, Q-034; Section updated: success_criteria (integrated 3 answers); Questions resolved: Q-035, Q-036, Q-037 |
 | 0.0 | 2026-02-09 | requirements-automation | Section updated: problem_statement (integrated 3 answers); Questions resolved: Q-019, Q-020, Q-021; Section updated: goals_objectives (integrated 5 answers); Questions resolved: Q-007, Q-008, Q-009, Q-010, Q-011 |
 | 0.1 | 2026-02-09 | requirements-automation | Generated open questions for Phase 1 |
 
@@ -82,27 +83,25 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 
 <!-- section:stakeholders_users -->
 ## 4. Stakeholders and Users
-<!-- PLACEHOLDER -->
 <!-- subsection:primary_stakeholders -->
-### Primary Stakeholders
 
 <!-- table:primary_stakeholders -->
 | Stakeholder | Role | Interest/Need | Contact |
 |-------------|------|---------------|---------|
-| <!-- PLACEHOLDER --> | - | - | - |
+| Project author | Originator and owner | Define and maintain automation framework vision and standards | TBD |
+| Future contributors | Development team members | Extend and enhance framework capabilities | TBD |
+| Maintenance team | Technical support | Sustain and troubleshoot automation framework | TBD |
 
 <!-- subsection:end_users -->
-### End Users
 
 <!-- table:end_users -->
 | User Type | Characteristics | Needs | Use Cases |
 |-----------|----------------|-------|-----------|
-| <!-- PLACEHOLDER --> | - | - | - |
-
-
+| Individual developers | Technical practitioners building and extending projects | Reliable translation of intent into plans; protection against unintended scope expansion; transparency into decision-making | Project bootstrapping; requirements-to-plan translation; iterative refinement |
+| Technical leads | Senior engineers overseeing development activities | Visibility into automated planning decisions; control over scope boundaries; audit trail of requirements evolution | Requirements-to-plan translation; iterative refinement; multi-agent coordination |
+| AI agents | Automated agents operating under orchestration control | Clear interfaces and protocols; deterministic behavior; error reporting and recovery mechanisms | Multi-agent coordination; automated requirements-to-plan translation |
 <!-- section_lock:stakeholders_users lock=false -->
 ---
-
 <!-- section:assumptions -->
 ## 5. Assumptions
 <!-- PLACEHOLDER -->
@@ -244,17 +243,17 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-035 | What are the key measurable outcomes that would indicate this project is successful? | 2026-02-09 | A complete, internally consistent execution plan is generated for approved requirements with no unintended repository changes. | success_criteria | Open |
-| Q-036 | What metrics or KPIs will be used to evaluate project success? | 2026-02-09 | Metrics include plan completeness, number of manual corrections required, and repeatability across similar projects. | success_criteria | Open |
-| Q-037 | What are the minimum requirements that must be met for deliverables to be accepted? | 2026-02-09 | All requirements must be represented in the plan, scope boundaries must be respected, and outputs must be reproducible. | success_criteria | Open |
+| Q-035 | What are the key measurable outcomes that would indicate this project is successful? | 2026-02-09 | A complete, internally consistent execution plan is generated for approved requirements with no unintended repository changes. | success_criteria | Resolved |
+| Q-036 | What metrics or KPIs will be used to evaluate project success? | 2026-02-09 | Metrics include plan completeness, number of manual corrections required, and repeatability across similar projects. | success_criteria | Resolved |
+| Q-037 | What are the minimum requirements that must be met for deliverables to be accepted? | 2026-02-09 | All requirements must be represented in the plan, scope boundaries must be respected, and outputs must be reproducible. | success_criteria | Resolved |
 | Q-038 | Are there specific performance, quality, or compliance standards that must be satisfied? | 2026-02-09 |  | success_criteria | Open |
 | Q-039 | What stakeholder approval or sign-off processes are required for project acceptance? | 2026-02-09 |  | success_criteria | Open |
-| Q-029 | Who are the primary stakeholders for this project (e.g., project sponsor, business owner, department head)? | 2026-02-09 | The primary stakeholders are the project author, future contributors, and any team members responsible for maintaining or extending the automation framework. | stakeholders_users | Open |
+| Q-029 | Who are the primary stakeholders for this project (e.g., project sponsor, business owner, department head)? | 2026-02-09 | The primary stakeholders are the project author, future contributors, and any team members responsible for maintaining or extending the automation framework. | stakeholders_users | Resolved |
 | Q-030 | What are the contact details (email, phone, or department) for each primary stakeholder? | 2026-02-09 |  | stakeholders_users | Open |
-| Q-031 | What types of end users will interact with this system (e.g., administrators, customers, operators)? | 2026-02-09 | End users include individual developers, technical leads, and AI agents operating under orchestration control. | stakeholders_users | Open |
+| Q-031 | What types of end users will interact with this system (e.g., administrators, customers, operators)? | 2026-02-09 | End users include individual developers, technical leads, and AI agents operating under orchestration control. | stakeholders_users | Resolved |
 | Q-032 | What are the key characteristics of each end user type (e.g., technical expertise, frequency of use, location)? | 2026-02-09 |  | stakeholders_users | Open |
-| Q-033 | What are the specific needs or requirements of each end user type? | 2026-02-09 | End users need reliable translation of intent into plans, protection against unintended scope expansion, and transparency into how decisions are made. | stakeholders_users | Open |
-| Q-034 | What are the primary use cases or scenarios for each end user type? | 2026-02-09 | Key use cases include project bootstrapping, requirements-to-plan translation, iterative refinement, and multi-agent coordination. | stakeholders_users | Open |
+| Q-033 | What are the specific needs or requirements of each end user type? | 2026-02-09 | End users need reliable translation of intent into plans, protection against unintended scope expansion, and transparency into how decisions are made. | stakeholders_users | Resolved |
+| Q-034 | What are the primary use cases or scenarios for each end user type? | 2026-02-09 | Key use cases include project bootstrapping, requirements-to-plan translation, iterative refinement, and multi-agent coordination. | stakeholders_users | Resolved |
 | Q-022 | What is the main problem or need this project aims to solve? | 2026-02-09 |  | goals_objectives | Open |
 | Q-023 | What are the top 2-3 measurable outcomes you want to achieve with this project? | 2026-02-09 |  | primary_goals | Open |
 | Q-024 | How will success be measured for each primary goal? | 2026-02-09 |  | primary_goals | Open |
@@ -289,23 +288,20 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 <!-- section:success_criteria -->
 ## 11. Success Criteria and Acceptance
 
+## 12. Out of Scope
 <!-- subsection:project_success_criteria -->
-### Project Success Criteria
-<!-- PLACEHOLDER -->
-1. [Success criterion 1] 
-2. [Success criterion 2] 
+1. A complete, internally consistent execution plan is generated for all approved requirements
+2. No unintended repository changes occur during plan generation
+3. Plan completeness reaches defined threshold with minimal manual corrections required
+4. Repeatability is demonstrated across similar projects
 
 <!-- subsection:acceptance_criteria -->
-### Acceptance Criteria
-<!-- PLACEHOLDER -->
-- [ ] Acceptance criterion 1 
-- [ ] Acceptance criterion 2
-
+- [ ] All requirements are represented in the execution plan
+- [ ] Scope boundaries are respected throughout plan generation
+- [ ] Plan outputs are reproducible
+- [ ] Internal consistency is maintained across all plan components
+- [ ] Manual correction count remains within acceptable limits
 <!-- section_lock:success_criteria lock=false -->
----
-
-<!-- section:out_of_scope -->
-## 12. Out of Scope
 <!-- PLACEHOLDER -->
 1. [Out of scope item 1] 
 2. [Out of scope item 2]
