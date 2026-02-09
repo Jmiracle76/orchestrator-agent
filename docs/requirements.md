@@ -240,7 +240,35 @@ This project explicitly does NOT include:
 
 ### Intake
 
-[Empty - Add your unstructured notes, questions, or thoughts here. They will be converted to formal Open Questions by the Requirements Agent.]
+Use the existing /agent-profiles/orchestration-agent.md file as the initial starting point for this agent. This file can be edited/changed as necessary.
+A new /tools/invoke_orchestrator_agent.py script is expected to be created to invoke the orchestrator agent once and only once and when and only when the requirements.md file has been marked "Approved".
+
+- Reduce manual intervention during early project setup
+- Enforce clear lifecycle stages between agents
+- Prevent uncontrolled script and file sprawl
+- Enable repeatable, auditable agent-driven project initialization
+
+In Scope
+- A single Planning / Orchestrator Agent
+- Supporting logic embedded in a clearly bounded new invocation script
+- Structured handoff between Requirements Agent → Planning Agent leveraging existing logic already present in /tools/invoke_requirements_agent.py.
+- Generation of milestones and GitHub issues based on approved requirements
+
+Out of Scope (Non-Goals)
+
+❌ Implementing the Requirements Agent (already exists)
+
+❌ Executing development work (no coding, refactoring, or file edits beyond planning artifacts)
+
+❌ Creating test scripts, README files, diagrams, or supplemental documentation
+
+❌ Invoking other agents beyond what is explicitly specified
+
+❌ Reviewing or validating outputs from downstream agents
+
+❌ Managing CI/CD, deployment, or runtime orchestration
+
+❌ Making architectural or technical design decisions not present in requirements
 
 ---
 
