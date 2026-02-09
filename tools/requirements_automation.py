@@ -37,6 +37,37 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
+def extract_json_object(text: str) -> str:
+    """Extract a JSON object from LLM output.
+
+    Handles common cases:
+    - Raw JSON: { ... }
+    - Fenced JSON: ```json\n{...}\n```
+    - Fenced generic: ```\n{...}\n```
+
+    Returns a JSON string safe for json.loads().
+    Raises ValueError if no JSON object can be found.
+    """
+    t = (text or "").strip()
+
+    # Strip markdown fences if present
+    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.DOTALL | re.IGNORECASE)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    # Already looks like JSON
+    if t.startswith("{") and t.endswith("}"):
+        return t
+
+    # Fallback: slice from first { to last }
+    first = t.find("{")
+    last = t.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        return t[first:last + 1].strip()
+
+    raise ValueError("No JSON object found in LLM output")
+
+
 # -----------------------------
 # Configuration
 # -----------------------------
@@ -496,8 +527,9 @@ Return JSON only. No prose.
 """
         raw = self._call(prompt).strip()
         try:
-            data = json.loads(raw)
-        except json.JSONDecodeError as e:
+            payload = extract_json_object(raw)
+            data = json.loads(payload)
+        except Exception as e:
             raise RuntimeError(f"LLM returned non-JSON for generate_open_questions: {raw[:400]}") from e
 
         questions = data.get("questions", [])
