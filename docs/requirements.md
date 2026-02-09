@@ -245,7 +245,43 @@ This project explicitly does NOT include:
 **Date:** 2025-01-26
 **Question:** What are the specific functional boundaries and responsibilities for each existing agent (requirements, planning, orchestration candidates)? What should each agent be allowed to do vs. prohibited from doing?
 
-**Answer:** [Awaiting human input]
+**Answer:** 
+Requirements Agent
+Owns:
+•	Eliciting, structuring, and validating requirements content
+•	Managing Open Questions, Risks, Assumptions, and completeness checks
+•	Enforcing requirements document schema and section integrity
+•	Recommending “Ready for Approval” status (but never approving)
+Does NOT:
+•	Generate plans, milestones, or issues
+•	Invoke downstream agents
+•	Modify non-requirements artifacts
+•	Make implementation or sequencing decisions
+Planning Agent
+Owns:
+•	Translating approved requirements into milestones and issues
+•	Sequencing work based strictly on documented requirements
+•	Producing planning artifacts only (no code, no execution)
+Does NOT:
+•	Modify requirements
+•	Infer or add requirements
+•	Execute development work
+•	Invoke other agents or perform orchestration
+Orchestration Agent
+Owns:
+•	Interpreting project lifecycle state
+•	Enforcing when agents may or may not run
+•	Triggering agent execution based on explicit state transitions
+•	Preventing out-of-order or out-of-scope agent activity
+Does NOT:
+•	Modify requirements or planning content
+•	Make design or implementation decisions
+•	Review or validate agent outputs
+Overlap Resolution
+•	Authority is strictly hierarchical:
+Requirements → Planning → Execution (out of scope)
+•	When ambiguity exists, the upstream agent’s output is authoritative.
+•	No agent may override or mutate upstream artifacts.
 
 **Integration Targets:**
 - Section 8: Functional Requirements (define per-agent scope as separate FRs)
@@ -259,7 +295,19 @@ This project explicitly does NOT include:
 **Date:** 2025-01-26
 **Question:** What specific inconsistencies, scope violations, and side effects have occurred with the current agent system? What are concrete examples of "bloated scripts" and "unintended side effects"?
 
-**Answer:** [Awaiting human input]
+**Answer:** 
+Measured impacts to date include:
+•	Manual cleanup time: ~3–6 hours per iteration spent deleting unintended files, scripts, and documentation.
+•	Unintended side effects: Multiple occurrences per iteration, including:
+o	Creation of unauthorized scripts and tools
+o	Modification of out-of-scope files
+o	Silent schema violations
+•	Invocation failure rate: Approximately 30–50% of agent runs require manual rollback or rework.
+•	Evidence of brittleness:
+o	Small prompt or schema changes cause large behavioral divergence
+o	Scripts growing to 2000+ lines to compensate for missing guardrails
+o	Agent confusion when lifecycle boundaries are unclear
+These issues materially slow iteration and increase cognitive load
 
 **Integration Targets:**
 - Section 2: Problem Statement (quantify current pain points)
