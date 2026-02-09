@@ -37,37 +37,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
-def extract_json_object(text: str) -> str:
-    """Extract a JSON object from LLM output.
-
-    Handles common cases:
-    - Raw JSON: { ... }
-    - Fenced JSON: ```json\n{...}\n```
-    - Fenced generic: ```\n{...}\n```
-
-    Returns a JSON string safe for json.loads().
-    Raises ValueError if no JSON object can be found.
-    """
-    t = (text or "").strip()
-
-    # Strip markdown fences if present
-    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.DOTALL | re.IGNORECASE)
-    if fence_match:
-        return fence_match.group(1).strip()
-
-    # Already looks like JSON
-    if t.startswith("{") and t.endswith("}"):
-        return t
-
-    # Fallback: slice from first { to last }
-    first = t.find("{")
-    last = t.rfind("}")
-    if first != -1 and last != -1 and last > first:
-        return t[first:last + 1].strip()
-
-    raise ValueError("No JSON object found in LLM output")
-
-
 # -----------------------------
 # Configuration
 # -----------------------------
@@ -149,8 +118,16 @@ def write_text(path: Path, text: str) -> None:
 
 
 def backup_file(path: Path) -> Path:
+    """
+    Create a timestamped backup copy of the requirements doc *outside* the git repo.
+
+    Why: backups inside the repo show up as modified/untracked files and break the
+    'only docs/requirements.md may change' commit allowlist.
+    """
     ts = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = path.with_suffix(path.suffix + f".{ts}.bak")
+    tmp_root = Path(os.getenv("TMPDIR", "/tmp")) / "requirements_automation_backups"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    backup_path = tmp_root / f"{path.name}.{ts}.bak"
     shutil.copy2(path, backup_path)
     return backup_path
 
@@ -519,9 +496,8 @@ Return JSON only. No prose.
 """
         raw = self._call(prompt).strip()
         try:
-            payload = extract_json_object(raw)
-            data = json.loads(payload)
-        except Exception as e:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
             raise RuntimeError(f"LLM returned non-JSON for generate_open_questions: {raw[:400]}") from e
 
         questions = data.get("questions", [])
