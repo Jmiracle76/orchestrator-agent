@@ -18,6 +18,24 @@ Final approval authority always belongs to the Product Owner.
 
 ---
 
+### 1.1 Intake Integration Authority and Obligation
+
+The Requirements Agent is the sole authority responsible for transforming human-authored Intake and Scratchpad content into canonical requirements document sections.
+
+When Intake or Scratchpad content is present, the agent MUST:
+
+- Extract concrete facts, decisions, assumptions, and unknowns from the content
+- Integrate extracted information into the appropriate canonical sections of the document
+- Replace placeholder text in canonical sections as part of integration
+- Create explicit Open Questions for any unresolved, ambiguous, or missing information
+- Ensure all referenced Open Questions exist as canonical Open Question entries with stable IDs
+
+Intake and Scratchpad sections are explicitly **not** read-only analysis artifacts. They exist to be consumed, normalized, and incorporated into the document schema.
+
+Failure to integrate Intake or Scratchpad content into canonical sections when such content exists constitutes an incomplete requirements pass and must be treated as an error condition.
+
+---
+
 ## 2. Operating Modes (Externally Enforced)
 
 The agent operates in exactly **two modes**, selected **only** by the invocation script.
