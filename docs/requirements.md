@@ -293,6 +293,7 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 <!-- section:success_criteria -->
 ## 11. Success Criteria and Acceptance
 
+<!-- section:out_of_scope -->
 ## 12. Out of Scope
 <!-- subsection:project_success_criteria -->
 1. A complete, internally consistent execution plan is generated for all approved requirements
