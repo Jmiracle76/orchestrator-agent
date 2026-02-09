@@ -259,9 +259,9 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 | Q-026 | What scope boundaries or features are explicitly excluded from this project? | 2026-02-09 |  | non_goals | Open |
 | Q-027 | Are there any common expectations or requests that this project will NOT address? | 2026-02-09 |  | non_goals | Open |
 | Q-028 | What is the target timeline or deadline for achieving the primary goals? | 2026-02-09 |  | primary_goals | Open |
-| Q-019 | Who is affected by this problem (target users, stakeholders, or organizations)? | 2026-02-09 |  | problem_statement | Open |
-| Q-020 | Are there any existing solutions or workarounds currently in use? If so, what are their limitations? | 2026-02-09 |  | problem_statement | Open |
-| Q-021 | What would success look like in terms of solving this problem? | 2026-02-09 |  | problem_statement | Open |
+| Q-019 | Who is affected by this problem (target users, stakeholders, or organizations)? | 2026-02-09 | Individual developers, small development teams, and technical leads who manage multiple concurrent project ideas and struggle to translate high-level intent into consistent, bounded execution plans. | problem_statement | Open |
+| Q-020 | Are there any existing solutions or workarounds currently in use? If so, what are their limitations? | 2026-02-09 | Current solutions include manual planning using markdown documents, issue trackers, and ad hoc AI prompting. These approaches are time-consuming, inconsistent, and prone to scope creep or unintended changes across repositories. | problem_statement | Open |
+| Q-021 | What would success look like in terms of solving this problem? | 2026-02-09 | Success would be the ability to reliably generate an actionable, scoped execution plan from approved requirements with minimal manual intervention, while preserving repository integrity and intent. | problem_statement | Open |
 | Q-012 | Who are the primary stakeholders for this project (e.g., project sponsors, department heads, business owners)? | 2026-02-09 |  | stakeholders_users | Open |
 | Q-013 | What is each primary stakeholder's role in the project and their specific interest or need? | 2026-02-09 |  | stakeholders_users | Open |
 | Q-014 | What are the contact details (email, phone, department) for each primary stakeholder? | 2026-02-09 |  | stakeholders_users | Open |
@@ -269,11 +269,11 @@ The project addresses the need for a Planning/Orchestrator Agent that reliably t
 | Q-016 | What are the key characteristics of each end user type (e.g., technical skill level, frequency of use, location)? | 2026-02-09 |  | stakeholders_users | Open |
 | Q-017 | What are the specific needs and requirements of each end user type? | 2026-02-09 |  | stakeholders_users | Open |
 | Q-018 | What are the primary use cases or tasks each end user type will perform with the system? | 2026-02-09 |  | stakeholders_users | Open |
-| Q-007 | What are the primary goals this project aims to achieve? | 2026-02-09 |  | goals_objectives | Open |
-| Q-008 | What are the secondary or supporting goals for this project? | 2026-02-09 |  | goals_objectives | Open |
-| Q-009 | What is explicitly out of scope or not a goal for this project? | 2026-02-09 |  | goals_objectives | Open |
-| Q-010 | How will success be measured for the primary goals? | 2026-02-09 |  | goals_objectives | Open |
-| Q-011 | Are there any time-bound objectives or milestones associated with these goals? | 2026-02-09 |  | goals_objectives | Open |
+| Q-007 | What are the primary goals this project aims to achieve? | 2026-02-09 | The primary goals are to reduce planning overhead, increase consistency in execution plans, and enable reliable handoff between automated agents without loss of intent or scope control. | goals_objectives | Open |
+| Q-008 | What are the secondary or supporting goals for this project? | 2026-02-09 | Secondary goals include improving traceability between requirements and execution tasks, supporting iterative refinement, and enabling reuse of planning patterns across projects. | goals_objectives | Open |
+| Q-009 | What is explicitly out of scope or not a goal for this project? | 2026-02-09 | The system will not attempt to autonomously execute tasks, make architectural decisions without human input, or modify production systems. | goals_objectives | Open |
+| Q-010 | How will success be measured for the primary goals? | 2026-02-09 | Success will be measured by the completeness, accuracy, and bounded nature of generated plans, as well as reduced manual planning effort. | goals_objectives | Open |
+| Q-011 | Are there any time-bound objectives or milestones associated with these goals? | 2026-02-09 | An initial functional version should be achievable within a few weeks, with incremental capability improvements over subsequent iterations. | goals_objectives | Open |
 | Q-002 | What is the core problem or pain point that this project aims to solve? | 2026-02-09 |  | problem_statement | Open |
 | Q-003 | Who is experiencing this problem (target users, stakeholders, or groups)? | 2026-02-09 |  | problem_statement | Open |
 | Q-004 | What are the current consequences or impacts of this problem not being solved? | 2026-02-09 |  | problem_statement | Open |
