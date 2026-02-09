@@ -1,409 +1,345 @@
 #!/usr/bin/env python3
-"""
-tools/invoke_requirements_agent.py
+"""Requirements Agent invoker (minimal, no env-var games).
 
-A minimal, repo-safe requirements-agent invoker.
+You already do:
+  source ~/ai-runner/config/anthropic.env
+  source ~/ai-runner/venv/bin/activate
 
-Key goals (because humans are allergic to simplicity):
-- Run the Requirements Agent in either review or integrate mode (auto-derived).
-- Accept agent output in TWO formats:
-  1) Preferred patch format:
-     ## REVIEW_OUTPUT / ## INTEGRATE_OUTPUT (optional)
-     ### SECTION: <Heading>
-     ```md
-     <full replacement content for that section>
-     ```
-  2) Fallback "full document" format:
-     Agent outputs a markdown document with standard section headings (## 1. Document Control, etc.).
-     We will extract sections by headings and apply replacements safely.
+This script should *not* require any additional env vars.
 
-- Keep changes bounded to docs/requirements.md by default.
-- Commit changes (optional) when modifications occur.
+Defaults:
+- Agent profile: agent-profiles/requirements-agent.md
+- Requirements doc: docs/requirements.md
 
-NOTE: This file is intentionally self-contained to avoid "helper script sprawl".
+It supports two agent output formats:
+1) SECTION blocks (preferred):
+   ### SECTION: <Exact Heading>
+   ```md
+   <new section content>
+   ```
+2) REVIEW-only: If no sections are emitted, we save the raw output and fail with a clear error.
+
+No helper-module sprawl. If you want sprawl, do it on purpose.
 """
 
 from __future__ import annotations
 
 import argparse
-import datetime as _dt
 import os
 import re
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Tuple
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_AGENT_PROFILE = REPO_ROOT / "agent-profiles" / "requirements-agent.md"
+DEFAULT_REQUIREMENTS_DOC = REPO_ROOT / "docs" / "requirements.md"
+LAST_OUTPUT_PATH = REPO_ROOT / ".requirements_agent_last_output.md"
 
 
-REQ_PATH_DEFAULT = "docs/requirements.md"
+# --------------------------- git helpers ---------------------------
 
-# Canonical section headings (level-2 "## " headings) expected in requirements doc
-CANON_SECTIONS = [
-    "## 1. Document Control",
-    "## 2. Problem Statement",
-    "## 3. Goals and Objectives",
-    "## 4. Non-Goals",
-    "## 5. Stakeholders and Users",
-    "## 6. Assumptions",
-    "## 7. Constraints",
-    "## 8. Functional Requirements",
-    "## 9. Non-Functional Requirements",
-    "## 10. Interfaces and Integrations",
-    "## 11. Data Considerations",
-    "## 12. Risks and Open Issues",
-    "## 13. Success Criteria and Acceptance",
-    "## 14. Out of Scope",
-    "## 15. Approval Record",
-]
-
-TOP_MARKERS = {"review": "## REVIEW_OUTPUT", "integrate": "## INTEGRATE_OUTPUT"}
+def run(cmd: List[str], *, check: bool = True, capture: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd,
+        cwd=str(REPO_ROOT),
+        check=check,
+        text=True,
+        stdout=subprocess.PIPE if capture else None,
+        stderr=subprocess.PIPE if capture else None,
+    )
 
 
-class Fail(Exception):
-    pass
+def git_current_branch() -> str:
+    cp = run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    return (cp.stdout or "").strip()
 
 
-def run(cmd: List[str], cwd: Optional[str] = None, check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, check=check, text=True, capture_output=True)
+def git_is_clean() -> bool:
+    cp = run(["git", "status", "--porcelain"])
+    return (cp.stdout or "").strip() == ""
 
 
-def git_clean() -> Tuple[bool, str]:
-    cp = run(["git", "status", "--porcelain"], check=True)
-    return (cp.stdout.strip() == ""), cp.stdout.strip()
+def git_changed_files() -> List[str]:
+    cp = run(["git", "status", "--porcelain"])
+    files: List[str] = []
+    for line in (cp.stdout or "").splitlines():
+        # porcelain: XY <path>
+        parts = line.strip().split(maxsplit=1)
+        if len(parts) == 2:
+            files.append(parts[1])
+    return files
 
 
-def git_branch() -> str:
-    cp = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True)
-    return cp.stdout.strip()
+def git_commit(message: str, paths: List[Path]) -> None:
+    run(["git", "add", "--"] + [str(p) for p in paths], capture=True)
+    run(["git", "commit", "-m", message], capture=True)
 
 
-def read_text(p: Path) -> str:
-    return p.read_text(encoding="utf-8")
+def git_push(remote: str = "origin", branch: str = "main") -> None:
+    run(["git", "push", remote, branch], capture=True)
 
 
-def write_text(p: Path, s: str) -> None:
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(s, encoding="utf-8")
+# --------------------------- parsing & patching ---------------------------
+
+SECTION_RE = re.compile(
+    r"^###\\s+SECTION:\\s*(?P<title>.+?)\\s*$"  # title line
+    r"\\n```(?:md|markdown)?\\n"               # fenced start
+    r"(?P<body>.*?)"                           # body
+    r"\\n```\\s*$",                            # fenced end
+    re.MULTILINE | re.DOTALL,
+)
 
 
-def now_date() -> str:
-    return _dt.datetime.now().strftime("%Y-%m-%d")
+def parse_section_blocks(agent_text: str) -> List[Tuple[str, str]]:
+    blocks: List[Tuple[str, str]] = []
+    for m in SECTION_RE.finditer(agent_text):
+        title = m.group("title").strip()
+        body = m.group("body").rstrip() + "\n"
+        blocks.append((title, body))
+    return blocks
 
 
-def derive_mode(doc: str) -> str:
+def replace_section(doc_text: str, heading: str, new_body: str) -> Tuple[str, bool]:
+    """Replace the content under a markdown heading with new_body.
+
+    Heading match is exact on the heading text, but tolerant on heading level:
+    - Matches lines like "## 2. Problem Statement" etc.
+
+    Replaces from heading line up to (but not including) next heading of same or higher level.
     """
-    Auto-derive mode:
-    - integrate if there exist any Open Questions with Answer present AND Status not Resolved
-    - else review
-    This is intentionally simple and approximate.
-    """
-    # Look for Open Questions subsections: "#### Q-XXX"
-    # and within each: "**Status:**", "**Answer:**"
-    q_blocks = re.split(r"(?m)^####\s+Q-\d+\b", doc)
-    # If no questions, review.
-    if len(q_blocks) <= 1:
-        return "review"
+    # Find a heading line containing the given heading string (exact text after hashes)
+    # Example: doc has "## 2. Problem Statement". Heading passed should match that line's text.
+    lines = doc_text.splitlines(keepends=True)
 
-    # Find each question subsection content using finditer to keep IDs
-    for m in re.finditer(r"(?m)^####\s+(Q-\d+)\b.*$", doc):
-        q_id = m.group(1)
-        start = m.start()
-        # end at next #### or end of doc
-        m2 = re.search(r"(?m)^####\s+Q-\d+\b", doc[m.end():])
-        end = (m.end() + m2.start()) if m2 else len(doc)
-        block = doc[start:end]
+    def heading_line_text(line: str) -> str | None:
+        hm = re.match(r"^(#{1,6})\\s+(.*?)(\\s+#+\\s*)?$", line.strip())
+        if not hm:
+            return None
+        return hm.group(2).strip()
 
-        status_m = re.search(r"(?mi)^\*\*Status:\*\*\s*(.+)\s*$", block)
-        ans_m = re.search(r"(?mi)^\*\*Answer:\*\*\s*(.*)$", block)
-        # Multi-line answer: take until next "**Integration Targets:**" or end
-        ans_text = ""
-        if ans_m:
-            ans_start = ans_m.end()
-            stop = re.search(r"(?mi)^\*\*Integration Targets:\*\*", block[ans_start:])
-            ans_text = (block[ans_start: ans_start + stop.start()] if stop else block[ans_start:]).strip()
+    start_idx = None
+    start_level = None
+    for i, line in enumerate(lines):
+        txt = heading_line_text(line)
+        if txt is not None and txt == heading:
+            start_idx = i
+            start_level = len(re.match(r"^(#{1,6})", line.strip()).group(1))  # type: ignore
+            break
 
-        status = (status_m.group(1).strip() if status_m else "").lower()
-        has_answer = bool(ans_text and ans_text.strip() and ans_text.strip() != "[answer]")
-        is_resolved = ("resolved" in status)
+    if start_idx is None or start_level is None:
+        return doc_text, False
 
-        if has_answer and not is_resolved:
-            return "integrate"
+    # Find end idx: next heading with level <= start_level
+    end_idx = len(lines)
+    for j in range(start_idx + 1, len(lines)):
+        hm = re.match(r"^(#{1,6})\\s+", lines[j].lstrip())
+        if hm:
+            level = len(hm.group(1))
+            if level <= start_level:
+                end_idx = j
+                break
 
-    return "review"
+    # Build replacement: keep heading line, then blank line, then new body, then ensure blank line
+    heading_line = lines[start_idx]
+    replacement = heading_line
+    if not replacement.endswith("\n"):
+        replacement += "\n"
+    replacement += "\n" if not replacement.endswith("\n\n") else ""
+    replacement += new_body
+    if not replacement.endswith("\n"):
+        replacement += "\n"
+    replacement += "\n"
 
+    new_lines = lines[: start_idx] + [replacement] + lines[end_idx:]
+    return "".join(new_lines), True
+
+
+# --------------------------- agent calling ---------------------------
 
 @dataclass
-class SectionPatch:
-    heading: str   # exact "## ..." heading to replace
-    content: str   # full replacement text INCLUDING heading line
+class AgentResult:
+    text: str
+    model: str
 
 
-def parse_section_blocks(agent_text: str) -> List[SectionPatch]:
+def call_agent_via_anthropic(system_prompt: str, user_prompt: str, model: str) -> AgentResult:
+    try:
+        import anthropic  # type: ignore
+    except Exception as e:
+        raise RuntimeError(f"anthropic package not available: {e}")
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set. Did you source anthropic.env?")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    msg = client.messages.create(
+        model=model,
+        max_tokens=4096,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    # SDK returns content blocks; join text blocks
+    parts = []
+    for block in msg.content:
+        if getattr(block, "type", None) == "text":
+            parts.append(block.text)
+    return AgentResult(text="\n".join(parts).strip() + "\n", model=model)
+
+
+def call_agent_via_subprocess(agent_cmd: str, system_prompt: str, user_prompt: str, model: str) -> AgentResult:
+    """Run an external command that reads prompts from stdin and prints response to stdout.
+
+    agent_cmd is a shell string (kept simple on purpose).
+    We pass MODEL in env as ANTHROPIC_MODEL for convenience.
     """
-    Preferred format:
-      ### SECTION: <Heading>
-      ```md
-      <content>
-      ```
-    Where <Heading> may be "## 2. Problem Statement" or just "2. Problem Statement".
-    We normalize to exact canonical heading if possible.
-    """
-    patches: List[SectionPatch] = []
-    # Find all SECTION blocks
-    pattern = re.compile(r"(?s)###\s*SECTION:\s*(.+?)\s*\n```(?:md|markdown)?\s*\n(.*?)\n```\s*")
-    for m in pattern.finditer(agent_text):
-        raw_head = m.group(1).strip()
-        body = m.group(2).rstrip()
+    env = os.environ.copy()
+    env.setdefault("ANTHROPIC_MODEL", model)
 
-        # Normalize heading
-        if raw_head.startswith("## "):
-            heading = raw_head
-        elif raw_head.startswith("#"):
-            heading = "## " + raw_head.lstrip("#").strip()
-        else:
-            heading = "## " + raw_head
+    payload = f"# SYSTEM\n{system_prompt}\n\n# USER\n{user_prompt}\n"
 
-        # If heading doesn't match canonical exactly, try fuzzy match by suffix
-        if heading not in CANON_SECTIONS:
-            cand = None
-            for h in CANON_SECTIONS:
-                if h.lower().endswith(heading.lower().lstrip("## ").strip()):
-                    cand = h
-                    break
-            if cand:
-                heading = cand
-
-        if heading not in CANON_SECTIONS:
-            # Ignore unknown sections rather than doing something dumb.
-            continue
-
-        # Ensure content includes heading line
-        content = body
-        if not content.lstrip().startswith("## "):
-            content = heading + "\n\n" + body.strip() + "\n"
-        else:
-            # Trust the provided content
-            content = content.strip() + "\n"
-
-        patches.append(SectionPatch(heading=heading, content=content))
-
-    return patches
-
-
-def parse_full_document(agent_text: str) -> List[SectionPatch]:
-    """
-    Fallback: agent output is a markdown doc containing some canonical "## X. ..." headings.
-    We extract each canonical section present and use it as a replacement patch.
-    """
-    # Build map of heading -> (start,end)
-    # We look for level-2 headings only.
-    headings = [(m.group(0), m.start()) for m in re.finditer(r"(?m)^##\s+\d+\.\s+.+$", agent_text)]
-    if not headings:
-        return []
-
-    # Index by heading line normalized to canonical if possible
-    found: List[Tuple[str, int]] = []
-    for h, pos in headings:
-        # Try direct canonical match
-        h_norm = h.strip()
-        if h_norm in CANON_SECTIONS:
-            found.append((h_norm, pos))
-            continue
-        # Fuzzy by numeric prefix
-        num_m = re.match(r"^##\s+(\d+)\.\s+(.+)$", h_norm)
-        if num_m:
-            n = int(num_m.group(1))
-            if 1 <= n <= 15:
-                canon = CANON_SECTIONS[n - 1]
-                found.append((canon, pos))
-
-    if not found:
-        return []
-
-    # Deduplicate by heading, keep first occurrence
-    seen = set()
-    found2 = []
-    for h, pos in sorted(found, key=lambda x: x[1]):
-        if h in seen:
-            continue
-        seen.add(h)
-        found2.append((h, pos))
-
-    # Determine section ranges by next found position
-    patches: List[SectionPatch] = []
-    for i, (h, start) in enumerate(found2):
-        end = found2[i + 1][1] if i + 1 < len(found2) else len(agent_text)
-        content = agent_text[start:end].rstrip() + "\n"
-        # Ensure it starts with the canonical heading line
-        if not content.startswith(h):
-            # Replace first heading line with canonical
-            content = re.sub(r"(?m)^##\s+\d+\.\s+.+$", h, content, count=1)
-        patches.append(SectionPatch(heading=h, content=content))
-
-    return patches
-
-
-def apply_patches(doc: str, patches: List[SectionPatch]) -> str:
-    """
-    Replace each targeted section in the existing doc.
-    A section is from its canonical heading line until the next canonical heading line.
-    """
-    if not patches:
-        return doc
-
-    # Build positions of canonical headings in existing doc
-    positions: Dict[str, int] = {}
-    for h in CANON_SECTIONS:
-        m = re.search(re.escape(h) + r"\s*$", doc, flags=re.M)
-        if m:
-            positions[h] = m.start()
-
-    # Apply patches in doc order, from bottom to top to keep indices stable
-    # Only apply if the target section exists in the current doc
-    # (If it's missing, we fail; the agent can repair via other mechanisms, but not here.)
-    for p in sorted(patches, key=lambda x: positions.get(x.heading, -1), reverse=True):
-        if p.heading not in positions:
-            raise Fail(f"Target section missing in doc: {p.heading}")
-
-        start = positions[p.heading]
-        # Find next canonical heading after start
-        next_pos = None
-        for h2 in CANON_SECTIONS:
-            pos2 = positions.get(h2)
-            if pos2 is not None and pos2 > start:
-                if next_pos is None or pos2 < next_pos:
-                    next_pos = pos2
-        end = next_pos if next_pos is not None else len(doc)
-
-        doc = doc[:start] + p.content.rstrip() + "\n\n" + doc[end:].lstrip()
-
-        # Recompute positions after modification? We apply bottom-up so earlier offsets are safe enough.
-        # For safety, do nothing.
-
-    return doc
-
-
-def call_agent(profile_path: str, mode: str, req_text: str, extra_context: str) -> str:
-    """
-    Placeholder: the repo-specific implementation probably shells out to your LLM runner.
-    This function assumes you already have a working 'ai-runner' style CLI or equivalent.
-
-    We keep it dead simple:
-    - Provide mode + current requirements doc + optional context.
-    - Expect agent to return text to stdout.
-
-    If your environment uses a different command, adjust AGENT_CMD env var.
-    """
-    cmd = os.environ.get("REQ_AGENT_CMD")
-    if not cmd:
-        # Default to the pattern you've been using in logs
-        # You likely have a wrapper; set REQ_AGENT_CMD if different.
-        cmd = "ai-runner agent"
-    # Build a very plain prompt envelope
-    prompt = f"""MODE: {mode}
-
-AGENT PROFILE PATH: {profile_path}
-
-REQUIREMENTS_DOC (current):
-{req_text}
-
-HUMAN_CONTEXT (optional):
-{extra_context}
-"""
-    # Run command via shell so users can set complex commands (yes, it's gross).
-    cp = subprocess.run(cmd, input=prompt, text=True, shell=True, capture_output=True)
+    cp = subprocess.run(
+        agent_cmd,
+        cwd=str(REPO_ROOT),
+        shell=True,
+        text=True,
+        input=payload,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
     if cp.returncode != 0:
-        raise Fail(f"Agent command failed ({cp.returncode}):\n{cp.stderr.strip()}")
-    return cp.stdout
+        raise RuntimeError(f"Agent subprocess failed ({cp.returncode}):\n{cp.stderr}")
+    return AgentResult(text=(cp.stdout or "").strip() + "\n", model=model)
+
+
+# --------------------------- main workflow ---------------------------
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--requirements", default=REQ_PATH_DEFAULT)
-    ap.add_argument("--profile", default="agent-profiles/requirements-agent.md")
-    ap.add_argument("--no-commit", action="store_true")
-    ap.add_argument("--commit-message", default=None)
+    ap.add_argument("--doc", default=str(DEFAULT_REQUIREMENTS_DOC), help="Path to requirements.md")
+    ap.add_argument("--profile", default=str(DEFAULT_AGENT_PROFILE), help="Path to agent profile markdown")
+    ap.add_argument("--model", default=os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929"))
+    ap.add_argument(
+        "--agent-cmd",
+        default="",
+        help=(
+            "Optional subprocess command to call the agent. If not provided, uses Anthropic SDK directly. "
+            "Example: --agent-cmd 'python tools/run_claude.py'"
+        ),
+    )
+    ap.add_argument("--no-push", action="store_true", help="Commit but do not push")
     args = ap.parse_args()
 
-    req_path = Path(args.requirements)
-    profile_path = args.profile
+    doc_path = Path(args.doc).resolve()
+    profile_path = Path(args.profile).resolve()
+
+    if not doc_path.exists():
+        print(f"ERROR: requirements doc not found: {doc_path}")
+        return 2
+    if not profile_path.exists():
+        print(f"ERROR: agent profile not found: {profile_path}")
+        return 2
 
     print("[Pre-flight] Checking git working tree...")
-    clean, details = git_clean()
-    if not clean:
-        print("ERROR: Working tree is not clean. Commit/stash first.\n" + details)
+    if not git_is_clean():
+        print("ERROR: Working tree is not clean. Commit/stash your changes first.")
         return 2
-    branch = git_branch()
+    branch = git_current_branch()
     print(f"✓ Clean. Branch: {branch}")
 
-    if not req_path.exists():
-        print(f"ERROR: Requirements doc not found: {req_path}")
-        return 2
-
-    req_text = read_text(req_path)
-    mode = derive_mode(req_text)
-    print(f"[Mode] Running in {mode} mode\n")
-
-    print("Optional context (Ctrl+D to finish):\n")
+    # Human optional context
+    print("\nOptional context (Ctrl+D to finish):\n")
     try:
-        extra_context = sys.stdin.read()
+        human_context = sys.stdin.read()
     except KeyboardInterrupt:
-        extra_context = ""
+        human_context = ""
 
-    print("\n[Agent] Calling requirements agent...")
-    agent_out = call_agent(profile_path, mode, req_text, extra_context)
+    req_text = doc_path.read_text(encoding="utf-8")
+    profile_text = profile_path.read_text(encoding="utf-8")
 
-    # Marker check: warn only
-    marker = TOP_MARKERS.get(mode)
-    if marker and marker not in agent_out:
-        print(f"WARNING: Agent output missing expected marker '{marker}'. Attempting to parse anyway.")
+    system_prompt = profile_text
+    user_prompt = (
+        "You are updating the repository requirements document.\n\n"
+        "Return updates ONLY in SECTION blocks when you are modifying sections.\n"
+        "If you are not modifying any sections, return a short explanation and no SECTION blocks.\n\n"
+        "# REQUIREMENTS_DOCUMENT\n"
+        f"{req_text}\n\n"
+        "# OPTIONAL_HUMAN_CONTEXT\n"
+        f"{human_context.strip()}\n"
+    )
 
-    # Parse preferred blocks
-    patches = parse_section_blocks(agent_out)
-
-    # Fallback parse: full document
-    if not patches:
-        patches = parse_full_document(agent_out)
-
-    if not patches:
-        raise Fail("Agent output contained no SECTION blocks and no recognizable canonical '## X.' headings.")
-
-    # Apply patches
-    updated = apply_patches(req_text, patches)
-
-    if updated == req_text:
-        print("[Patching] No changes detected after applying patches; skipping commit")
-        return 0
-
-    write_text(req_path, updated)
-    print(f"[Patching] Applied {len(patches)} section update(s) to {req_path}")
-
-    if args.no_commit:
-        print("[Commit] Skipped (disabled)")
-        return 0
-
-    # Commit only the requirements file
-    run(["git", "add", str(req_path)])
-    msg = args.commit_message
-    if not msg:
-        msg = f"requirements: {mode} pass ({now_date()})"
-    run(["git", "commit", "-m", msg])
-    print("[Commit] Committed changes")
-
-    # Push (optional)
+    print("\n[Agent] Calling model...")
     try:
-        run(["git", "push", "origin", branch], check=True)
-        print("[Push] Pushed to origin")
-    except subprocess.CalledProcessError as e:
-        print("[Push] WARNING: Push failed. You can push manually.\n" + (e.stderr or "").strip())
+        if args.agent_cmd.strip():
+            result = call_agent_via_subprocess(args.agent_cmd.strip(), system_prompt, user_prompt, args.model)
+        else:
+            result = call_agent_via_anthropic(system_prompt, user_prompt, args.model)
+    except Exception as e:
+        print(f"ERROR: Agent call failed: {e}")
+        return 3
+
+    LAST_OUTPUT_PATH.write_text(result.text, encoding="utf-8")
+    print(f"✓ Agent responded (saved raw output to {LAST_OUTPUT_PATH.name})")
+
+    blocks = parse_section_blocks(result.text)
+    if not blocks:
+        print("ERROR: Agent output contained no SECTION blocks.\n"
+              "Expected '### SECTION: <Heading>' blocks with fenced markdown.\n"
+              f"Raw output saved to: {LAST_OUTPUT_PATH}")
+        return 4
+
+    updated = req_text
+    applied_any = False
+    missing: List[str] = []
+    for heading, body in blocks:
+        updated, ok = replace_section(updated, heading, body)
+        if ok:
+            applied_any = True
+        else:
+            missing.append(heading)
+
+    if missing:
+        print("ERROR: Some SECTION headings were not found in the document. Refusing to apply partial patch.")
+        for h in missing:
+            print(f" - {h}")
+        print(f"Raw output saved to: {LAST_OUTPUT_PATH}")
+        return 4
+
+    if not applied_any or updated == req_text:
+        print("[Commit] No changes detected; skipping commit")
+        return 0
+
+    doc_path.write_text(updated, encoding="utf-8")
+
+    # Ensure only the doc changed
+    changed = git_changed_files()
+    rel_doc = os.path.relpath(doc_path, REPO_ROOT)
+    unexpected = [f for f in changed if f != rel_doc]
+    if unexpected:
+        print("ERROR: Unexpected file changes detected after applying patch:")
+        for f in unexpected:
+            print(f" - {f}")
+        print("Refusing to commit.")
+        return 5
+
+    msg = "requirements: agent update"
+    git_commit(msg, [doc_path])
+    print("✓ Committed changes")
+
+    if not args.no_push:
+        # Push to current branch
+        git_push("origin", branch)
+        print("✓ Pushed to origin")
 
     return 0
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except Fail as e:
-        print(f"ERROR: {e}")
-        sys.exit(2)
+    raise SystemExit(main())
