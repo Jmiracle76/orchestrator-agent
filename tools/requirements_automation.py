@@ -1051,9 +1051,9 @@ def process_phase_1(
 
         # Any questions (open or answered) targeting this section
         subs = find_subsections_within(lines, span)
-target_ids = {section_id} | {s.subsection_id for s in subs}
+        target_ids = {section_id} | {s.subsection_id for s in subs}
 
-targeted = [q for q in open_qs if canon_target(q.section_target) in target_ids]
+        targeted = [q for q in open_qs if canon_target(q.section_target) in target_ids]
 
         answered = [
             q for q in targeted
@@ -1072,54 +1072,54 @@ targeted = [q for q in open_qs if canon_target(q.section_target) in target_ids]
         # 1) If we have answers for this section, integrate them FIRST (even if the section is blank).
         # This prevents the "blank" branch from endlessly generating questions while answers exist.
         if answered and revised_sections[section_id] < 1:
-    # Integrate answers into the most specific target we can:
-    # - If question targets a subsection (e.g., primary_goals), update that subsection block.
-    # - Else, update the parent section block.
-    by_target: Dict[str, List[OpenQuestion]] = {}
-    for q in answered:
-        tgt = canon_target(q.section_target)
-        by_target.setdefault(tgt, []).append(q)
+            # Integrate answers into the most specific target we can:
+            # - If question targets a subsection (e.g., primary_goals), update that subsection block.
+            # - Else, update the parent section block.
+            by_target: Dict[str, List[OpenQuestion]] = {}
+            for q in answered:
+                tgt = canon_target(q.section_target)
+                by_target.setdefault(tgt, []).append(q)
 
-    any_integrated = False
+            any_integrated = False
 
-    for tgt, qs_for_tgt in by_target.items():
-        if tgt == section_id:
-            tgt_start, tgt_end = span.start_line, span.end_line
-        else:
-            subspan = get_subsection_span(subs, tgt)
-            if not subspan:
-                logging.warning("Answered questions target '%s' but no matching subsection marker exists; skipping.", tgt)
-                continue
-            tgt_start, tgt_end = subspan.start_line, subspan.end_line
+            for tgt, qs_for_tgt in by_target.items():
+                if tgt == section_id:
+                    tgt_start, tgt_end = span.start_line, span.end_line
+                else:
+                    subspan = get_subsection_span(subs, tgt)
+                    if not subspan:
+                        logging.warning("Answered questions target '%s' but no matching subsection marker exists; skipping.", tgt)
+                        continue
+                    tgt_start, tgt_end = subspan.start_line, subspan.end_line
 
-        context = "\n".join(lines[tgt_start:tgt_end])
+                context = "\n".join(lines[tgt_start:tgt_end])
 
-        try:
-            new_body = llm.integrate_answers(tgt, context, qs_for_tgt)
-        except NotImplementedError:
-            new_body = context
+                try:
+                    new_body = llm.integrate_answers(tgt, context, qs_for_tgt)
+                except NotImplementedError:
+                    new_body = context
 
-        # Apply strict sanitizer before writing
-        new_body = sanitize_llm_body(tgt, new_body)
+                # Apply strict sanitizer before writing
+                new_body = sanitize_llm_body(tgt, new_body)
 
-        if new_body.strip() and new_body.strip() != context.strip():
-            if not dry_run:
-                lines = replace_block_body_preserving_markers(lines, tgt_start, tgt_end, new_body)
-            any_integrated = True
+                if new_body.strip() and new_body.strip() != context.strip():
+                    if not dry_run:
+                        lines = replace_block_body_preserving_markers(lines, tgt_start, tgt_end, new_body)
+                    any_integrated = True
 
-    if any_integrated:
-        changed = True
-        revised_sections[section_id] += 1
+            if any_integrated:
+                changed = True
+                revised_sections[section_id] += 1
 
-        qids = [q.question_id for q in answered]
-        lines, resolved = open_questions_resolve(lines, qids)
-        if resolved:
-            change_summaries.append(f"Questions resolved: {', '.join(qids)}")
-            changed = True
-            open_qs, _, _ = open_questions_parse(lines)
+                qids = [q.question_id for q in answered]
+                lines, resolved = open_questions_resolve(lines, qids)
+                if resolved:
+                    change_summaries.append(f"Questions resolved: {', '.join(qids)}")
+                    changed = True
+                    open_qs, _, _ = open_questions_parse(lines)
 
-    # Re-evaluate blankness after integration
-    blank = section_is_blank(lines, span)
+            # Re-evaluate blankness after integration
+            blank = section_is_blank(lines, span)
 
         # 2) If still blank, generate questions ONLY if none already exist for this section.
         if blank:
