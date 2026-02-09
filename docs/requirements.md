@@ -5,7 +5,7 @@
 - **Project:** [Project Name - Replace with your project name]
 
 <!-- meta:version -->
-- **Version:** 0.0 
+- **Version:** 0.1
 
 <!-- meta:status -->
 - **Status:** Draft 
@@ -30,7 +30,7 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.0 |
+| Current Version | 0.1 |
 | Last Modified | 2026-02-09 |
 | Modified By | requirements-automation |
 | Approval Status | Draft |
