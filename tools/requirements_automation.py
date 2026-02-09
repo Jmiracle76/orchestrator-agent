@@ -103,6 +103,7 @@ TARGET_CANONICAL_MAP: Dict[str, str] = {
 SECTION_MARKER_RE = re.compile(r"<!--\s*section:(?P<id>[a-z0-9_]+)\s*-->")
 SECTION_LOCK_RE   = re.compile(r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->")
 TABLE_MARKER_RE   = re.compile(r"<!--\s*table:(?P<id>[a-z0-9_]+)\s*-->")
+SUBSECTION_MARKER_RE = re.compile(r"<!--\s*subsection:(?P<id>[a-z0-9_]+)\s*-->")
 PLACEHOLDER_TOKEN = "<!-- PLACEHOLDER -->"
 
 OPEN_Q_COLUMNS = [
@@ -833,21 +834,60 @@ CURRENT SECTION TEXT:
 # -----------------------------
 
 def validate_and_repair_structure(lines: List[str]) -> Tuple[List[str], bool, List[str]]:
+    """
+    Validate + (lightly) repair control-plane structure.
+
+    Repair policy (Phase 1):
+    - If a required section marker is missing but the corresponding numbered heading exists,
+      re-insert the marker immediately above that heading.
+    - If section_lock references a missing section marker, warn (and the insertion above should fix most cases).
+    """
     changed = False
     notes: List[str] = []
 
+    # --- Auto-repair missing section markers (based on numbered headings) ---
+    expected_heading_to_id = {
+        "## 2. Problem Statement": "problem_statement",
+        "## 3. Goals and Objectives": "goals_objectives",
+        "## 4. Stakeholders and Users": "stakeholders_users",
+        "## 11. Success Criteria and Acceptance": "success_criteria",
+        "## 12. Out of Scope": "out_of_scope",
+        "## 1. Document Control": "document_control",
+        "## 10. Risks and Open Issues": "risks_open_issues",
+    }
+
+    # Compute known section markers
+    spans = find_sections(lines)
+    present = {s.section_id for s in spans}
+
+    for heading, sid in expected_heading_to_id.items():
+        if sid in present:
+            continue
+        # Find heading line
+        for i, ln in enumerate(lines):
+            if ln.strip() == heading:
+                # Insert marker above heading, unless marker already exists very near
+                insert_at = i
+                # If previous line is already some marker, insert above it to keep marker->heading adjacency
+                if i > 0 and lines[i-1].strip().startswith("<!--") and "section:" in lines[i-1]:
+                    break
+                marker = f"<!-- section:{sid} -->"
+                lines.insert(insert_at, marker)
+                notes.append(f"Repaired missing section marker for {sid} above heading '{heading}' (line {i+1}).")
+                changed = True
+                # Refresh present set so we don't double-insert
+                present.add(sid)
+                break
+
+    # Recompute spans after potential insertions
     spans = find_sections(lines)
     known_sections = {s.section_id for s in spans}
 
-    # Warn on orphan locks
+    # --- Orphan lock warnings ---
     for i, line in enumerate(lines):
         m = SECTION_LOCK_RE.search(line)
         if m and m.group("id") not in known_sections:
             notes.append(f"Orphan section_lock at line {i+1}: {m.group('id')}")
-
-    # Ensure Open Questions table exists (don’t auto-create silently)
-    if not find_table_block(lines, "open_questions"):
-        notes.append("Missing Open Questions table marker/block: <!-- table:open_questions -->")
 
     return lines, changed, notes
 
@@ -855,6 +895,92 @@ def validate_and_repair_structure(lines: List[str]) -> Tuple[List[str], bool, Li
 # -----------------------------
 # Section editing helpers
 # -----------------------------
+
+def sanitize_llm_body(section_or_subsection_id: str, body: str) -> str:
+    """
+    Hard safety filter against structural corruption.
+
+    We DO NOT allow the LLM to emit:
+    - section markers / locks / table markers / subsection markers
+    - horizontal rule separators
+    - top-level headings (## ...) that would bleed into other sections
+
+    This is intentionally strict. If you want richer formatting later, loosen it carefully.
+    """
+    out_lines: List[str] = []
+    for ln in split_lines(body):
+        if SECTION_MARKER_RE.search(ln) or SECTION_LOCK_RE.search(ln) or TABLE_MARKER_RE.search(ln) or SUBSECTION_MARKER_RE.search(ln):
+            continue
+        if ln.strip() == "---":
+            continue
+        if ln.lstrip().startswith("## "):
+            continue
+        out_lines.append(ln.rstrip())
+    return "\n".join(out_lines).strip()
+
+@dataclasses.dataclass(frozen=True)
+class SubsectionSpan:
+    subsection_id: str
+    start_line: int
+    end_line: int
+
+def find_subsections_within(lines: List[str], section_span: SectionSpan) -> List[SubsectionSpan]:
+    """Find <!-- subsection:<id> --> markers inside a section span."""
+    starts: List[Tuple[str, int]] = []
+    for i in range(section_span.start_line, section_span.end_line):
+        m = SUBSECTION_MARKER_RE.search(lines[i])
+        if m:
+            starts.append((m.group("id"), i))
+    subs: List[SubsectionSpan] = []
+    for idx, (sid, start) in enumerate(starts):
+        end = starts[idx + 1][1] if idx + 1 < len(starts) else section_span.end_line
+        subs.append(SubsectionSpan(subsection_id=sid, start_line=start, end_line=end))
+    return subs
+
+def get_subsection_span(subs: List[SubsectionSpan], subsection_id: str) -> Optional[SubsectionSpan]:
+    for s in subs:
+        if s.subsection_id == subsection_id:
+            return s
+    return None
+
+def replace_block_body_preserving_markers(lines: List[str], start: int, end: int, new_body: str) -> List[str]:
+    """
+    Replace the *content* of a block while preserving:
+    - the first line (marker)
+    - the first heading line (## or ###) if present
+    - any trailing section_lock line(s) inside the block
+    - an ending '---' divider if present at the end of the original block
+    """
+    block_lines = lines[start:end]
+    if not block_lines:
+        return lines
+
+    marker_line = block_lines[0]
+    heading_line = None
+    for ln in block_lines[1:8]:
+        if ln.lstrip().startswith("## ") or ln.lstrip().startswith("### "):
+            heading_line = ln
+            break
+
+    lock_lines = [ln for ln in block_lines if SECTION_LOCK_RE.search(ln)]
+    keep_divider = ("---" in block_lines[-3:])
+
+    new_block: List[str] = [marker_line]
+    if heading_line:
+        new_block.append(heading_line)
+
+    body_clean = sanitize_llm_body("block", new_body)
+    if body_clean:
+        new_block.extend(split_lines(body_clean))
+    else:
+        new_block.append(PLACEHOLDER_TOKEN)
+
+    if lock_lines:
+        new_block.append(lock_lines[-1])
+    if keep_divider:
+        new_block.append("---")
+
+    return lines[:start] + new_block + lines[end:]
 
 def replace_section_data_plane(lines: List[str], span: SectionSpan, new_body: str) -> List[str]:
     block_lines = lines[span.start_line:span.end_line]
@@ -924,7 +1050,10 @@ def process_phase_1(
             return TARGET_CANONICAL_MAP.get(t0, t0)
 
         # Any questions (open or answered) targeting this section
-        targeted = [q for q in open_qs if canon_target(q.section_target) == section_id]
+        subs = find_subsections_within(lines, span)
+target_ids = {section_id} | {s.subsection_id for s in subs}
+
+targeted = [q for q in open_qs if canon_target(q.section_target) in target_ids]
 
         answered = [
             q for q in targeted
@@ -943,28 +1072,54 @@ def process_phase_1(
         # 1) If we have answers for this section, integrate them FIRST (even if the section is blank).
         # This prevents the "blank" branch from endlessly generating questions while answers exist.
         if answered and revised_sections[section_id] < 1:
-            context_body = section_body(lines, span)
-            new_body = llm.integrate_answers(section_id, context_body, answered)
+    # Integrate answers into the most specific target we can:
+    # - If question targets a subsection (e.g., primary_goals), update that subsection block.
+    # - Else, update the parent section block.
+    by_target: Dict[str, List[OpenQuestion]] = {}
+    for q in answered:
+        tgt = canon_target(q.section_target)
+        by_target.setdefault(tgt, []).append(q)
 
-            # Replace if changed (compare to body, not full section block)
-            if new_body.strip() and new_body.strip() != context_body.strip():
-                if not dry_run:
-                    lines = replace_section_data_plane(lines, span, new_body)
-                changed = True
-                change_summaries.append(f"Section updated: {section_id} (integrated {len(answered)} answers)")
-                revised_sections[section_id] += 1
+    any_integrated = False
 
-            # Mark integrated Qs as resolved (automation-owned)
-            qids = [q.question_id for q in answered]
-            if qids and not dry_run:
-                lines, resolved = open_questions_resolve(lines, qids)
-                if resolved:
-                    change_summaries.append(f"Questions resolved: {', '.join(qids)}")
-                    changed = True
-                    open_qs, _, _ = open_questions_parse(lines)
+    for tgt, qs_for_tgt in by_target.items():
+        if tgt == section_id:
+            tgt_start, tgt_end = span.start_line, span.end_line
+        else:
+            subspan = get_subsection_span(subs, tgt)
+            if not subspan:
+                logging.warning("Answered questions target '%s' but no matching subsection marker exists; skipping.", tgt)
+                continue
+            tgt_start, tgt_end = subspan.start_line, subspan.end_line
 
-            # Re-evaluate blankness after integration
-            blank = section_is_blank(lines, span)
+        context = "\n".join(lines[tgt_start:tgt_end])
+
+        try:
+            new_body = llm.integrate_answers(tgt, context, qs_for_tgt)
+        except NotImplementedError:
+            new_body = context
+
+        # Apply strict sanitizer before writing
+        new_body = sanitize_llm_body(tgt, new_body)
+
+        if new_body.strip() and new_body.strip() != context.strip():
+            if not dry_run:
+                lines = replace_block_body_preserving_markers(lines, tgt_start, tgt_end, new_body)
+            any_integrated = True
+
+    if any_integrated:
+        changed = True
+        revised_sections[section_id] += 1
+
+        qids = [q.question_id for q in answered]
+        lines, resolved = open_questions_resolve(lines, qids)
+        if resolved:
+            change_summaries.append(f"Questions resolved: {', '.join(qids)}")
+            changed = True
+            open_qs, _, _ = open_questions_parse(lines)
+
+    # Re-evaluate blankness after integration
+    blank = section_is_blank(lines, span)
 
         # 2) If still blank, generate questions ONLY if none already exist for this section.
         if blank:
