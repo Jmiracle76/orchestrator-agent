@@ -13,8 +13,8 @@
 <!-- Status values: Draft | Under Review | Approved -->
 
 **Project:** [Project Name]
-**Version:** 0.3
-**Status:** **Recommendation:** Pending - Revisions Required
+**Version:** 0.4
+**Status:** **Status:** Pending - Revisions Required
 **Last Updated:** [Date]
 **Approved By:** Pending
 **Approval Date:** Pending
@@ -28,10 +28,10 @@
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.3 |
+| Current Version | 0.4 |
 | Last Modified | [Date] |
 | Modified By | Template |
-| Approval Status | **Recommendation:** Pending - Revisions Required |
+| Approval Status | **Status:** Pending - Revisions Required |
 | Approved By | Pending |
 | Approval Date | Pending |
 
@@ -42,6 +42,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.4 | 2026-02-09 | Requirements Agent | Automated update |
 | 0.3 | 2026-02-09 | Requirements Agent | Automated update |
 | 0.2 | 2026-02-09 | Requirements Agent | Automated update |
 | 0.1 | 2026-02-09 | Requirements Agent | Automated update |
@@ -223,6 +224,8 @@ This project explicitly does NOT include:
 
 ### Identified Risks
 
+**Full Updated Identified Risks Content:**
+
 | Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
 |---------|-------------|-------------|--------|---------------------|-------|
 | R-001 | Template baseline state | High | High | Populate all sections with project-specific content; address remaining Open Questions OQ-003 through OQ-008 | Requirements Agent |
@@ -230,7 +233,9 @@ This project explicitly does NOT include:
 | R-003 | Missing orchestration capability | Medium | High | Partially mitigated by OQ-001 resolution defining orchestrator scope (FR-003); full mitigation requires OQ-004 and OQ-005 resolution for detailed capabilities and lifecycle | Requirements Agent |
 | R-004 | Undefined success metrics | Medium | High | Project success cannot be measured without concrete criteria; addressed via OQ-006 | Requirements Agent |
 | R-005 | Integration and interface gaps | Medium | Medium | No definition of how agents communicate, what data flows between them, or what external systems are involved; addressed via OQ-007 | Requirements Agent |
-| R-006 | Historical failure patterns | Medium | High | Current system exhibits 30-50% invocation failure rate with 3-6 hours manual cleanup per iteration; now documented in Problem Statement from OQ-002; risk remains until orchestration and boundaries are fully implemented per FR-001 through FR-004 | Requirements Agent |
+| R-006 | Historical failure patterns | High | High | Current system exhibits 30-50% invocation failure rate with 3-6 hours manual cleanup per iteration; documented failure modes include unauthorized file creation, out-of-scope modifications, and schema violations; mitigation requires full implementation of orchestration boundaries (FR-001 through FR-004) and lifecycle management (pending OQ-004, OQ-005 resolution) | Requirements Agent |
+
+---
 
 ---
 
@@ -273,6 +278,8 @@ Out of Scope (Non-Goals)
 ---
 
 ### Open Questions
+
+**Full Updated Open Questions Content:**
 
 #### OQ-001: Agent Scope Definition
 **Status:** Resolved
@@ -324,6 +331,127 @@ Requirements → Planning → Execution (out of scope)
 **Integration Targets:**
 - Section 8: Functional Requirements (define per-agent scope as separate FRs) ✓ Integrated
 - Section 4: Non-Goals (define what agents should NOT do) ✓ Integrated
+
+---
+
+#### OQ-002: Current System Problems
+**Status:** Resolved
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+**Resolved By:** Requirements Agent
+**Resolved Date:** 2026-02-09
+
+**Question:** What specific inconsistencies, scope violations, and side effects have occurred with the current agent system? What are concrete examples of "bloated scripts" and "unintended side effects"?
+
+**Answer:**
+Measured impacts to date include:
+•	Manual cleanup time: ~3–6 hours per iteration spent deleting unintended files, scripts, and documentation.
+•	Unintended side effects: Multiple occurrences per iteration, including:
+o	Creation of unauthorized scripts and tools
+o	Modification of out-of-scope files
+o	Silent schema violations
+•	Invocation failure rate: Approximately 30–50% of agent runs require manual rollback or rework.
+•	Evidence of brittleness:
+o	Small prompt or schema changes cause large behavioral divergence
+o	Scripts growing to 2000+ lines to compensate for missing guardrails
+o	Agent confusion when lifecycle boundaries are unclear
+These issues materially slow iteration and increase cognitive load
+
+**Integration Targets:**
+- Section 2: Problem Statement (quantify current pain points) ✓ Integrated
+- Section 12: Identified Risks (document specific failure patterns) ✓ Integrated as R-006
+
+---
+
+#### OQ-003: Tooling Change Scope Issues
+**Status:** Open
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+
+**Question:** What does "tooling changes frequently exceed intended scope" mean specifically? What changes were made that shouldn't have been? What manual cleanup was required?
+
+**Answer:** [Awaiting human input]
+
+**Integration Targets:**
+- Section 2: Problem Statement (add to observable impact)
+- Section 7: Constraints (define tooling change boundaries)
+
+---
+
+#### OQ-004: Orchestrator Agent Requirements
+**Status:** Open
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+
+**Question:** What specific capabilities must the orchestrator agent have? Should it: interpret project state, sequence agent execution, enforce lifecycle boundaries, and translate requirements to plans? Are there other orchestration functions needed?
+
+**Answer:** [Awaiting human input]
+
+**Integration Targets:**
+- Section 8: Functional Requirements (define orchestrator capabilities as FRs)
+- Section 3: Goals and Objectives (define orchestration goals)
+
+---
+
+#### OQ-005: Agent Lifecycle and Sequencing
+**Status:** Open
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+
+**Question:** What does "agent lifecycle" mean in this context? What are the distinct phases agents should go through? What sequencing rules should the orchestrator enforce (e.g., requirements must be approved before planning begins)?
+
+**Answer:** [Awaiting human input]
+
+**Integration Targets:**
+- Section 8: Functional Requirements (define lifecycle management FRs)
+- Section 9: Non-Functional Requirements (define sequencing constraints)
+
+---
+
+#### OQ-006: Project Success Metrics
+**Status:** Open
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+
+**Question:** How will we measure success for this orchestrator project? What observable outcomes indicate the system is working correctly (e.g., reduced scope creep incidents, elimination of manual cleanup, consistent agent behavior)?
+
+**Answer:** [Awaiting human input]
+
+**Integration Targets:**
+- Section 13: Success Criteria and Acceptance (define measurable success criteria)
+- Section 9: Non-Functional Requirements (define quality targets)
+
+---
+
+#### OQ-007: Agent Communication and Integration
+**Status:** Open
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+
+**Question:** How do agents currently communicate? What data structures are passed between agents? What integration points exist with invocation scripts? Should these patterns be preserved or changed?
+
+**Answer:** [Awaiting human input]
+
+**Integration Targets:**
+- Section 10: Interfaces and Integrations (define agent-to-agent and agent-to-script interfaces)
+- Section 11: Data Considerations (define data exchange formats)
+
+---
+
+#### OQ-008: Primary Stakeholders and Users
+**Status:** Open
+**Asked By:** Requirements Agent
+**Date:** 2025-01-26
+
+**Question:** Who are the primary stakeholders for this orchestrator system? Who will use it? Is this for a specific team, a broader organization, or open-source contributors? Who has approval authority?
+
+**Answer:** [Awaiting human input]
+
+**Integration Targets:**
+- Section 5: Stakeholders and Users (define stakeholder list and users)
+- Section 15: Approval Record (identify Product Owner)
+
+---
 
 ---
 
@@ -712,7 +840,7 @@ The following items are explicitly OUT OF SCOPE for this project:
 
 | Field | Value |
 |-------|-------|
-| Current Status | **Recommendation:** Pending - Revisions Required |
+| Current Status | **Status:** Pending - Revisions Required |
 | Recommended By | Pending |
 | Recommendation Date | Pending |
 | Approved By | Pending |
