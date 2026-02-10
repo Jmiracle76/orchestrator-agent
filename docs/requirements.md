@@ -88,15 +88,22 @@ The project addresses the inconsistency, time consumption, and scope-creep risk 
 - No making architectural decisions without human confirmation
 - No running destructive commands
 - No automatic PR merging or priority decisions without human input
+- 
+
+<!-- section_lock:problem_statement lock=false -->
+---
+
+<!-- section:goals_objectives -->
+## 3. Goals and Objectives
+<!-- subsection:primary_goals -->
 ### Primary Goals
 - No automatic PR merging or priority decisions without human input
 - Does not "just build the project for you" or manage people
-
-### Primary Goals
 1. Reduce planning overhead
 2. Increase consistency in execution plans
 3. Enable reliable handoff between automated agents without loss of intent or scope control
 
+<!-- subsection:secondary_goals -->
 ### Secondary Goals
 1. Improve traceability between requirements and execution tasks
 2. Support iterative refinement
@@ -104,13 +111,17 @@ The project addresses the inconsistency, time consumption, and scope-creep risk 
 4. Optional integrations (GitHub issues export)
 5. Richer reporting (diff summaries, risk/decision logs)
 
+<!-- subsection:non_goals -->
 ### Non-Goals
 1. Autonomous task execution
 2. Architectural decisions without human input
 3. Modification of production systems
 
-
+<!-- section_lock:goals_objectives lock=false -->
+---
+<!-- subsection:primary_stakeholders -->
 ### Primary Stakeholders
+
 - **Repo owner (project author)**: Defines intent, approves requirements, wants reliable bounded plans and repository safety
 - **Future contributors**: Implement enhancements and new phases/agents, need clear structure and guardrails
 - **Maintainer**: Keeps script functioning, needs stability, logging, and predictable failure modes
@@ -137,9 +148,8 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 - Integrate answers into sections
 - Recommend readiness for approval
 - Handoff to planning agent to produce milestones/tasks/tests from approved requirements
-<!-- section_lock:problem_statement lock=false -->
 
-<!-- section_lock:goals_objectives lock=false -->
+
 ---
 
 <!-- section:stakeholders_users -->
@@ -161,6 +171,7 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 | Individual developers | Technical practitioners building and extending projects | Reliable translation of intent into plans; protection against unintended scope expansion; transparency into decision-making | Project bootstrapping; requirements-to-plan translation; iterative refinement |
 | Technical leads | Senior engineers overseeing development activities | Visibility into automated planning decisions; control over scope boundaries; audit trail of requirements evolution | Requirements-to-plan translation; iterative refinement; multi-agent coordination |
 | AI agents | Automated agents operating under orchestration control | Clear interfaces and protocols; deterministic behavior; error reporting and recovery mechanisms | Multi-agent coordination; automated requirements-to-plan translation |
+
 <!-- section_lock:stakeholders_users lock=false -->
 ---
 <!-- section:assumptions -->
