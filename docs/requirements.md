@@ -367,21 +367,25 @@ Single human owner approval is required for project acceptance. The automation s
 <!-- section:success_criteria -->
 ## 11. Success Criteria and Acceptance
 
-<!-- section:out_of_scope -->
-## 12. Out of Scope
 <!-- subsection:project_success_criteria -->
+### Project Success Criteria
 1. A complete, internally consistent execution plan is generated for all approved requirements
 2. No unintended repository changes occur during plan generation
 3. Plan completeness reaches defined threshold with minimal manual corrections required
 4. Repeatability is demonstrated across similar projects
 
 <!-- subsection:acceptance_criteria -->
+### Acceptance Criteria
 - [ ] All requirements are represented in the execution plan
 - [ ] Scope boundaries are respected throughout plan generation
 - [ ] Plan outputs are reproducible
 - [ ] Internal consistency is maintained across all plan components
 - [ ] Manual correction count remains within acceptable limits
 <!-- section_lock:success_criteria lock=false -->
+---
+
+<!-- section:out_of_scope -->
+## 12. Out of Scope
 <!-- PLACEHOLDER -->
 1. [Out of scope item 1] 
 2. [Out of scope item 2]
