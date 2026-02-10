@@ -1,18 +1,23 @@
 from __future__ import annotations
 import re
 
+# LLM configuration for question generation and answer integration.
 MODEL = "claude-sonnet-4-5-20250929"
 MAX_TOKENS = 4000
 
+# Actor name used for reporting or audit trails.
 AUTOMATION_ACTOR = "requirements-automation"
 
+# Markers used inside markdown to delineate structure.
 SECTION_MARKER_RE = re.compile(r"<!--\s*section:(?P<id>[a-z0-9_]+)\s*-->")
 SECTION_LOCK_RE   = re.compile(r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->")
 TABLE_MARKER_RE   = re.compile(r"<!--\s*table:(?P<id>[a-z0-9_]+)\s*-->")
 SUBSECTION_MARKER_RE = re.compile(r"<!--\s*subsection:(?P<id>[a-z0-9_]+)\s*-->")
 
+# Placeholder indicates a section still needs human input.
 PLACEHOLDER_TOKEN = "<!-- PLACEHOLDER -->"
 
+# Expected header columns for the Open Questions table.
 OPEN_Q_COLUMNS = [
     "Question ID",
     "Question",
@@ -22,6 +27,7 @@ OPEN_Q_COLUMNS = [
     "Resolution Status",
 ]
 
+# Phase order controls progression through the requirements workflow.
 PHASE_ORDER = [
     "phase_1_intent_scope",
     "phase_2_assumptions_constraints",
@@ -30,6 +36,7 @@ PHASE_ORDER = [
     "phase_5_approval",
 ]
 
+# Sections required for each phase.
 PHASES = {
     "phase_1_intent_scope": ["problem_statement", "goals_objectives", "stakeholders_users", "success_criteria"],
     "phase_2_assumptions_constraints": ["assumptions", "constraints"],
@@ -38,6 +45,7 @@ PHASES = {
     "phase_5_approval": ["approval_record"],
 }
 
+# Maps alias section IDs to canonical targets for consistency.
 TARGET_CANONICAL_MAP = {
     "primary_goals": "goals_objectives",
     "secondary_goals": "goals_objectives",

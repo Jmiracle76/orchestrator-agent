@@ -4,6 +4,7 @@ from typing import List
 from .config import SECTION_MARKER_RE, SECTION_LOCK_RE, TABLE_MARKER_RE
 
 def sanitize_llm_body(section_id: str, body: str) -> str:
+    """Normalize LLM output by removing markers, headers, and duplicates."""
     if not body:
         return ""
     lines = body.splitlines()
@@ -13,6 +14,7 @@ def sanitize_llm_body(section_id: str, body: str) -> str:
         if not s.strip():
             cleaned.append("")
             continue
+        # Strip any structural markers or headings that should not re-enter the doc.
         if SECTION_MARKER_RE.search(s) or SECTION_LOCK_RE.search(s) or TABLE_MARKER_RE.search(s):
             continue
         if s.strip() == "---":
@@ -23,6 +25,7 @@ def sanitize_llm_body(section_id: str, body: str) -> str:
             continue
         cleaned.append(s)
 
+    # Assumptions should avoid constraint headings and duplicates.
     if section_id == "assumptions":
         keep: List[str] = []
         for s in cleaned:
@@ -49,6 +52,7 @@ def sanitize_llm_body(section_id: str, body: str) -> str:
             deduped.append(s)
         cleaned = deduped
 
+    # Constraints should only keep the known constraint sub-headings.
     elif section_id == "constraints":
         allowed = {"### Technical Constraints", "### Operational Constraints", "### Resource Constraints"}
         keep: List[str] = []
@@ -66,6 +70,7 @@ def sanitize_llm_body(section_id: str, body: str) -> str:
             keep.append(s)
         cleaned = keep
 
+    # Collapse repeated blank lines to keep formatting tight.
     out: List[str] = []
     blank_run = 0
     for s in cleaned:

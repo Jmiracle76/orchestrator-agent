@@ -8,11 +8,13 @@ from ..editing import replace_block_body_preserving_markers
 from ..utils_io import iso_today
 
 def process_phase_2(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+    """Fill assumptions/constraints or generate questions for missing content."""
     changed = False
     blocked: List[str] = []
     needs_human = False
     summaries: List[str] = []
 
+    # Validate spans first to ensure the document is structurally sound.
     phase_sections = PHASES["phase_2_assumptions_constraints"]
     span_issues = validate_required_section_spans(lines, phase_sections)
     if span_issues:
@@ -36,6 +38,7 @@ def process_phase_2(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
         answered = [q for q in targeted if q.answer.strip() not in ("","-","Pending") and q.status.strip() in ("Open","Deferred")]
         open_unanswered_exists = any(q.status.strip() in ("Open","Deferred") and q.answer.strip() in ("","-","Pending") for q in targeted)
 
+        # Integrate answered questions into the section if present.
         if answered:
             ctx = section_text(lines, span)
             current_body = section_body(lines, span)
@@ -53,6 +56,7 @@ def process_phase_2(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
                 summaries.append(f"{section_id}: integrated {len(answered)} answers; resolved {len(answered)} questions.")
             continue
 
+        # If blank and no unanswered questions exist, generate new questions.
         if blank and not open_unanswered_exists:
             needs_human = True
             ctx = section_text(lines, span)

@@ -5,10 +5,12 @@ from .parsing import find_sections, get_section_span, section_is_blank
 from .open_questions import open_questions_parse
 
 def _canon_target(t: str) -> str:
+    """Normalize section targets so aliases map to canonical section IDs."""
     t0 = (t or "").strip()
     return TARGET_CANONICAL_MAP.get(t0, t0)
 
 def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
+    """Phase 1 completes when sections are filled and open questions resolved."""
     issues: List[str] = []
     spans = find_sections(lines)
     try:
@@ -23,11 +25,13 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
             continue
         if section_is_blank(lines, sp):
             issues.append(f"Section still blank: {sid}")
+        # Phase 1 requires no remaining Open questions targeting this section.
         if any(_canon_target(q.section_target) == sid and q.status.strip() == "Open" for q in open_qs):
             issues.append(f"Open questions remain for section: {sid}")
     return (len(issues) == 0), issues
 
 def validate_phase_2_complete(lines: List[str]) -> Tuple[bool, List[str]]:
+    """Phase 2 completes when sections are filled and no Open/Deferred remain."""
     issues: List[str] = []
     spans = find_sections(lines)
     try:
@@ -42,6 +46,7 @@ def validate_phase_2_complete(lines: List[str]) -> Tuple[bool, List[str]]:
             continue
         if section_is_blank(lines, sp):
             issues.append(f"Section still blank: {sid}")
+        # Phase 2 requires Open or Deferred questions to be resolved.
         if any(q.section_target.strip() == sid and q.status.strip() in ("Open", "Deferred") for q in open_qs):
             issues.append(f"Open questions remain for section: {sid}")
     return (len(issues) == 0), issues

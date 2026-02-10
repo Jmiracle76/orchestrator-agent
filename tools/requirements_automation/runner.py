@@ -5,6 +5,7 @@ from .validators import validate_phase_1_complete, validate_phase_2_complete
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 
 def choose_phase(lines) -> Tuple[str, bool]:
+    """Return the next incomplete phase and whether all phases are complete."""
     for ph in PHASE_ORDER:
         if ph == "phase_1_intent_scope":
             complete, _ = validate_phase_1_complete(lines)
@@ -18,6 +19,7 @@ def choose_phase(lines) -> Tuple[str, bool]:
     return PHASE_ORDER[-1], True
 
 def run_phase(phase: str, lines, llm, dry_run: bool):
+    """Dispatch to the appropriate phase handler."""
     if phase == "phase_1_intent_scope":
         return process_phase_1(lines, llm, dry_run)
     if phase == "phase_2_assumptions_constraints":

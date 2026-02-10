@@ -9,18 +9,22 @@ from ..editing import replace_block_body_preserving_markers
 from ..utils_io import iso_today
 
 def _canon_target(t: str) -> str:
+    """Normalize alias section IDs to canonical targets."""
     t0 = (t or "").strip()
     return TARGET_CANONICAL_MAP.get(t0, t0)
 
 def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+    """Fill intent/scope sections or create open questions when missing."""
     changed = False
     blocked: List[str] = []
     needs_human = False
     summaries: List[str] = []
 
+    # Parse document structure and current open questions table.
     spans = find_sections(lines)
     open_qs, _, _ = open_questions_parse(lines)
 
+    # Track how many times we've integrated for each section in this run.
     revised: Dict[str,int] = {sid: 0 for sid in PHASES["phase_1_intent_scope"]}
 
     for section_id in PHASES["phase_1_intent_scope"]:
@@ -34,12 +38,14 @@ def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
 
         blank = section_is_blank(lines, span)
 
+        # Subsections allow targeting nested areas inside a section.
         subs = find_subsections_within(lines, span)
         target_ids = {section_id} | {s.subsection_id for s in subs}
         targeted = [q for q in open_qs if _canon_target(q.section_target) in target_ids]
         answered = [q for q in targeted if q.answer.strip() not in ("", "-", "Pending") and q.status.strip() in ("Open","Deferred")]
         open_unanswered_exists = any(q.status.strip() in ("Open","Deferred") and q.answer.strip() in ("", "-", "Pending") for q in targeted)
 
+        # If answers exist, integrate them into the section/subsection body.
         if answered and revised[section_id] < 1:
             by_target: Dict[str, List[OpenQuestion]] = {}
             for q in answered:
@@ -55,6 +61,7 @@ def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
                         logging.warning("Answered questions target '%s' but no matching subsection marker exists; skipping.", tgt)
                         continue
                     start, end = subspan.start_line, subspan.end_line
+                # Provide the LLM the current context for a targeted block.
                 context = "\n".join(lines[start:end])
                 new_body = llm.integrate_answers(tgt, context, qs)
                 if new_body.strip() and new_body.strip() != context.strip():
@@ -74,6 +81,7 @@ def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
 
             blank = section_is_blank(lines, span)
 
+        # If still blank and no unanswered questions exist, generate new ones.
         if blank:
             needs_human = True
             if open_unanswered_exists:
