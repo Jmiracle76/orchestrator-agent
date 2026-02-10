@@ -74,8 +74,7 @@ def main(argv: List[str] | None = None) -> int:
     if invalid_targets:
         valid = ", ".join(sorted(available_section_ids))
         invalid = ", ".join(invalid_targets)
-        logging.error("Workflow order references unknown section IDs: %s", invalid)
-        logging.error("Valid section IDs: %s", valid)
+        logging.error("Workflow order references unknown section IDs (%s). Valid section IDs: %s", invalid, valid)
         return 2
 
     target, _ = choose_next_target(lines, workflow_order)

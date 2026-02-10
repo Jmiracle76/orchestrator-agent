@@ -54,7 +54,7 @@ def extract_workflow_order(lines: List[str]) -> List[str]:
         if not entry or entry.startswith("#"):
             return
         if entry in seen:
-            raise ValueError(f"Duplicate workflow target '{entry}' (document line {doc_line_number}).")
+            raise ValueError(f"Duplicate workflow target '{entry}' on line {doc_line_number}.")
         workflow.append(entry)
         seen.add(entry)
 
@@ -84,7 +84,8 @@ def extract_workflow_order(lines: List[str]) -> List[str]:
 
     if start_line is None:
         raise ValueError(
-            "Workflow order block not found. Add a workflow order block after the metadata comments in the document header, e.g. <!-- workflow:order ... -->."
+            "Workflow order block not found. Add a workflow order block after the metadata comments in the document header, e.g.:\n"
+            "<!-- workflow:order\nsection_id\n-->"
         )
     if in_block:
         raise ValueError(f"Workflow order block not terminated (started on line {start_line}).")

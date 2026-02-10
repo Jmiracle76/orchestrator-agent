@@ -26,7 +26,7 @@ def validate_section_complete(section_id: str, lines: List[str]) -> Tuple[bool, 
         return True, []
 
     if section_is_blank(lines, sp):
-        issues.append(f"Section still blank: {section_id}")
+        return False, [f"Section still blank: {section_id}"]
 
     try:
         open_qs, _, _ = open_questions_parse(lines)
