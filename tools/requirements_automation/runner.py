@@ -18,7 +18,7 @@ def choose_phase(lines) -> Tuple[str, bool]:
             return ph, False
     return PHASE_ORDER[-1], True
 
-def run_phase(phase: str, lines, llm, dry_run: bool):
+def run_phase(phase: str, lines, llm, dry_run: bool, doc_type: str | None = None):
     """Dispatch to the appropriate phase handler."""
     if phase == "phase_1_intent_scope":
         return process_phase_1(lines, llm, dry_run)

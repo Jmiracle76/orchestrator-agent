@@ -1,3 +1,5 @@
+<!-- meta:doc_type value="requirements" -->
+<!-- meta:doc_format value="markdown" version="1.0" -->
 
 # Requirements Document
 
