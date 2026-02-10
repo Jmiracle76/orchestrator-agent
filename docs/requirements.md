@@ -361,6 +361,14 @@ Single human owner approval is required for project acceptance. The automation s
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
+| Q-057 | What are the maximum acceptable API rate limits or call volumes per run for the Anthropic Messages API? | 2026-02-10 |  | constraints | Open |
+| Q-058 | What is the maximum acceptable memory footprint for the script during execution? | 2026-02-10 |  | constraints | Open |
+| Q-059 | What is the maximum acceptable repository size (in MB or number of files) the tool should support? | 2026-02-10 |  | constraints | Open |
+| Q-060 | Are there any disk space constraints for backup files or temporary storage? | 2026-02-10 |  | constraints | Open |
+| Q-061 | What is the maximum acceptable cost per run in terms of API usage? | 2026-02-10 |  | constraints | Open |
+| Q-062 | Are there any network bandwidth constraints or limitations? | 2026-02-10 |  | constraints | Open |
+| Q-063 | What Python version range must be supported (minimum/maximum)? | 2026-02-10 |  | constraints | Open |
+| Q-064 | Are there constraints on concurrent execution (e.g., must prevent multiple simultaneous runs)? | 2026-02-10 |  | constraints | Open |
 | Q-047 | What specific technologies, platforms, or programming languages must be used or avoided? | 2026-02-10 | Must use Python for the automation script. Must not require heavyweight services (no DB required). Keep dependencies minimal (anthropic SDK ok). Avoid tooling that forces a specific IDE or cloud platform. | constraints | Resolved |
 | Q-048 | Are there any required integrations with existing systems or APIs? | 2026-02-10 | Required: Anthropic Messages API via ANTHROPIC_API_KEY. Required: local git CLI for safety-net commits/push. No other integrations required for Phase 2. | constraints | Resolved |
 | Q-049 | What are the performance requirements (e.g., response time, throughput, uptime SLAs)? | 2026-02-10 | Target: complete a typical requirements pass in under ~60 seconds for small repos (dominated by LLM calls). Script should not do expensive repo scans. Must be responsive enough for iterative runs without “coffee breaks”. | constraints | Resolved |
