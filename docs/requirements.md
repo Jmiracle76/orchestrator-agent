@@ -11,7 +11,7 @@
 - **Status:** Draft 
 
 <!-- meta:last_updated -->
-- **Last Updated:** 2026-02-09 
+- **Last Updated:** 2026-02-10 
 
 <!-- meta:approved_by -->
 - **Approved By:** Pending
@@ -31,7 +31,7 @@
 |-------|-------|
 | Document Status | Draft |
 | Current Version | 0.1 |
-| Last Modified | 2026-02-09 |
+| Last Modified | 2026-02-10 |
 | Modified By | requirements-automation |
 | Approval Status | Draft |
 | Approved By | Pending |
@@ -41,6 +41,7 @@
 ### Version History
 | Version | Date | Author | Changes |
 |---------|---------|---------|---------|
+| 0.1 | 2026-02-10 | requirements-automation | Generated 7 open questions for assumptions; Generated 10 open questions for constraints |
 | 0.1 | 2026-02-09 | requirements-automation | Questions resolved: Q-002, Q-003, Q-004, Q-005, Q-006; Questions resolved: Q-022, Q-023, Q-024, Q-025, Q-026, Q-027, Q-028; Questions resolved: Q-030, Q-032, Q-012, Q-013, Q-014, Q-015, Q-016, Q-017, Q-018; Questions resolved: Q-038, Q-039 |
 | 0.1 | 2026-02-09 | requirements-automation | Section updated: stakeholders_users (integrated 4 answers); Questions resolved: Q-029, Q-031, Q-033, Q-034; Section updated: success_criteria (integrated 3 answers); Questions resolved: Q-035, Q-036, Q-037 |
 | 0.0 | 2026-02-09 | requirements-automation | Section updated: problem_statement (integrated 3 answers); Questions resolved: Q-019, Q-020, Q-021; Section updated: goals_objectives (integrated 5 answers); Questions resolved: Q-007, Q-008, Q-009, Q-010, Q-011 |
@@ -322,6 +323,23 @@ Single human owner approval is required for project acceptance. The automation s
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
+| Q-047 | What specific technologies, platforms, or programming languages must be used or avoided? | 2026-02-10 |  | constraints | Open |
+| Q-048 | Are there any required integrations with existing systems or APIs? | 2026-02-10 |  | constraints | Open |
+| Q-049 | What are the performance requirements (e.g., response time, throughput, uptime SLAs)? | 2026-02-10 |  | constraints | Open |
+| Q-050 | Are there security, compliance, or regulatory requirements that must be met? | 2026-02-10 |  | constraints | Open |
+| Q-051 | What are the support and maintenance windows or restrictions? | 2026-02-10 |  | constraints | Open |
+| Q-052 | Are there geographical, timezone, or deployment location restrictions? | 2026-02-10 |  | constraints | Open |
+| Q-053 | What is the budget limit for this project? | 2026-02-10 |  | constraints | Open |
+| Q-054 | What is the project timeline and are there any fixed deadlines? | 2026-02-10 |  | constraints | Open |
+| Q-055 | How many team members are available and what are their skill levels? | 2026-02-10 |  | constraints | Open |
+| Q-056 | Are there limitations on infrastructure, hardware, or cloud resources? | 2026-02-10 |  | constraints | Open |
+| Q-040 | What assumptions are being made about user behavior, access patterns, or usage volumes? | 2026-02-10 |  | assumptions | Open |
+| Q-041 | What assumptions exist about the technical environment (e.g., infrastructure, third-party services, dependencies)? | 2026-02-10 |  | assumptions | Open |
+| Q-042 | What assumptions are made about data availability, quality, or format? | 2026-02-10 |  | assumptions | Open |
+| Q-043 | Are there assumptions about team resources, skills, or availability? | 2026-02-10 |  | assumptions | Open |
+| Q-044 | What assumptions exist about regulatory, compliance, or security requirements? | 2026-02-10 |  | assumptions | Open |
+| Q-045 | Are there assumptions about project timeline, budget, or scope stability? | 2026-02-10 |  | assumptions | Open |
+| Q-046 | What assumptions are made about integration points or existing systems? | 2026-02-10 |  | assumptions | Open |
 | Q-035 | What are the key measurable outcomes that would indicate this project is successful? | 2026-02-09 | A complete, internally consistent execution plan is generated for approved requirements with no unintended repository changes. | success_criteria | Resolved |
 | Q-036 | What metrics or KPIs will be used to evaluate project success? | 2026-02-09 | Metrics include plan completeness, number of manual corrections required, and repeatability across similar projects. | success_criteria | Resolved |
 | Q-037 | What are the minimum requirements that must be met for deliverables to be accepted? | 2026-02-09 | All requirements must be represented in the plan, scope boundaries must be respected, and outputs must be reproducible. | success_criteria | Resolved |
