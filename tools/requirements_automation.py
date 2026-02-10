@@ -1339,6 +1339,38 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
 # -----------------------------
 
 
+
+# -----------------------------
+# Readiness gate (Phase 2)
+# -----------------------------
+
+def validate_phase_2_complete(lines: List[str]) -> Tuple[bool, List[str]]:
+    """Phase 2 is complete when:
+    - required sections exist and are not blank (PLACEHOLDER removed), and
+    - there are no Open/Deferred questions targeting those sections.
+    """
+    issues: List[str] = []
+    spans = find_sections(lines)
+
+    try:
+        open_qs, _, _ = open_questions_parse(lines)
+    except Exception as e:
+        return False, [f"Open Questions parse failed: {e}"]
+
+    phase2_sections = PHASES.get("phase_2_assumptions_constraints", [])
+    for sid in phase2_sections:
+        sp = get_section_span(spans, sid)
+        if not sp:
+            issues.append(f"Missing section: {sid}")
+            continue
+        if section_is_blank(lines, sp):
+            issues.append(f"Section still blank: {sid}")
+        # Any non-resolved questions targeting this section block completion
+        if any(q.section_target.strip() == sid and q.status.strip() in ("Open", "Deferred") for q in open_qs):
+            issues.append(f"Open questions remain for section: {sid}")
+
+    return (len(issues) == 0), issues
+
 def process_phase_2(
     lines: List[str],
     llm: LLMClient,
