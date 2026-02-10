@@ -50,7 +50,7 @@ def main(argv: List[str] | None = None) -> int:
     lines = split_lines(read_text(doc_path))
     metadata = extract_metadata(lines)
     raw_doc_type = metadata.get("doc_type")
-    doc_type = (raw_doc_type or DEFAULT_DOC_TYPE).strip().lower()
+    doc_type = raw_doc_type.strip().lower() if raw_doc_type else DEFAULT_DOC_TYPE
     if not raw_doc_type:
         logging.warning("No doc_type metadata found; defaulting to %s", DEFAULT_DOC_TYPE)
     if doc_type not in SUPPORTED_DOC_TYPES:
