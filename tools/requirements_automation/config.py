@@ -37,7 +37,7 @@ OPEN_Q_COLUMNS = [
     "Resolution Status",
 ]
 
-# Phase order controls progression through the requirements workflow.
+# Deprecated: Phase order controls progression through the requirements workflow.
 PHASE_ORDER = [
     "phase_1_intent_scope",
     "phase_2_assumptions_constraints",
@@ -46,7 +46,7 @@ PHASE_ORDER = [
     "phase_5_approval",
 ]
 
-# Sections required for each phase.
+# Sections required for each phase (deprecated in favor of workflow order).
 PHASES = {
     "phase_1_intent_scope": ["problem_statement", "goals_objectives", "stakeholders_users", "success_criteria"],
     "phase_2_assumptions_constraints": ["assumptions", "constraints"],
@@ -54,6 +54,12 @@ PHASES = {
     "phase_4_interfaces_data_risks": ["interfaces_integrations", "data_considerations", "risks_open_issues"],
     "phase_5_approval": ["approval_record"],
 }
+
+# Workflow targets that are not section IDs (extensible prefix list).
+SPECIAL_WORKFLOW_PREFIXES = ["review_gate:"]
+
+def is_special_workflow_target(target: str) -> bool:
+    return any(target.startswith(prefix) for prefix in SPECIAL_WORKFLOW_PREFIXES)
 
 # Maps alias section IDs to canonical targets for consistency.
 TARGET_CANONICAL_MAP = {

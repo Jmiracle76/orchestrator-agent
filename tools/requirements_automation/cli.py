@@ -4,12 +4,12 @@ from pathlib import Path
 from dataclasses import asdict
 from typing import List
 from .models import RunResult
-from .config import DEFAULT_DOC_TYPE, SUPPORTED_DOC_TYPES
-from .parsing import extract_metadata
+from .config import DEFAULT_DOC_TYPE, SUPPORTED_DOC_TYPES, is_special_workflow_target
+from .parsing import extract_metadata, extract_workflow_order, find_sections
 from .utils_io import read_text, write_text, split_lines, join_lines, backup_file_outside_repo
 from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_push
 from .llm import LLMClient
-from .runner import choose_phase, run_phase
+from .runner import choose_next_target, run_phase
 
 def main(argv: List[str] | None = None) -> int:
     """Run the requirements automation workflow for a single phase pass."""
@@ -60,9 +60,26 @@ def main(argv: List[str] | None = None) -> int:
     llm = LLMClient()
 
     # Decide which phase is next and execute it.
-    phase, _ = choose_phase(lines)
+    try:
+        workflow_order = extract_workflow_order(lines)
+    except ValueError as e:
+        logging.error("Workflow order parse failed: %s", e)
+        return 2
+
+    available_section_ids = {sp.section_id for sp in find_sections(lines)}
+    invalid_targets = [
+        target for target in workflow_order
+        if not is_special_workflow_target(target) and target not in available_section_ids
+    ]
+    if invalid_targets:
+        valid = ", ".join(sorted(available_section_ids))
+        invalid = ", ".join(invalid_targets)
+        logging.error("Workflow order references unknown section IDs (%s). Valid section IDs: %s", invalid, valid)
+        return 2
+
+    target, _ = choose_next_target(lines, workflow_order)
     lines, phase_changed, blocked, _needs_human, _summaries = run_phase(
-        phase,
+        target,
         lines,
         llm,
         args.dry_run,
@@ -80,7 +97,7 @@ def main(argv: List[str] | None = None) -> int:
 
     # Commit and push only the target doc, unless --no-commit is set.
     if changed and not args.dry_run and not args.no_commit:
-        commit_msg = f"requirements: automation pass ({phase})"
+        commit_msg = f"requirements: automation pass ({target})"
         allow = [str(doc_path.relative_to(repo_root)).replace("\\", "/")]
         commit_and_push(repo_root, commit_msg, allow_files=allow)
 
