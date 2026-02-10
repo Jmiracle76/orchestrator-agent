@@ -78,11 +78,7 @@ def main(argv: List[str] | None = None) -> int:
         logging.error("Valid section IDs: %s", valid)
         return 2
 
-    try:
-        target, _ = choose_next_target(lines, workflow_order)
-    except ValueError as e:
-        logging.error("Workflow order selection failed: %s", e)
-        return 2
+    target, _ = choose_next_target(lines, workflow_order)
     lines, phase_changed, blocked, _needs_human, _summaries = run_phase(
         target,
         lines,
