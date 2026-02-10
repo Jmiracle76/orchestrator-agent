@@ -186,7 +186,6 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 6. Git is installed and configured; repository is a standard filesystem checkout (not read-only).
 7. No special CI/CD integration is required for Phase 2.
 8. `docs/requirements.md` exists and contains valid section/table markers.
-8. `docs/requirements.md` exists and contains valid section/table markers.
 9. Open Questions table preserves the exact schema and is not manually reformatted into a different table structure.
 10. Single maintainer (repository owner) has ability to edit markdown and run Python scripts.
 11. No dedicated QA or PM resources are available; contributions from others are optional and not required for MVP.
@@ -197,6 +196,13 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 16. Budget is minimal (developer time plus API usage) and acceptable for experimentation.
 17. System only needs to integrate with: local filesystem, git, and one LLM provider API (Anthropic) for MVP.
 18. Optional future integrations (e.g., GitHub issues export) are explicitly non-blocking.
+
+<!-- section_lock:assumptions lock=false -->
+---
+<!-- section:constraints -->
+## 6. Constraints
+
+<!-- subsection:technical_constraints -->
 ### Technical Constraints
 
 - Must use Python for the automation script.
@@ -217,6 +223,7 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 - No dedicated cloud infrastructure required.
 - Must work in environments with outbound HTTPS but otherwise minimal privileges.
 
+<!-- subsection:operational_constraints -->
 ### Operational Constraints
 
 - No formal maintenance windows; runs are manual and on-demand.
@@ -228,10 +235,6 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 - Budget constrained to developer time plus reasonable LLM API usage (low monthly spend, tens of dollars or less, acceptable for MVP testing).
 - No paid infrastructure purchases required.
 - No hard deadline; target progression: Phase 2 stabilizes within days, Phase 3 within 1–2 weeks, first usable requirements→plan handoff within 2–4 weeks, then iterative hardening.
-<!-- section_lock:assumptions lock=false -->
-<!-- PLACEHOLDER -->
-- [Operational constraint 1] 
-- [Operational constraint 2] 
 
 <!-- subsection:resource_constraints -->
 ### Resource Constraints
