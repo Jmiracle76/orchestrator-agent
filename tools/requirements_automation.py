@@ -1290,7 +1290,7 @@ def process_phase_2(
             # Only replace if materially different (defensive against LLM echo).
             if new_body.strip() and new_body.strip() != section_body(lines, span).strip():
                 if not dry_run:
-                    lines = replace_block_body_preserving_markers(lines, span, new_body)
+                    lines = replace_block_body_preserving_markers(lines, span.start_line, span.end_line, new_body)
                 changed = True
                 revised_sections[section_id] += 1
 
