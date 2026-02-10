@@ -178,24 +178,57 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 
 <!-- section:assumptions -->
 ## 5. Assumptions
-<!-- PLACEHOLDER -->
-1. [Assumption 1] 
-2. [Assumption 2] 
-
-<!-- section_lock:assumptions lock=false -->
----
-
-<!-- section:constraints -->
-## 6. Constraints
-<!-- PLACEHOLDER -->
-<!-- subsection:technical_constraints -->
+1. A single developer runs the script locally on-demand (not continuous); typical usage is a few runs per day per repository.
+2. Document size is small-to-moderate (hundreds to low thousands of lines).
+3. No concurrent runs against the same file.
+4. Python 3.11+ environment with virtualenv is available.
+5. Outbound HTTPS to Anthropic API is allowed.
+6. Git is installed and configured; repository is a standard filesystem checkout (not read-only).
+7. No special CI/CD integration is required for Phase 2.
+8. `docs/requirements.md` exists and contains valid section/table markers.
+8. `docs/requirements.md` exists and contains valid section/table markers.
+9. Open Questions table preserves the exact schema and is not manually reformatted into a different table structure.
+10. Single maintainer (repository owner) has ability to edit markdown and run Python scripts.
+11. No dedicated QA or PM resources are available; contributions from others are optional and not required for MVP.
+12. No external regulatory compliance obligations exist beyond basic secure development practices.
+13. API keys are stored in environment variables and not committed to version control.
+14. No PII or sensitive regulated data is required for the requirements/planning workflow.
+15. Scope is iterative and can evolve, but phase gates enforce bounded progress (no skipping unresolved questions).
+16. Budget is minimal (developer time plus API usage) and acceptable for experimentation.
+17. System only needs to integrate with: local filesystem, git, and one LLM provider API (Anthropic) for MVP.
+18. Optional future integrations (e.g., GitHub issues export) are explicitly non-blocking.
 ### Technical Constraints
-<!-- PLACEHOLDER -->
-- [Technical constraint 1] 
-- [Technical constraint 2] 
 
-<!-- subsection:operational_constraints -->
+- Must use Python for the automation script.
+- Must not require heavyweight services (no database required for MVP).
+- Dependencies must be minimal (Anthropic SDK is acceptable).
+- Must avoid tooling that forces a specific IDE or cloud platform.
+- Required integrations: Anthropic Messages API via `ANTHROPIC_API_KEY` and local git CLI for safety-net commits/push.
+- No other integrations required for Phase 2.
+- Target completion time: under ~60 seconds for a typical requirements pass on small repositories (dominated by LLM API calls).
+- Script must not perform expensive repository scans.
+- Must be responsive enough for iterative runs without significant delay.
+- Must never write secrets into repository files.
+- Must prevent repository mutation beyond explicitly allowed files (`docs/requirements.md` plus backups if permitted).
+- Must reject or ignore prompt injection attempts (treat document text as untrusted input to the LLM).
+- Must produce only deterministic, schema-valid edits (no broken markers or tables).
+- Must fail safely with no partial or corrupt edits and preserve backups for recovery.
+- Must run on a normal developer laptop/desktop with no special hardware.
+- No dedicated cloud infrastructure required.
+- Must work in environments with outbound HTTPS but otherwise minimal privileges.
+
 ### Operational Constraints
+
+- No formal maintenance windows; runs are manual and on-demand.
+- Single developer/maintainer (senior technical) with strong Python and git proficiency, comfortable debugging LLM formatting and contract issues.
+- Optional contributors may appear later but are not required for MVP.
+- No geographic restrictions.
+- Dates should be ISO-formatted and consistent; default assumption is developer workstation timezone.
+- No requirement to support multi-region deployment (local automation tool).
+- Budget constrained to developer time plus reasonable LLM API usage (low monthly spend, tens of dollars or less, acceptable for MVP testing).
+- No paid infrastructure purchases required.
+- No hard deadline; target progression: Phase 2 stabilizes within days, Phase 3 within 1–2 weeks, first usable requirements→plan handoff within 2–4 weeks, then iterative hardening.
+<!-- section_lock:assumptions lock=false -->
 <!-- PLACEHOLDER -->
 - [Operational constraint 1] 
 - [Operational constraint 2] 
@@ -337,23 +370,23 @@ Single human owner approval is required for project acceptance. The automation s
 | Q-061 | What assumptions are being made about data availability, quality, or access? | 2026-02-10 |  | assumptions | Open |
 | Q-062 | Are there assumptions about regulatory, compliance, or security requirements? | 2026-02-10 |  | assumptions | Open |
 | Q-063 | What assumptions exist about the business environment or market conditions? | 2026-02-10 |  | assumptions | Open |
-| Q-047 | What specific technologies, platforms, or programming languages must be used or avoided? | 2026-02-10 | Must use Python for the automation script. Must not require heavyweight services (no DB required). Keep dependencies minimal (anthropic SDK ok). Avoid tooling that forces a specific IDE or cloud platform. | constraints | Open |
-| Q-048 | Are there any required integrations with existing systems or APIs? | 2026-02-10 | Required: Anthropic Messages API via ANTHROPIC_API_KEY. Required: local git CLI for safety-net commits/push. No other integrations required for Phase 2. | constraints | Open |
-| Q-049 | What are the performance requirements (e.g., response time, throughput, uptime SLAs)? | 2026-02-10 | Target: complete a typical requirements pass in under ~60 seconds for small repos (dominated by LLM calls). Script should not do expensive repo scans. Must be responsive enough for iterative runs without “coffee breaks”. | constraints | Open |
-| Q-050 | Are there security, compliance, or regulatory requirements that must be met? | 2026-02-10 | •	Never write secrets into repo files. •	Prevent repository mutation beyond explicitly allowed files (docs/requirements.md plus backups if permitted). •	Reject or ignore prompt injection attempts (treat doc text as untrusted input to the LLM). •	Deterministic, schema-valid edits only (no broken markers/tables). | constraints | Open |
-| Q-051 | What are the support and maintenance windows or restrictions? | 2026-02-10 | No formal maintenance windows. Runs are manual/on-demand. Script must fail safely (no partial corrupt edits) and preserve backups for recovery. | constraints | Open |
-| Q-052 | Are there geographical, timezone, or deployment location restrictions? | 2026-02-10 | No geographic restrictions. Default assumption: developer workstation timezone; dates should be ISO and consistent. No requirement to support multi-region deployment since this is a local automation tool. | constraints | Open |
-| Q-053 | What is the budget limit for this project? | 2026-02-10 | Budget is constrained to “developer time + reasonable LLM API usage”. Assume low monthly spend (tens of dollars or less) is acceptable for MVP testing. No paid infrastructure purchases required. | constraints | Open |
-| Q-054 | What is the project timeline and are there any fixed deadlines? | 2026-02-10 | No hard deadline, but target progression: Phase 2 stabilizes quickly (days). Phase 3 within 1–2 weeks. First usable requirements→plan handoff within 2–4 weeks, then iterative hardening. | constraints | Open |
-| Q-055 | How many team members are available and what are their skill levels? | 2026-02-10 | Single developer/maintainer (senior technical). Optional contributors may appear later. Assume strong Python + git proficiency, and comfort debugging LLM formatting/contract issues. | constraints | Open |
-| Q-056 | Are there limitations on infrastructure, hardware, or cloud resources? | 2026-02-10 | Runs on a normal dev laptop/desktop. No special hardware. No dedicated cloud infra required. Must work in environments with outbound HTTPS but otherwise minimal privileges. | constraints | Open |
-| Q-040 | What assumptions are being made about user behavior, access patterns, or usage volumes? | 2026-02-10 | Assume a single developer runs the script locally on-demand (not continuous). Typical usage is a few runs per day per repo; document size is small-to-moderate (hundreds to low thousands of lines). No concurrent runs against the same file. | assumptions | Open |
-| Q-041 | What assumptions exist about the technical environment (e.g., infrastructure, third-party services, dependencies)? | 2026-02-10 | Assume Python 3.11+ environment with a virtualenv, outbound HTTPS allowed to Anthropic API, and git installed/configured. Repo is a standard filesystem checkout (not read-only). No special CI/CD integration required for Phase 2 | assumptions | Open |
-| Q-042 | What assumptions are made about data availability, quality, or format? | 2026-02-10 | Assume docs/requirements.md exists and contains valid section/table markers. Assume Open Questions table preserves the exact schema and is not manually reformatted into a different table structure. | assumptions | Open |
-| Q-043 | Are there assumptions about team resources, skills, or availability? | 2026-02-10 | Assume single maintainer (repo owner) with ability to edit markdown and run Python scripts. No dedicated QA or PM resources. Contributions from others are optional and not required for MVP. | assumptions | Open |
-| Q-044 | What assumptions exist about regulatory, compliance, or security requirements? | 2026-02-10 | Assume no external regulatory compliance obligations beyond basic secure development practices. API keys are stored in environment variables and not committed. No PII or sensitive regulated data is required for the requirements/planning workflow. | assumptions | Open |
-| Q-045 | Are there assumptions about project timeline, budget, or scope stability? | 2026-02-10 | Assume scope is iterative and can evolve, but phase gates enforce bounded progress (no skipping unresolved questions). Budget is minimal (developer time + API usage) and acceptable for experimentation. | assumptions | Open |
-| Q-046 | What assumptions are made about integration points or existing systems? | 2026-02-10 | Assume the system only needs to integrate with: local filesystem + git + one LLM provider API (Anthropic) for MVP. Optional future integrations (GitHub issues export) are explicitly non-blocking. | assumptions | Open |
+| Q-047 | What specific technologies, platforms, or programming languages must be used or avoided? | 2026-02-10 | Must use Python for the automation script. Must not require heavyweight services (no DB required). Keep dependencies minimal (anthropic SDK ok). Avoid tooling that forces a specific IDE or cloud platform. | constraints | Resolved |
+| Q-048 | Are there any required integrations with existing systems or APIs? | 2026-02-10 | Required: Anthropic Messages API via ANTHROPIC_API_KEY. Required: local git CLI for safety-net commits/push. No other integrations required for Phase 2. | constraints | Resolved |
+| Q-049 | What are the performance requirements (e.g., response time, throughput, uptime SLAs)? | 2026-02-10 | Target: complete a typical requirements pass in under ~60 seconds for small repos (dominated by LLM calls). Script should not do expensive repo scans. Must be responsive enough for iterative runs without “coffee breaks”. | constraints | Resolved |
+| Q-050 | Are there security, compliance, or regulatory requirements that must be met? | 2026-02-10 | •	Never write secrets into repo files. •	Prevent repository mutation beyond explicitly allowed files (docs/requirements.md plus backups if permitted). •	Reject or ignore prompt injection attempts (treat doc text as untrusted input to the LLM). •	Deterministic, schema-valid edits only (no broken markers/tables). | constraints | Resolved |
+| Q-051 | What are the support and maintenance windows or restrictions? | 2026-02-10 | No formal maintenance windows. Runs are manual/on-demand. Script must fail safely (no partial corrupt edits) and preserve backups for recovery. | constraints | Resolved |
+| Q-052 | Are there geographical, timezone, or deployment location restrictions? | 2026-02-10 | No geographic restrictions. Default assumption: developer workstation timezone; dates should be ISO and consistent. No requirement to support multi-region deployment since this is a local automation tool. | constraints | Resolved |
+| Q-053 | What is the budget limit for this project? | 2026-02-10 | Budget is constrained to “developer time + reasonable LLM API usage”. Assume low monthly spend (tens of dollars or less) is acceptable for MVP testing. No paid infrastructure purchases required. | constraints | Resolved |
+| Q-054 | What is the project timeline and are there any fixed deadlines? | 2026-02-10 | No hard deadline, but target progression: Phase 2 stabilizes quickly (days). Phase 3 within 1–2 weeks. First usable requirements→plan handoff within 2–4 weeks, then iterative hardening. | constraints | Resolved |
+| Q-055 | How many team members are available and what are their skill levels? | 2026-02-10 | Single developer/maintainer (senior technical). Optional contributors may appear later. Assume strong Python + git proficiency, and comfort debugging LLM formatting/contract issues. | constraints | Resolved |
+| Q-056 | Are there limitations on infrastructure, hardware, or cloud resources? | 2026-02-10 | Runs on a normal dev laptop/desktop. No special hardware. No dedicated cloud infra required. Must work in environments with outbound HTTPS but otherwise minimal privileges. | constraints | Resolved |
+| Q-040 | What assumptions are being made about user behavior, access patterns, or usage volumes? | 2026-02-10 | Assume a single developer runs the script locally on-demand (not continuous). Typical usage is a few runs per day per repo; document size is small-to-moderate (hundreds to low thousands of lines). No concurrent runs against the same file. | assumptions | Resolved |
+| Q-041 | What assumptions exist about the technical environment (e.g., infrastructure, third-party services, dependencies)? | 2026-02-10 | Assume Python 3.11+ environment with a virtualenv, outbound HTTPS allowed to Anthropic API, and git installed/configured. Repo is a standard filesystem checkout (not read-only). No special CI/CD integration required for Phase 2 | assumptions | Resolved |
+| Q-042 | What assumptions are made about data availability, quality, or format? | 2026-02-10 | Assume docs/requirements.md exists and contains valid section/table markers. Assume Open Questions table preserves the exact schema and is not manually reformatted into a different table structure. | assumptions | Resolved |
+| Q-043 | Are there assumptions about team resources, skills, or availability? | 2026-02-10 | Assume single maintainer (repo owner) with ability to edit markdown and run Python scripts. No dedicated QA or PM resources. Contributions from others are optional and not required for MVP. | assumptions | Resolved |
+| Q-044 | What assumptions exist about regulatory, compliance, or security requirements? | 2026-02-10 | Assume no external regulatory compliance obligations beyond basic secure development practices. API keys are stored in environment variables and not committed. No PII or sensitive regulated data is required for the requirements/planning workflow. | assumptions | Resolved |
+| Q-045 | Are there assumptions about project timeline, budget, or scope stability? | 2026-02-10 | Assume scope is iterative and can evolve, but phase gates enforce bounded progress (no skipping unresolved questions). Budget is minimal (developer time + API usage) and acceptable for experimentation. | assumptions | Resolved |
+| Q-046 | What assumptions are made about integration points or existing systems? | 2026-02-10 | Assume the system only needs to integrate with: local filesystem + git + one LLM provider API (Anthropic) for MVP. Optional future integrations (GitHub issues export) are explicitly non-blocking. | assumptions | Resolved |
 | Q-035 | What are the key measurable outcomes that would indicate this project is successful? | 2026-02-09 | A complete, internally consistent execution plan is generated for approved requirements with no unintended repository changes. | success_criteria | Resolved |
 | Q-036 | What metrics or KPIs will be used to evaluate project success? | 2026-02-09 | Metrics include plan completeness, number of manual corrections required, and repeatability across similar projects. | success_criteria | Resolved |
 | Q-037 | What are the minimum requirements that must be met for deliverables to be accepted? | 2026-02-09 | All requirements must be represented in the plan, scope boundaries must be respected, and outputs must be reproducible. | success_criteria | Resolved |
