@@ -8,6 +8,7 @@ from .config import (
     SUBSECTION_MARKER_RE,
     META_MARKER_RE,
     PLACEHOLDER_TOKEN,
+    SUPPORTED_METADATA_KEYS,
 )
 from .models import SectionSpan, SubsectionSpan
 
@@ -24,7 +25,7 @@ def extract_metadata(lines: List[str]) -> Dict[str, str]:
         if not m:
             continue
         key = m.group("key")
-        if key not in {"doc_type", "doc_format"}:
+        if key not in SUPPORTED_METADATA_KEYS:
             continue
         value = (m.group("value") or "").strip()
         if value:

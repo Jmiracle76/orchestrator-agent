@@ -25,6 +25,7 @@ PLACEHOLDER_TOKEN = "<!-- PLACEHOLDER -->"
 # Supported document types used for metadata-driven routing.
 SUPPORTED_DOC_TYPES = ["requirements", "research", "planning"]
 DEFAULT_DOC_TYPE = "requirements"
+SUPPORTED_METADATA_KEYS = {"doc_type", "doc_format"}
 
 # Expected header columns for the Open Questions table.
 OPEN_Q_COLUMNS = [

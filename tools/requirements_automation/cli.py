@@ -55,7 +55,7 @@ def main(argv: List[str] | None = None) -> int:
         logging.warning("No doc_type metadata found; defaulting to %s", DEFAULT_DOC_TYPE)
     if doc_type not in SUPPORTED_DOC_TYPES:
         supported = ", ".join(SUPPORTED_DOC_TYPES)
-        print(f"ERROR: Unsupported doc_type '{doc_type}'. Supported types: {supported}")
+        logging.error("Unsupported doc_type '%s'. Supported types: %s", doc_type, supported)
         return 2
     llm = LLMClient()
 
