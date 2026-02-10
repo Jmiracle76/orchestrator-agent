@@ -101,6 +101,9 @@ class WorkflowRunner:
             for q in targeted_questions
         )
 
+        # Note: Questions with status "Open"/"Deferred" and non-empty answers
+        # are considered "answered but not yet integrated". After integration,
+        # they are marked as "Resolved" by the phase processors.
         has_answered_questions = any(
             q.answer.strip() not in ("", "-", "Pending")
             and q.status.strip() in ("Open", "Deferred")
@@ -196,6 +199,8 @@ class WorkflowRunner:
             )
             resolved_count = 0
             # Count resolved questions from summaries
+            # TODO (Issue 5): This is fragile string parsing. Replace with
+            # structured return data from unified handlers.
             for summary in summaries:
                 if "resolved" in summary.lower():
                     # Try to extract count from summary

@@ -100,7 +100,7 @@ def main(argv: List[str] | None = None) -> int:
         # Log summary of all steps
         for i, result in enumerate(results):
             logging.info("Step %d: target=%s action=%s changed=%s", 
-                        i+1, result.target_id, result.action_taken, result.changed)
+                        i + 1, result.target_id, result.action_taken, result.changed)
     else:
         # Single-step execution mode (default)
         result = runner.run_once(args.dry_run)
