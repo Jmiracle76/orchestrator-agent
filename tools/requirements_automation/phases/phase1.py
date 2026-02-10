@@ -13,7 +13,7 @@ def _canon_target(t: str) -> str:
     t0 = (t or "").strip()
     return TARGET_CANONICAL_MAP.get(t0, t0)
 
-def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | None = None) -> Tuple[List[str], bool, List[str], bool, List[str]]:
     """Fill intent/scope sections or create open questions when missing."""
     changed = False
     blocked: List[str] = []
@@ -25,9 +25,12 @@ def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
     open_qs, _, _ = open_questions_parse(lines)
 
     # Track how many times we've integrated for each section in this run.
-    revised: Dict[str,int] = {sid: 0 for sid in PHASES["phase_1_intent_scope"]}
+    phase_sections = PHASES["phase_1_intent_scope"]
+    if target_section:
+        phase_sections = [target_section]
+    revised: Dict[str,int] = {sid: 0 for sid in phase_sections}
 
-    for section_id in PHASES["phase_1_intent_scope"]:
+    for section_id in phase_sections:
         span = get_section_span(spans, section_id)
         if not span:
             blocked.append(f"Missing required section marker: {section_id}")
@@ -90,7 +93,7 @@ def process_phase_1(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
             ctx = section_body(lines, span)
             proposed = llm.generate_open_questions(section_id, ctx)
             new_qs = []
-            allowed_targets = set(PHASES["phase_1_intent_scope"])
+            allowed_targets = set(phase_sections)
             for item in proposed:
                 q_text = (item.get("question") or "").strip()
                 target = _canon_target((item.get("section_target") or section_id).strip())

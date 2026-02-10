@@ -13,6 +13,7 @@ from .config import (
 from .models import SectionSpan, SubsectionSpan
 
 META_VALUE_LINE_RE = re.compile(r"-\s*\*\*(?P<label>[^*]+)\*\*:\s*(?P<value>.+)")
+WORKFLOW_ORDER_START_RE = re.compile(r"<!--\s*workflow:order\b")
 
 def _normalize_meta_label(label: str) -> str:
     return re.sub(r"[\s\-]+", "_", label.strip().lower())
@@ -40,6 +41,53 @@ def extract_metadata(lines: List[str]) -> Dict[str, str]:
             if version:
                 metadata["version"] = version
     return metadata
+
+def extract_workflow_order(lines: List[str]) -> List[str]:
+    """Extract the workflow order block from a template/doc header."""
+    in_block = False
+    workflow: List[str] = []
+    seen = set()
+    start_line = None
+
+    def _add_entry(raw: str, line_no: int) -> None:
+        entry = raw.strip()
+        if not entry or entry.startswith("#"):
+            return
+        if entry in seen:
+            raise ValueError(f"Duplicate workflow entry '{entry}' (line {line_no}).")
+        workflow.append(entry)
+        seen.add(entry)
+
+    for idx, ln in enumerate(lines):
+        if not in_block:
+            if WORKFLOW_ORDER_START_RE.search(ln):
+                in_block = True
+                start_line = idx + 1
+                after = ln.split("workflow:order", 1)[1]
+                if "-->" in after:
+                    before_end = after.split("-->", 1)[0]
+                    _add_entry(before_end, idx + 1)
+                    in_block = False
+                    break
+                remainder = after.strip()
+                if remainder and remainder != "-->":
+                    _add_entry(remainder, idx + 1)
+            continue
+
+        if "-->" in ln:
+            content, _ = ln.split("-->", 1)
+            _add_entry(content, idx + 1)
+            in_block = False
+            break
+        _add_entry(ln, idx + 1)
+
+    if start_line is None:
+        raise ValueError("Workflow order block not found (missing <!-- workflow:order -->).")
+    if in_block:
+        raise ValueError(f"Workflow order block not terminated (started on line {start_line}).")
+    if not workflow:
+        raise ValueError("Workflow order block is empty.")
+    return workflow
 
 def find_sections(lines: List[str]) -> List[SectionSpan]:
     """Locate section markers and return their line spans."""

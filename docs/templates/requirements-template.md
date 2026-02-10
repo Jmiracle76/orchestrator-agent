@@ -1,6 +1,21 @@
 <!-- meta:doc_type value="requirements" -->
 <!-- meta:doc_format value="markdown" version="1.0" -->
 
+<!-- workflow:order
+problem_statement
+goals_objectives
+stakeholders_users
+success_criteria
+assumptions
+constraints
+requirements
+interfaces_integrations
+data_considerations
+risks_open_issues
+review_gate:coherence_check
+approval_record
+-->
+
 # Requirements Document
 
 <!-- meta:project_name -->

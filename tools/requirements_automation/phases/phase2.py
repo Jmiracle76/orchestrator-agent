@@ -7,7 +7,7 @@ from ..open_questions import open_questions_parse, open_questions_insert, open_q
 from ..editing import replace_block_body_preserving_markers
 from ..utils_io import iso_today
 
-def process_phase_2(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+def process_phase_2(lines: List[str], llm, dry_run: bool, target_section: str | None = None) -> Tuple[List[str], bool, List[str], bool, List[str]]:
     """Fill assumptions/constraints or generate questions for missing content."""
     changed = False
     blocked: List[str] = []
@@ -16,6 +16,8 @@ def process_phase_2(lines: List[str], llm, dry_run: bool) -> Tuple[List[str], bo
 
     # Validate spans first to ensure the document is structurally sound.
     phase_sections = PHASES["phase_2_assumptions_constraints"]
+    if target_section:
+        phase_sections = [target_section]
     span_issues = validate_required_section_spans(lines, phase_sections)
     if span_issues:
         blocked.extend(span_issues)
