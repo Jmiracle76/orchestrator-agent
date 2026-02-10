@@ -55,7 +55,7 @@ PHASES = {
     "phase_5_approval": ["approval_record"],
 }
 
-# Workflow targets that are not section IDs.
+# Workflow targets that are not section IDs (extensible prefix list).
 SPECIAL_WORKFLOW_PREFIXES = ["review_gate:"]
 
 def is_special_workflow_target(target: str) -> bool:

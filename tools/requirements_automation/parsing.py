@@ -58,28 +58,29 @@ def extract_workflow_order(lines: List[str]) -> List[str]:
         workflow.append(entry)
         seen.add(entry)
 
+    def _consume_line(raw: str, line_no: int) -> bool:
+        if "-->" in raw:
+            content, _ = raw.split("-->", 1)
+            _add_entry(content, line_no)
+            return True
+        _add_entry(raw, line_no)
+        return False
+
     for idx, ln in enumerate(lines):
         if not in_block:
-            if WORKFLOW_ORDER_START_RE.search(ln):
+            match = WORKFLOW_ORDER_START_RE.search(ln)
+            if match:
                 in_block = True
                 start_line = idx + 1
-                after = ln.split("workflow:order", 1)[1]
-                if "-->" in after:
-                    before_end = after.split("-->", 1)[0]
-                    _add_entry(before_end, idx + 1)
+                remainder = ln[match.end():]
+                if _consume_line(remainder, idx + 1):
                     in_block = False
                     break
-                remainder = after.strip()
-                if remainder and remainder != "-->":
-                    _add_entry(remainder, idx + 1)
             continue
 
-        if "-->" in ln:
-            content, _ = ln.split("-->", 1)
-            _add_entry(content, idx + 1)
+        if _consume_line(ln, idx + 1):
             in_block = False
             break
-        _add_entry(ln, idx + 1)
 
     if start_line is None:
         raise ValueError("Workflow order block not found (missing <!-- workflow:order -->).")

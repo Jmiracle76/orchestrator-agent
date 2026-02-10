@@ -66,13 +66,13 @@ def main(argv: List[str] | None = None) -> int:
         logging.error("Workflow order parse failed: %s", e)
         return 2
 
-    section_ids = {sp.section_id for sp in find_sections(lines)}
+    available_section_ids = {sp.section_id for sp in find_sections(lines)}
     invalid_targets = [
         target for target in workflow_order
-        if not is_special_workflow_target(target) and target not in section_ids
+        if not is_special_workflow_target(target) and target not in available_section_ids
     ]
     if invalid_targets:
-        valid = ", ".join(sorted(section_ids))
+        valid = ", ".join(sorted(available_section_ids))
         invalid = ", ".join(invalid_targets)
         logging.error("Workflow order references unknown section IDs: %s", invalid)
         logging.error("Valid section IDs: %s", valid)
