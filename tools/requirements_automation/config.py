@@ -13,9 +13,19 @@ SECTION_MARKER_RE = re.compile(r"<!--\s*section:(?P<id>[a-z0-9_]+)\s*-->")
 SECTION_LOCK_RE   = re.compile(r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->")
 TABLE_MARKER_RE   = re.compile(r"<!--\s*table:(?P<id>[a-z0-9_]+)\s*-->")
 SUBSECTION_MARKER_RE = re.compile(r"<!--\s*subsection:(?P<id>[a-z0-9_]+)\s*-->")
+META_MARKER_RE = re.compile(
+    r"<!--\s*meta:(?P<key>[a-z_]+)"
+    r"(?:\s+value=\"(?P<value>[^\"]+)\")?"
+    r"(?:\s+version=\"(?P<version>[^\"]+)\")?\s*-->"
+)
 
 # Placeholder indicates a section still needs human input.
 PLACEHOLDER_TOKEN = "<!-- PLACEHOLDER -->"
+
+# Supported document types used for metadata-driven routing.
+SUPPORTED_DOC_TYPES = ["requirements", "research", "planning"]
+DEFAULT_DOC_TYPE = "requirements"
+SUPPORTED_METADATA_KEYS = {"doc_type", "doc_format"}
 
 # Expected header columns for the Open Questions table.
 OPEN_Q_COLUMNS = [

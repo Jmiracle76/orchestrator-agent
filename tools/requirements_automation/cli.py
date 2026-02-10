@@ -4,6 +4,8 @@ from pathlib import Path
 from dataclasses import asdict
 from typing import List
 from .models import RunResult
+from .config import DEFAULT_DOC_TYPE, SUPPORTED_DOC_TYPES
+from .parsing import extract_metadata
 from .utils_io import read_text, write_text, split_lines, join_lines, backup_file_outside_repo
 from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_push
 from .llm import LLMClient
@@ -46,11 +48,26 @@ def main(argv: List[str] | None = None) -> int:
 
     # Load document into memory and construct the LLM client.
     lines = split_lines(read_text(doc_path))
+    metadata = extract_metadata(lines)
+    raw_doc_type = (metadata.get("doc_type") or "").strip()
+    doc_type = raw_doc_type.lower() if raw_doc_type else DEFAULT_DOC_TYPE
+    if not raw_doc_type:
+        logging.warning("No doc_type metadata found; defaulting to %s", DEFAULT_DOC_TYPE)
+    if doc_type not in SUPPORTED_DOC_TYPES:
+        supported = ", ".join(SUPPORTED_DOC_TYPES)
+        logging.error("Unsupported doc_type '%s'. Supported types: %s", doc_type, supported)
+        return 2
     llm = LLMClient()
 
     # Decide which phase is next and execute it.
     phase, _ = choose_phase(lines)
-    lines, phase_changed, blocked, _needs_human, _summaries = run_phase(phase, lines, llm, args.dry_run)
+    lines, phase_changed, blocked, _needs_human, _summaries = run_phase(
+        phase,
+        lines,
+        llm,
+        args.dry_run,
+        doc_type=doc_type,
+    )
 
     changed = phase_changed
     outcome = "blocked" if blocked else ("updated" if changed else "no-op")

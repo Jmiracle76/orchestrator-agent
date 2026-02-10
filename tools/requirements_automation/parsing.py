@@ -1,7 +1,45 @@
 from __future__ import annotations
+import re
 from typing import Dict, List, Optional, Tuple
-from .config import SECTION_MARKER_RE, SECTION_LOCK_RE, TABLE_MARKER_RE, SUBSECTION_MARKER_RE, PLACEHOLDER_TOKEN
+from .config import (
+    SECTION_MARKER_RE,
+    SECTION_LOCK_RE,
+    TABLE_MARKER_RE,
+    SUBSECTION_MARKER_RE,
+    META_MARKER_RE,
+    PLACEHOLDER_TOKEN,
+    SUPPORTED_METADATA_KEYS,
+)
 from .models import SectionSpan, SubsectionSpan
+
+META_VALUE_LINE_RE = re.compile(r"-\s*\*\*(?P<label>[^*]+)\*\*:\s*(?P<value>.+)")
+
+def _normalize_meta_label(label: str) -> str:
+    return re.sub(r"[\s\-]+", "_", label.strip().lower())
+
+def extract_metadata(lines: List[str]) -> Dict[str, str]:
+    """Extract metadata from template/doc header markers."""
+    metadata: Dict[str, str] = {}
+    for i, ln in enumerate(lines):
+        m = META_MARKER_RE.search(ln)
+        if not m:
+            continue
+        key = m.group("key")
+        if key not in SUPPORTED_METADATA_KEYS:
+            continue
+        value = (m.group("value") or "").strip()
+        if value:
+            metadata[key] = value
+        elif i + 1 < len(lines):
+            next_line = lines[i + 1].strip()
+            vmatch = META_VALUE_LINE_RE.match(next_line)
+            if vmatch and _normalize_meta_label(vmatch.group("label")) == key:
+                metadata[key] = vmatch.group("value").strip()
+        if key == "doc_format":
+            version = (m.group("version") or "").strip()
+            if version:
+                metadata["version"] = version
+    return metadata
 
 def find_sections(lines: List[str]) -> List[SectionSpan]:
     """Locate section markers and return their line spans."""
