@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import re
 from typing import List, Optional
 from .models import WorkflowResult, SectionState
 from .config import PHASES, is_special_workflow_target, PLACEHOLDER_TOKEN
@@ -198,8 +199,6 @@ class WorkflowRunner:
             for summary in summaries:
                 if "resolved" in summary.lower():
                     # Try to extract count from summary
-                    import re
-
                     match = re.search(r"(\d+)\s+questions?\s+resolved", summary.lower())
                     if match:
                         resolved_count = int(match.group(1))
@@ -213,9 +212,7 @@ class WorkflowRunner:
         action = "no_action"
         if questions_generated > 0:
             action = "question_gen"
-        elif resolved_count > 0:
-            action = "integration"
-        elif changed:
+        elif resolved_count > 0 or changed:
             action = "integration"
 
         return WorkflowResult(
@@ -279,7 +276,8 @@ class WorkflowRunner:
                 continue
 
             # Skip completed sections (no placeholder, no open questions)
-            if not state.is_blank and not state.has_open_questions:
+            # A section is complete if it has content (not blank, no placeholder) and no open questions
+            if not state.has_placeholder and not state.has_open_questions:
                 logging.debug("Section '%s' is complete, skipping", target_id)
                 continue
 
