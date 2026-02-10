@@ -49,21 +49,21 @@ def extract_workflow_order(lines: List[str]) -> List[str]:
     seen = set()
     start_line = None
 
-    def _add_entry(raw: str, line_no: int) -> None:
+    def _add_entry(raw: str, doc_line_number: int) -> None:
         entry = raw.strip()
         if not entry or entry.startswith("#"):
             return
         if entry in seen:
-            raise ValueError(f"Duplicate workflow target '{entry}' (document line {line_no}).")
+            raise ValueError(f"Duplicate workflow target '{entry}' (document line {doc_line_number}).")
         workflow.append(entry)
         seen.add(entry)
 
-    def _consume_line(raw: str, line_no: int) -> bool:
+    def _consume_line(raw: str, doc_line_number: int) -> bool:
         if "-->" in raw:
             content, _ = raw.split("-->", 1)
-            _add_entry(content, line_no)
+            _add_entry(content, doc_line_number)
             return True
-        _add_entry(raw, line_no)
+        _add_entry(raw, doc_line_number)
         return False
 
     for idx, ln in enumerate(lines):
@@ -83,7 +83,9 @@ def extract_workflow_order(lines: List[str]) -> List[str]:
             break
 
     if start_line is None:
-        raise ValueError("Workflow order block not found. Add a workflow order block to the document header, e.g. <!-- workflow:order ... -->.")
+        raise ValueError(
+            "Workflow order block not found. Add a workflow order block after the metadata comments in the document header, e.g. <!-- workflow:order ... -->."
+        )
     if in_block:
         raise ValueError(f"Workflow order block not terminated (started on line {start_line}).")
     if not workflow:

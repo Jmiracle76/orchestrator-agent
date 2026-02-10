@@ -37,7 +37,7 @@ OPEN_Q_COLUMNS = [
     "Resolution Status",
 ]
 
-# Deprecated: phase order controls progression through the requirements workflow.
+# Deprecated: Phase order controls progression through the requirements workflow.
 PHASE_ORDER = [
     "phase_1_intent_scope",
     "phase_2_assumptions_constraints",
