@@ -202,10 +202,6 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 ---
 <!-- section:constraints -->
 ## 6. Constraints
-
-<!-- subsection:technical_constraints -->
-### Technical Constraints
-
 - Must use Python for the automation script.
 - Must not require heavyweight services (no database required for MVP).
 - Dependencies must be minimal (Anthropic SDK is acceptable).
@@ -223,9 +219,8 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 - Must run on a normal developer laptop/desktop with no special hardware.
 - No dedicated cloud infrastructure required.
 - Must work in environments with outbound HTTPS but otherwise minimal privileges.
-
-<!-- subsection:operational_constraints -->
-### Operational Constraints
+- Minimum supported Python version: 3.11. Recommended: 3.11–3.13. Must avoid dependencies that block 3.11+ and test against at least 3.11 and latest stable in CI when available.
+- Must prevent simultaneous runs against the same `docs/requirements.md`. Implement cross-platform file lock or lockfile in temp directory keyed by repo path; exit cleanly with outcome blocked if lock is held. Locking must cover read-modify-write and commit steps.
 
 - No formal maintenance windows; runs are manual and on-demand.
 - Single developer/maintainer (senior technical) with strong Python and git proficiency, comfortable debugging LLM formatting and contract issues.
@@ -237,15 +232,14 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 - No paid infrastructure purchases required.
 - No hard deadline; target progression: Phase 2 stabilizes within days, Phase 3 within 1–2 weeks, first usable requirements→plan handoff within 2–4 weeks, then iterative hardening.
 
-<!-- subsection:resource_constraints -->
-### Resource Constraints
-<!-- PLACEHOLDER -->
-- [Resource constraint 1] 
-- [Resource constraint 2] 
-
+- Target ≤ 250 MB RSS memory footprint for typical runs; hard ceiling ≤ 500 MB RSS on normal dev workstation. Script must avoid loading large repo trees into memory; operate primarily on `docs/requirements.md` text plus small JSON payloads. No caching of whole-repo file contents in memory.
+- For Phase 2, must support repositories up to 2 GB and ≤ 200,000 files without scanning them (no repo-wide traversal for normal operation). Only required reads are requirements doc and templates. Optional future scanning features must be explicitly opt-in with guardrails and timeouts.
+- Backups stored outside repo in temp/backup directory. Default retention: keep last 5 backups or max 20 MB total, whichever is hit first (older backups deleted). Temp storage must stay under 10 MB per run. If limits exceeded, fail safely with clear error and no write to doc.
+- Target ≤ 25 Anthropic Messages API calls per run for typical repo; hard cap ≤ 60 calls per run before aborting with clear "too many calls" error. Implement exponential backoff with jitter for 429/5xx and respect provider rate-limit headers if exposed. Runs should normally require single-digit to low-double-digit calls per section/question batch; avoid per-line/per-item calls.
+- Target ≤ $0.25 per run for normal usage; hard cap ≤ $1.00 per run (estimated) before aborting unless `--allow-expensive-run` flag is set. Script must estimate cost using token counts returned by API or conservative heuristics, and log per-run cost estimate.
+- Assume typical home/office broadband. Keep request/response sizes small by sending only relevant section context and Q&A (no whole-repo dumps). Target ≤ 5 MB total transfer per run typical, with soft cap ≤ 20 MB. Must function over higher-latency links; use timeouts (e.g., 60s per request) and retries with backoff.
 <!-- section_lock:constraints lock=false -->
 ---
-
 <!-- section:requirements -->
 ## 7.  Requirements
 <!-- PLACEHOLDER -->
@@ -361,14 +355,14 @@ Single human owner approval is required for project acceptance. The automation s
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-057 | What are the maximum acceptable API rate limits or call volumes per run for the Anthropic Messages API? | 2026-02-10 | Target ≤ 25 Messages API calls per run for a typical repo, with a hard cap of ≤ 60 calls per run before the script aborts with a clear “too many calls” error. Implement exponential backoff with jitter for 429/5xx and respect provider rate-limit headers if exposed. Runs should be structured to normally require single-digit to low-double-digit calls (per section/question batch), and avoid per-line/per-item calls. | constraints | Open |
-| Q-058 | What is the maximum acceptable memory footprint for the script during execution? | 2026-02-10 | Target ≤ 250 MB RSS for typical runs; hard ceiling ≤ 500 MB RSS on a normal dev workstation. The script should avoid loading large repo trees into memory; it should primarily operate on docs/requirements.md text plus small JSON payloads. No caching of whole-repo file contents in memory. | constraints | Open |
-| Q-059 | What is the maximum acceptable repository size (in MB or number of files) the tool should support? | 2026-02-10 | For Phase 2 behavior, the script should support repositories up to 2 GB and ≤ 200,000 files without scanning them, because it must not perform repo-wide traversal for normal operation. The only required reads are the requirements doc and templates. If optional future features add scanning, they must be explicitly opt-in and include guardrails/timeouts. | constraints | Open |
-| Q-060 | Are there any disk space constraints for backup files or temporary storage? | 2026-02-10 | Backups must be stored outside the repo in a temp/backup directory. Default retention: keep last 5 backups or max 20 MB total, whichever is hit first (older backups deleted). Temp storage should stay under 10 MB per run. If limits are exceeded, the script should fail safely with a clear error and no write to the doc. | constraints | Open |
-| Q-061 | What is the maximum acceptable cost per run in terms of API usage? | 2026-02-10 | Target ≤ $0.25 per run for normal usage; hard cap ≤ $1.00 per run (estimated) before aborting unless --allow-expensive-run is set. The script should estimate cost using token counts returned by the API (if available) or conservative heuristics, and log a per-run cost estimate. Goal is “iterate often without crying at the bill.” | constraints | Open |
-| Q-062 | Are there any network bandwidth constraints or limitations? | 2026-02-10 | Assume typical home/office broadband. The script should keep request/response sizes small by sending only relevant section context and Q&A (no whole-repo dumps). Target ≤ 5 MB total transfer per run typical, with a soft cap of ≤ 20 MB. Must function over higher-latency links; use timeouts (e.g., 60s per request) and retries with backoff. | constraints | Open |
-| Q-063 | What Python version range must be supported (minimum/maximum)? | 2026-02-10 | Minimum supported: Python 3.11. Recommended: 3.11–3.13. No upper maximum enforced, but the project should avoid dependencies that block 3.11+ and should pin/test against at least 3.11 and latest stable in CI (when CI exists). | constraints | Open |
-| Q-064 | Are there constraints on concurrent execution (e.g., must prevent multiple simultaneous runs)? | 2026-02-10 | Yes: the tool must prevent simultaneous runs against the same docs/requirements.md. Implement a file lock (cross-platform best effort) or a lockfile in the temp directory keyed by repo path. If a lock is held, exit cleanly with outcome blocked and reason “another run is in progress.” No partial writes; locking must cover read-modify-write and commit steps. | constraints | Open |
+| Q-057 | What are the maximum acceptable API rate limits or call volumes per run for the Anthropic Messages API? | 2026-02-10 | Target ≤ 25 Messages API calls per run for a typical repo, with a hard cap of ≤ 60 calls per run before the script aborts with a clear “too many calls” error. Implement exponential backoff with jitter for 429/5xx and respect provider rate-limit headers if exposed. Runs should be structured to normally require single-digit to low-double-digit calls (per section/question batch), and avoid per-line/per-item calls. | constraints | Resolved |
+| Q-058 | What is the maximum acceptable memory footprint for the script during execution? | 2026-02-10 | Target ≤ 250 MB RSS for typical runs; hard ceiling ≤ 500 MB RSS on a normal dev workstation. The script should avoid loading large repo trees into memory; it should primarily operate on docs/requirements.md text plus small JSON payloads. No caching of whole-repo file contents in memory. | constraints | Resolved |
+| Q-059 | What is the maximum acceptable repository size (in MB or number of files) the tool should support? | 2026-02-10 | For Phase 2 behavior, the script should support repositories up to 2 GB and ≤ 200,000 files without scanning them, because it must not perform repo-wide traversal for normal operation. The only required reads are the requirements doc and templates. If optional future features add scanning, they must be explicitly opt-in and include guardrails/timeouts. | constraints | Resolved |
+| Q-060 | Are there any disk space constraints for backup files or temporary storage? | 2026-02-10 | Backups must be stored outside the repo in a temp/backup directory. Default retention: keep last 5 backups or max 20 MB total, whichever is hit first (older backups deleted). Temp storage should stay under 10 MB per run. If limits are exceeded, the script should fail safely with a clear error and no write to the doc. | constraints | Resolved |
+| Q-061 | What is the maximum acceptable cost per run in terms of API usage? | 2026-02-10 | Target ≤ $0.25 per run for normal usage; hard cap ≤ $1.00 per run (estimated) before aborting unless --allow-expensive-run is set. The script should estimate cost using token counts returned by the API (if available) or conservative heuristics, and log a per-run cost estimate. Goal is “iterate often without crying at the bill.” | constraints | Resolved |
+| Q-062 | Are there any network bandwidth constraints or limitations? | 2026-02-10 | Assume typical home/office broadband. The script should keep request/response sizes small by sending only relevant section context and Q&A (no whole-repo dumps). Target ≤ 5 MB total transfer per run typical, with a soft cap of ≤ 20 MB. Must function over higher-latency links; use timeouts (e.g., 60s per request) and retries with backoff. | constraints | Resolved |
+| Q-063 | What Python version range must be supported (minimum/maximum)? | 2026-02-10 | Minimum supported: Python 3.11. Recommended: 3.11–3.13. No upper maximum enforced, but the project should avoid dependencies that block 3.11+ and should pin/test against at least 3.11 and latest stable in CI (when CI exists). | constraints | Resolved |
+| Q-064 | Are there constraints on concurrent execution (e.g., must prevent multiple simultaneous runs)? | 2026-02-10 | Yes: the tool must prevent simultaneous runs against the same docs/requirements.md. Implement a file lock (cross-platform best effort) or a lockfile in the temp directory keyed by repo path. If a lock is held, exit cleanly with outcome blocked and reason “another run is in progress.” No partial writes; locking must cover read-modify-write and commit steps. | constraints | Resolved |
 | Q-047 | What specific technologies, platforms, or programming languages must be used or avoided? | 2026-02-10 | Must use Python for the automation script. Must not require heavyweight services (no DB required). Keep dependencies minimal (anthropic SDK ok). Avoid tooling that forces a specific IDE or cloud platform. | constraints | Resolved |
 | Q-048 | Are there any required integrations with existing systems or APIs? | 2026-02-10 | Required: Anthropic Messages API via ANTHROPIC_API_KEY. Required: local git CLI for safety-net commits/push. No other integrations required for Phase 2. | constraints | Resolved |
 | Q-049 | What are the performance requirements (e.g., response time, throughput, uptime SLAs)? | 2026-02-10 | Target: complete a typical requirements pass in under ~60 seconds for small repos (dominated by LLM calls). Script should not do expensive repo scans. Must be responsive enough for iterative runs without “coffee breaks”. | constraints | Resolved |
