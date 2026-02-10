@@ -32,3 +32,26 @@ class RunResult:
     outcome: str  # no-op | updated | blocked | error
     changed: bool
     blocked_reasons: List[str]
+
+@dataclass(frozen=True)
+class WorkflowResult:
+    """Result from executing a single workflow target."""
+    target_id: str              # Section or review gate ID processed
+    action_taken: str           # "question_gen", "integration", "review", "skip_locked", "no_action", "complete"
+    changed: bool               # Document modified?
+    blocked: bool               # Needs human intervention?
+    blocked_reasons: List[str]  # Why blocked (e.g., "unanswered questions")
+    summaries: List[str]        # Human-readable action descriptions
+    questions_generated: int    # Count of new questions
+    questions_resolved: int     # Count of resolved questions
+
+@dataclass(frozen=True)
+class SectionState:
+    """State information for a section target."""
+    section_id: str
+    exists: bool
+    locked: bool
+    is_blank: bool
+    has_placeholder: bool
+    has_open_questions: bool
+    has_answered_questions: bool

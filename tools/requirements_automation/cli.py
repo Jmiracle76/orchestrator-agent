@@ -10,6 +10,7 @@ from .utils_io import read_text, write_text, split_lines, join_lines, backup_fil
 from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_push
 from .llm import LLMClient
 from .runner import choose_next_target, run_phase
+from .runner_v2 import WorkflowRunner
 
 def main(argv: List[str] | None = None) -> int:
     """Run the requirements automation workflow for a single phase pass."""
@@ -20,6 +21,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-commit", action="store_true")
     parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--max-steps", type=int, default=1, help="Max workflow steps to execute (default: 1)")
     args = parser.parse_args(argv)
 
     # Configure logging once, based on the CLI log-level.
@@ -77,16 +79,39 @@ def main(argv: List[str] | None = None) -> int:
         logging.error("Workflow order references unknown section IDs (%s). Valid section IDs: %s", invalid, valid)
         return 2
 
-    target, _ = choose_next_target(lines, workflow_order)
-    lines, phase_changed, blocked, _needs_human, _summaries = run_phase(
-        target,
-        lines,
-        llm,
-        args.dry_run,
-        doc_type=doc_type,
-    )
+    # Create WorkflowRunner and execute workflow
+    runner = WorkflowRunner(lines, llm, doc_type, workflow_order, handler_registry=None)
+    
+    if args.max_steps > 1:
+        # Batch execution mode
+        results = runner.run_until_blocked(args.dry_run, max_steps=args.max_steps)
+        # Use the last result for determining outcome
+        last_result = results[-1] if results else None
+        if not last_result:
+            return 0
+        
+        # Update lines from runner (may have been modified)
+        lines = runner.lines
+        changed = any(r.changed for r in results)
+        blocked = last_result.blocked
+        blocked_reasons = last_result.blocked_reasons
+        target_id = last_result.target_id
+        
+        # Log summary of all steps
+        for i, result in enumerate(results):
+            logging.info("Step %d: target=%s action=%s changed=%s", 
+                        i+1, result.target_id, result.action_taken, result.changed)
+    else:
+        # Single-step execution mode (default)
+        result = runner.run_once(args.dry_run)
+        
+        # Update lines from runner (may have been modified)
+        lines = runner.lines
+        changed = result.changed
+        blocked = result.blocked
+        blocked_reasons = result.blocked_reasons
+        target_id = result.target_id
 
-    changed = phase_changed
     outcome = "blocked" if blocked else ("updated" if changed else "no-op")
 
     # Persist changes, optionally writing a backup first.
@@ -97,11 +122,11 @@ def main(argv: List[str] | None = None) -> int:
 
     # Commit and push only the target doc, unless --no-commit is set.
     if changed and not args.dry_run and not args.no_commit:
-        commit_msg = f"requirements: automation pass ({target})"
+        commit_msg = f"requirements: automation pass ({target_id})"
         allow = [str(doc_path.relative_to(repo_root)).replace("\\", "/")]
         commit_and_push(repo_root, commit_msg, allow_files=allow)
 
     # Return a machine-readable summary for callers.
-    result = RunResult(outcome=outcome, changed=changed, blocked_reasons=blocked)
+    result = RunResult(outcome=outcome, changed=changed, blocked_reasons=blocked_reasons)
     print(json.dumps(asdict(result), indent=2))
     return 0 if outcome in ("no-op", "updated") else 1
