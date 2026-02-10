@@ -32,41 +32,9 @@ import logging
 import os
 import re
 import shutil
-import tempfile
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-
-
-def extract_json_object(text: str) -> str:
-    """Extract a JSON object from LLM output.
-
-    Handles common cases:
-    - Raw JSON: { ... }
-    - Fenced JSON: ```json\n{...}\n```
-    - Fenced generic: ```\n{...}\n```
-
-    Returns a JSON string safe for json.loads().
-    Raises ValueError if no JSON object can be found.
-    """
-    t = (text or "").strip()
-
-    # Strip markdown fences if present
-    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.DOTALL | re.IGNORECASE)
-    if fence_match:
-        return fence_match.group(1).strip()
-
-    # Already looks like JSON
-    if t.startswith("{") and t.endswith("}"):
-        return t
-
-    # Fallback: slice from first { to last }
-    first = t.find("{")
-    last = t.rfind("}")
-    if first != -1 and last != -1 and last > first:
-        return t[first:last + 1].strip()
-
-    raise ValueError("No JSON object found in LLM output")
 
 
 # -----------------------------
@@ -81,42 +49,18 @@ DEFAULT_TEMPLATE = REPO_ROOT / "docs" / "templates" / "requirements-template.md"
 DEFAULT_DOC = REPO_ROOT / "docs" / "requirements.md"
 
 PHASES: Dict[str, List[str]] = {
-    # Phase 1: Intent & scope
     "phase_1_intent_scope": [
         "problem_statement",
         "goals_objectives",
         "stakeholders_users",
         "success_criteria",
     ],
-    # Phase 2: Assumptions & constraints
-    "phase_2_assumptions_constraints": [
-        "assumptions",
-        "constraints",
-    ],
-}
-
-# Execute phases in this order; we run ONLY the first incomplete phase each run.
-PHASE_ORDER = [
-    "phase_1_intent_scope",
-    "phase_2_assumptions_constraints",
-]
-
-
-# Open Questions may sometimes (incorrectly) target subsection IDs.
-# Phase 1 only edits whole sections, so we coerce known subsection targets
-# back to their owning section.
-TARGET_CANONICAL_MAP: Dict[str, str] = {
-    # Goals & objectives subsections
-    "primary_goals": "goals_objectives",
-    "secondary_goals": "goals_objectives",
-    "non_goals": "goals_objectives",
 }
 
 # Markers
 SECTION_MARKER_RE = re.compile(r"<!--\s*section:(?P<id>[a-z0-9_]+)\s*-->")
 SECTION_LOCK_RE   = re.compile(r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->")
 TABLE_MARKER_RE   = re.compile(r"<!--\s*table:(?P<id>[a-z0-9_]+)\s*-->")
-SUBSECTION_MARKER_RE = re.compile(r"<!--\s*subsection:(?P<id>[a-z0-9_]+)\s*-->")
 PLACEHOLDER_TOKEN = "<!-- PLACEHOLDER -->"
 
 OPEN_Q_COLUMNS = [
@@ -174,220 +118,11 @@ def write_text(path: Path, text: str) -> None:
 
 
 def backup_file(path: Path) -> Path:
-    """
-    Create a timestamped backup copy of the requirements doc *outside* the git repo.
-
-    Why: backups inside the repo show up as modified/untracked files and break the
-    'only docs/requirements.md may change' commit allowlist.
-    """
     ts = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-    tmp_root = Path(os.getenv("TMPDIR", "/tmp")) / "requirements_automation_backups"
-    tmp_root.mkdir(parents=True, exist_ok=True)
-    backup_path = tmp_root / f"{path.name}.{ts}.bak"
+    backup_path = path.with_suffix(path.suffix + f".{ts}.bak")
     shutil.copy2(path, backup_path)
     return backup_path
 
-
-
-# -----------------------------
-# Automation-owned updates: meta, document control, version history
-# -----------------------------
-
-AUTOMATION_ACTOR = "requirements-automation"
-
-def _find_meta_value_line(lines: List[str], meta_id: str) -> Optional[int]:
-    """Return index of the line immediately following <!-- meta:<id> --> marker."""
-    marker = re.compile(rf"<!--\s*meta:{re.escape(meta_id)}\s*-->")
-    for i, ln in enumerate(lines):
-        if marker.search(ln):
-            # next non-empty line is the value line
-            j = i + 1
-            while j < len(lines) and lines[j].strip() == "":
-                j += 1
-            return j if j < len(lines) else None
-    return None
-
-def _set_meta_field(lines: List[str], meta_id: str, new_value_line: str) -> Tuple[List[str], bool]:
-    idx = _find_meta_value_line(lines, meta_id)
-    if idx is None:
-        return lines, False
-    if lines[idx].rstrip() == new_value_line.rstrip():
-        return lines, False
-    lines = list(lines)
-    lines[idx] = new_value_line
-    return lines, True
-
-def _find_table_span_by_marker(lines: List[str], table_id: str) -> Optional[Tuple[int, int]]:
-    span = find_table_block(lines, table_id)
-    return span
-
-def _update_document_control_table(lines: List[str], version: str, today: str) -> Tuple[List[str], bool]:
-    """Update table:document_control fields we own."""
-    span = _find_table_span_by_marker(lines, "document_control")
-    if not span:
-        return lines, False
-    start, end = span
-    table_lines = lines[start:end]
-    rows = parse_markdown_table(table_lines)
-    if len(rows) < 2:
-        return lines, False
-
-    changed = False
-    # Rebuild table_lines in-place by editing only known fields
-    for i in range(2, len(rows)):  # data rows only
-        r = rows[i]
-        if len(r) < 2:
-            continue
-        field = r[0].strip()
-        if field == "Current Version":
-            if r[1].strip() != version:
-                r[1] = version; changed = True
-        elif field == "Last Modified":
-            if r[1].strip() != today:
-                r[1] = today; changed = True
-        elif field == "Modified By":
-            if r[1].strip() != AUTOMATION_ACTOR:
-                r[1] = AUTOMATION_ACTOR; changed = True
-        # Leave statuses/approval fields for you/humans for now.
-
-    if not changed:
-        return lines, False
-
-    # Re-emit table lines (preserving original header/separator lines)
-    new_table_lines: List[str] = []
-    new_table_lines.append(table_lines[0])  # header row (as-is)
-    new_table_lines.append(table_lines[1])  # separator (as-is)
-    for i in range(2, len(rows)):
-        # Try to preserve original formatting width? Not worth it. Deterministic output is better.
-        new_table_lines.append("| " + " | ".join(rows[i]) + " |")
-    return lines[:start] + new_table_lines + lines[end:], True
-
-def _parse_version(v: str) -> Tuple[int, int]:
-    m = re.match(r"^(\d+)\.(\d+)$", v.strip())
-    if not m:
-        return (0, 0)
-    return int(m.group(1)), int(m.group(2))
-
-def _format_version(major: int, minor: int) -> str:
-    return f"{major}.{minor}"
-
-def _increment_minor(v: str) -> str:
-    major, minor = _parse_version(v)
-    return _format_version(major, minor + 1)
-
-def _get_current_version(lines: List[str]) -> str:
-    idx = _find_meta_value_line(lines, "version")
-    if idx is None:
-        return "0.0"
-    m = re.search(r"\*\*Version:\*\*\s*([0-9]+\.[0-9]+)", lines[idx])
-    return m.group(1) if m else "0.0"
-
-def _upsert_version_history_row(lines: List[str], version: str, today: str, summary: str) -> Tuple[List[str], bool]:
-    """Insert a new Version History row at top of the table, replacing template placeholder row if present."""
-    # Find the '### Version History' heading
-    vh_idx = None
-    for i, ln in enumerate(lines):
-        if ln.strip() == "### Version History":
-            vh_idx = i
-            break
-    if vh_idx is None:
-        return lines, False
-
-    # Find first table row after heading
-    start = None
-    for j in range(vh_idx + 1, len(lines)):
-        if lines[j].lstrip().startswith("|"):
-            start = j
-            break
-        if SECTION_MARKER_RE.search(lines[j]):  # next section before table
-            return lines, False
-    if start is None:
-        return lines, False
-
-    end = start
-    while end < len(lines) and lines[end].lstrip().startswith("|"):
-        end += 1
-
-    table_lines = lines[start:end]
-    rows = parse_markdown_table(table_lines)
-    if len(rows) < 2:
-        return lines, False
-
-    # Build new row
-    new_row = [version, today, AUTOMATION_ACTOR, summary]
-
-    # Remove placeholder data rows (rows[2:] that are empty or placeholder)
-    data = rows[2:] if len(rows) > 2 else []
-    cleaned = []
-    for r in data:
-        if len(r) != 4:
-            continue
-        if any(PLACEHOLDER_TOKEN in c for c in r):
-            continue
-        if all(c.strip() in ("", "-", "Pending") for c in r):
-            continue
-        cleaned.append(r)
-
-    # Avoid inserting duplicate consecutive entry (same version+date+summary)
-    if cleaned:
-        top = cleaned[0]
-        if top[0].strip() == version and top[1].strip() == today and top[3].strip() == summary.strip():
-            return lines, False
-
-    new_rows = [rows[0], rows[1], new_row] + cleaned
-    # Emit
-    new_table_lines = [
-        "| " + " | ".join(new_rows[0]) + " |",
-        "|" + "|".join(["---------"] * len(new_rows[0])) + "|",
-    ]
-    for r in new_rows[2:]:
-        new_table_lines.append("| " + " | ".join(r) + " |")
-
-    return lines[:start] + new_table_lines + lines[end:], True
-
-def update_automation_owned_fields(
-    lines_before: List[str],
-    lines_after: List[str],
-    *,
-    doc_created: bool,
-    phase_completed_this_run: bool,
-    change_summaries: List[str],
-) -> Tuple[List[str], bool]:
-    """Update meta/version/date + document control + version history, deterministically."""
-    today = iso_today()
-    changed = False
-    lines = list(lines_after)
-
-    # Decide version bump
-    current_version = _get_current_version(lines_before if lines_before else lines)
-    new_version = current_version
-
-    if doc_created and current_version == "0.0":
-        new_version = "0.1"
-    elif phase_completed_this_run:
-        new_version = _increment_minor(current_version)
-
-    # Update meta fields
-    if new_version != current_version:
-        lines, did = _set_meta_field(lines, "version", f"- **Version:** {new_version} ")
-        changed = changed or did
-
-    # Always update last_updated if anything changed in doc content OR version bumped
-    if change_summaries or (new_version != current_version) or doc_created:
-        lines, did = _set_meta_field(lines, "last_updated", f"- **Last Updated:** {today} ")
-        changed = changed or did
-
-    # Update document control table (version/last modified/modified by)
-    lines, did = _update_document_control_table(lines, new_version, today)
-    changed = changed or did
-
-    # Version history row
-    if change_summaries or (new_version != current_version) or doc_created:
-        summary = "; ".join(change_summaries) if change_summaries else "Automation run"
-        lines, did = _upsert_version_history_row(lines, new_version, today, summary)
-        changed = changed or did
-
-    return lines, changed
 
 def split_lines(doc: str) -> List[str]:
     return doc.splitlines()
@@ -464,35 +199,6 @@ def get_section_span(spans: List[SectionSpan], section_id: str) -> Optional[Sect
 
 def section_text(lines: List[str], span: SectionSpan) -> str:
     return "\n".join(lines[span.start_line:span.end_line])
-
-
-def section_body(lines: List[str], span: SectionSpan) -> str:
-    """Return the section *data-plane* text only.
-
-    Strips control-plane markers and headings:
-    - <!-- section:... -->
-    - markdown headers (##, ### ...)
-    - <!-- section_lock:... -->
-    - '---' divider lines
-
-    This keeps the LLM focused on editable content, and prevents it from
-    "learning" and regurgitating markers.
-    """
-    block = lines[span.start_line:span.end_line]
-    body: List[str] = []
-    for ln in block:
-        if SECTION_MARKER_RE.search(ln):
-            continue
-        if SECTION_LOCK_RE.search(ln):
-            continue
-        if ln.lstrip().startswith("##"):
-            continue
-        if ln.strip() == "---":
-            continue
-        body.append(ln)
-    # Trim leading/trailing blank lines
-    text = "\n".join(body).strip("\n")
-    return text
 
 
 def section_is_locked(lines: List[str], span: SectionSpan) -> bool:
@@ -641,6 +347,13 @@ def open_questions_insert(lines: List[str], new_questions: List[Tuple[str, str, 
     return lines[:start] + table_lines + lines[end:], inserted
 
 
+
+
+# Backwards-compatible alias used by phase processors
+def insert_open_questions(lines: List[str], new_questions: List[Dict[str, str]]) -> Tuple[List[str], int]:
+    """Alias for open_questions_insert (older call sites expect insert_open_questions)."""
+    return open_questions_insert(lines, new_questions)
+
 def open_questions_set_answer(
     lines: List[str],
     question_id: str,
@@ -782,9 +495,8 @@ Return JSON only. No prose.
 """
         raw = self._call(prompt).strip()
         try:
-            payload = extract_json_object(raw)
-            data = json.loads(payload)
-        except Exception as e:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
             raise RuntimeError(f"LLM returned non-JSON for generate_open_questions: {raw[:400]}") from e
 
         questions = data.get("questions", [])
@@ -847,60 +559,21 @@ CURRENT SECTION TEXT:
 # -----------------------------
 
 def validate_and_repair_structure(lines: List[str]) -> Tuple[List[str], bool, List[str]]:
-    """
-    Validate + (lightly) repair control-plane structure.
-
-    Repair policy (Phase 1):
-    - If a required section marker is missing but the corresponding numbered heading exists,
-      re-insert the marker immediately above that heading.
-    - If section_lock references a missing section marker, warn (and the insertion above should fix most cases).
-    """
     changed = False
     notes: List[str] = []
 
-    # --- Auto-repair missing section markers (based on numbered headings) ---
-    expected_heading_to_id = {
-        "## 2. Problem Statement": "problem_statement",
-        "## 3. Goals and Objectives": "goals_objectives",
-        "## 4. Stakeholders and Users": "stakeholders_users",
-        "## 11. Success Criteria and Acceptance": "success_criteria",
-        "## 12. Out of Scope": "out_of_scope",
-        "## 1. Document Control": "document_control",
-        "## 10. Risks and Open Issues": "risks_open_issues",
-    }
-
-    # Compute known section markers
-    spans = find_sections(lines)
-    present = {s.section_id for s in spans}
-
-    for heading, sid in expected_heading_to_id.items():
-        if sid in present:
-            continue
-        # Find heading line
-        for i, ln in enumerate(lines):
-            if ln.strip() == heading:
-                # Insert marker above heading, unless marker already exists very near
-                insert_at = i
-                # If previous line is already some marker, insert above it to keep marker->heading adjacency
-                if i > 0 and lines[i-1].strip().startswith("<!--") and "section:" in lines[i-1]:
-                    break
-                marker = f"<!-- section:{sid} -->"
-                lines.insert(insert_at, marker)
-                notes.append(f"Repaired missing section marker for {sid} above heading '{heading}' (line {i+1}).")
-                changed = True
-                # Refresh present set so we don't double-insert
-                present.add(sid)
-                break
-
-    # Recompute spans after potential insertions
     spans = find_sections(lines)
     known_sections = {s.section_id for s in spans}
 
-    # --- Orphan lock warnings ---
+    # Warn on orphan locks
     for i, line in enumerate(lines):
         m = SECTION_LOCK_RE.search(line)
         if m and m.group("id") not in known_sections:
             notes.append(f"Orphan section_lock at line {i+1}: {m.group('id')}")
+
+    # Ensure Open Questions table exists (don’t auto-create silently)
+    if not find_table_block(lines, "open_questions"):
+        notes.append("Missing Open Questions table marker/block: <!-- table:open_questions -->")
 
     return lines, changed, notes
 
@@ -908,92 +581,6 @@ def validate_and_repair_structure(lines: List[str]) -> Tuple[List[str], bool, Li
 # -----------------------------
 # Section editing helpers
 # -----------------------------
-
-def sanitize_llm_body(section_or_subsection_id: str, body: str) -> str:
-    """
-    Hard safety filter against structural corruption.
-
-    We DO NOT allow the LLM to emit:
-    - section markers / locks / table markers / subsection markers
-    - horizontal rule separators
-    - top-level headings (## ...) that would bleed into other sections
-
-    This is intentionally strict. If you want richer formatting later, loosen it carefully.
-    """
-    out_lines: List[str] = []
-    for ln in split_lines(body):
-        if SECTION_MARKER_RE.search(ln) or SECTION_LOCK_RE.search(ln) or TABLE_MARKER_RE.search(ln) or SUBSECTION_MARKER_RE.search(ln):
-            continue
-        if ln.strip() == "---":
-            continue
-        if ln.lstrip().startswith("## "):
-            continue
-        out_lines.append(ln.rstrip())
-    return "\n".join(out_lines).strip()
-
-@dataclasses.dataclass(frozen=True)
-class SubsectionSpan:
-    subsection_id: str
-    start_line: int
-    end_line: int
-
-def find_subsections_within(lines: List[str], section_span: SectionSpan) -> List[SubsectionSpan]:
-    """Find <!-- subsection:<id> --> markers inside a section span."""
-    starts: List[Tuple[str, int]] = []
-    for i in range(section_span.start_line, section_span.end_line):
-        m = SUBSECTION_MARKER_RE.search(lines[i])
-        if m:
-            starts.append((m.group("id"), i))
-    subs: List[SubsectionSpan] = []
-    for idx, (sid, start) in enumerate(starts):
-        end = starts[idx + 1][1] if idx + 1 < len(starts) else section_span.end_line
-        subs.append(SubsectionSpan(subsection_id=sid, start_line=start, end_line=end))
-    return subs
-
-def get_subsection_span(subs: List[SubsectionSpan], subsection_id: str) -> Optional[SubsectionSpan]:
-    for s in subs:
-        if s.subsection_id == subsection_id:
-            return s
-    return None
-
-def replace_block_body_preserving_markers(lines: List[str], start: int, end: int, new_body: str) -> List[str]:
-    """
-    Replace the *content* of a block while preserving:
-    - the first line (marker)
-    - the first heading line (## or ###) if present
-    - any trailing section_lock line(s) inside the block
-    - an ending '---' divider if present at the end of the original block
-    """
-    block_lines = lines[start:end]
-    if not block_lines:
-        return lines
-
-    marker_line = block_lines[0]
-    heading_line = None
-    for ln in block_lines[1:8]:
-        if ln.lstrip().startswith("## ") or ln.lstrip().startswith("### "):
-            heading_line = ln
-            break
-
-    lock_lines = [ln for ln in block_lines if SECTION_LOCK_RE.search(ln)]
-    keep_divider = ("---" in block_lines[-3:])
-
-    new_block: List[str] = [marker_line]
-    if heading_line:
-        new_block.append(heading_line)
-
-    body_clean = sanitize_llm_body("block", new_body)
-    if body_clean:
-        new_block.extend(split_lines(body_clean))
-    else:
-        new_block.append(PLACEHOLDER_TOKEN)
-
-    if lock_lines:
-        new_block.append(lock_lines[-1])
-    if keep_divider:
-        new_block.append("---")
-
-    return lines[:start] + new_block + lines[end:]
 
 def replace_section_data_plane(lines: List[str], span: SectionSpan, new_body: str) -> List[str]:
     block_lines = lines[span.start_line:span.end_line]
@@ -1032,11 +619,10 @@ def process_phase_1(
     lines: List[str],
     llm: LLMClient,
     dry_run: bool,
-) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+) -> Tuple[List[str], bool, List[str], bool]:
     changed = False
     blocked: List[str] = []
     needs_human_input = False
-    change_summaries: List[str] = []
 
     spans = find_sections(lines)
 
@@ -1057,125 +643,67 @@ def process_phase_1(
 
         blank = section_is_blank(lines, span)
 
-        # Canonicalize question targets (some earlier runs may have created subsection targets)
-        def canon_target(t: str) -> str:
-            t0 = (t or "").strip()
-            return TARGET_CANONICAL_MAP.get(t0, t0)
-
-        # Any questions (open or answered) targeting this section
-        subs = find_subsections_within(lines, span)
-        target_ids = {section_id} | {s.subsection_id for s in subs}
-
-        targeted = [q for q in open_qs if canon_target(q.section_target) in target_ids]
-
         answered = [
-            q for q in targeted
-            if q.answer.strip() not in ("", "-", "Pending")
+            q for q in open_qs
+            if q.section_target.strip() == section_id
+            and q.answer.strip() not in ("", "-", "Pending")
             and q.status.strip() in ("Open", "Deferred")
         ]
-
-        open_unanswered_exists = any(
-            q.status.strip() in ("Open", "Deferred") and q.answer.strip() in ("", "-", "Pending")
-            for q in targeted
-        )
 
         # provenance stub
         human_modified = False
 
-        # 1) If we have answers for this section, integrate them FIRST (even if the section is blank).
-        # This prevents the "blank" branch from endlessly generating questions while answers exist.
-        if answered and revised_sections[section_id] < 1:
-            # Integrate answers into the most specific target we can:
-            # - If question targets a subsection (e.g., primary_goals), update that subsection block.
-            # - Else, update the parent section block.
-            by_target: Dict[str, List[OpenQuestion]] = {}
-            for q in answered:
-                tgt = canon_target(q.section_target)
-                by_target.setdefault(tgt, []).append(q)
-
-            any_integrated = False
-
-            for tgt, qs_for_tgt in by_target.items():
-                if tgt == section_id:
-                    tgt_start, tgt_end = span.start_line, span.end_line
-                else:
-                    subspan = get_subsection_span(subs, tgt)
-                    if not subspan:
-                        logging.warning("Answered questions target '%s' but no matching subsection marker exists; skipping.", tgt)
-                        continue
-                    tgt_start, tgt_end = subspan.start_line, subspan.end_line
-
-                context = "\n".join(lines[tgt_start:tgt_end])
-
-                try:
-                    new_body = llm.integrate_answers(tgt, context, qs_for_tgt)
-                except NotImplementedError:
-                    new_body = context
-
-                # Apply strict sanitizer before writing
-                new_body = sanitize_llm_body(tgt, new_body)
-
-                if new_body.strip() and new_body.strip() != context.strip():
-                    if not dry_run:
-                        lines = replace_block_body_preserving_markers(lines, tgt_start, tgt_end, new_body)
-                    any_integrated = True
-
-            if any_integrated:
-                changed = True
-                revised_sections[section_id] += 1
-
-                qids = [q.question_id for q in answered]
-                lines, resolved = open_questions_resolve(lines, qids)
-                if resolved:
-                    change_summaries.append(f"Questions resolved: {', '.join(qids)}")
-                    changed = True
-                    open_qs, _, _ = open_questions_parse(lines)
-
-            # Re-evaluate blankness after integration
-            blank = section_is_blank(lines, span)
-
-        # 2) If still blank, generate questions ONLY if none already exist for this section.
+        # 1) blank -> generate questions
         if blank:
             needs_human_input = True
-            if open_unanswered_exists:
-                logging.info("Section blank but already has open questions; not generating more: %s", section_id)
-                continue
-
-            context_body = section_body(lines, span)
-            proposed = llm.generate_open_questions(section_id, context_body)
+            context = section_text(lines, span)
+            proposed = llm.generate_open_questions(section_id, context)
 
             if proposed:
-                allowed_targets = set(PHASES["phase_1_intent_scope"])
                 new_questions = []
                 for item in proposed:
                     q_text = (item.get("question") or "").strip()
-                    target = canon_target((item.get("section_target") or section_id).strip())
-                    # Coerce invalid targets to the current section (keeps Phase 1 deterministic)
-                    if target not in allowed_targets:
-                        target = section_id
+                    target = (item.get("section_target") or section_id).strip()
                     if q_text:
                         new_questions.append((q_text, target, iso_today()))
                 if new_questions and not dry_run:
                     lines, inserted = open_questions_insert(lines, new_questions)
                     if inserted:
                         changed = True
-                        change_summaries.append(f"Open questions added for {section_id}: {inserted}")
                         open_qs, _, _ = open_questions_parse(lines)
             else:
                 blocked.append(f"{section_id} is blank and LLM returned no questions.")
             continue
 
+        # 2) answered -> integrate -> resolve
+        if answered and revised_sections[section_id] < 1:
+            context = section_text(lines, span)
+            new_body = llm.integrate_answers(section_id, context, answered)
+
+            if new_body.strip() != context.strip():
+                if not dry_run:
+                    lines = replace_section_data_plane(lines, span, new_body)
+                changed = True
+                revised_sections[section_id] += 1
+
+                qids = [q.question_id for q in answered]
+                if qids and not dry_run:
+                    lines, resolved = open_questions_resolve(lines, qids)
+                    if resolved:
+                        changed = True
+                        open_qs, _, _ = open_questions_parse(lines)
+
         # 3) human modified -> review (stub)
         if human_modified and revised_sections[section_id] < 1:
-            context_body = section_body(lines, span)
-            revised = llm.review_and_revise(section_id, context_body)
-            if revised.strip() and revised.strip() != context_body.strip():
+            context = section_text(lines, span)
+            revised = llm.review_and_revise(section_id, context)
+            if revised.strip() != context.strip():
                 if not dry_run:
                     lines = replace_section_data_plane(lines, span, revised)
                 changed = True
                 revised_sections[section_id] += 1
 
-    return lines, changed, blocked, needs_human_input, change_summaries
+    return lines, changed, blocked, needs_human_input
 
 
 # -----------------------------
@@ -1191,10 +719,6 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
     except Exception as e:
         return False, [f"Open Questions parse failed: {e}"]
 
-    def canon_target(t: str) -> str:
-        t0 = (t or "").strip()
-        return TARGET_CANONICAL_MAP.get(t0, t0)
-
     for sid in PHASES["phase_1_intent_scope"]:
         sp = get_section_span(spans, sid)
         if not sp:
@@ -1202,7 +726,7 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
             continue
         if section_is_blank(lines, sp):
             issues.append(f"Section still blank: {sid}")
-        if any(canon_target(q.section_target) == sid and q.status.strip() == "Open" for q in open_qs):
+        if any(q.section_target.strip() == sid and q.status.strip() == "Open" for q in open_qs):
             issues.append(f"Open questions remain for section: {sid}")
 
     return (len(issues) == 0), issues
@@ -1211,166 +735,6 @@ def validate_phase_1_complete(lines: List[str]) -> Tuple[bool, List[str]]:
 # -----------------------------
 # Bootstrap helper (optional but useful)
 # -----------------------------
-
-
-def process_phase_2(
-    lines: List[str],
-    llm: LLMClient,
-    dry_run: bool,
-) -> Tuple[List[str], bool, List[str], bool, List[str]]:
-    """
-    Process Phase 2 sections in order:
-    - assumptions
-    - constraints
-
-    Same mechanics as Phase 1:
-    - Skip locked sections
-    - If section blank -> generate Open Questions (but do not draft content)
-    - If answered questions exist -> integrate into target section and resolve them
-    - If human-modified (and not locked) -> review and revise
-
-    Returns:
-    - new_lines
-    - changed
-    - blocked_reasons
-    - needs_human_input
-    - change_summaries (for version history)
-    """
-    changed = False
-    blocked: List[str] = []
-    needs_human_input = False
-    change_summaries: List[str] = []
-
-    spans = find_sections(lines)
-
-    # Parse Open Questions once; we will re-parse after inserts/resolutions.
-    open_qs, _, _ = open_questions_parse(lines)
-
-    revised_sections: Dict[str, int] = {sid: 0 for sid in PHASES["phase_2_assumptions_constraints"]}
-
-    for section_id in PHASES["phase_2_assumptions_constraints"]:
-        span = get_section_span(spans, section_id)
-        if not span:
-            blocked.append(f"Missing required section marker: {section_id}")
-            continue
-
-        if section_is_locked(lines, span):
-            logging.info("Section locked, skipping edits: %s", section_id)
-            continue
-
-        blank = section_is_blank(lines, span)
-
-        answered = [
-            q for q in open_qs
-            if q.section_target.strip() == section_id
-            and q.answer.strip() not in ("", "-", "Pending")
-            and q.status.strip() in ("Open", "Deferred")
-        ]
-
-        human_modified = False  # provenance tracking comes later
-
-        # If blank, only generate questions (unless questions already exist)
-        if blank:
-            if any(q.section_target.strip() == section_id and q.status.strip() == "Open" for q in open_qs):
-                logging.info("Section blank but already has open questions; not generating more: %s", section_id)
-                needs_human_input = True
-                continue
-
-            logging.info("Section blank, generating questions: %s", section_id)
-            needs_human_input = True
-            context = section_text(lines, span)
-
-            try:
-                proposed = llm.generate_open_questions(section_id, context)
-            except Exception as e:
-                logging.error("LLM generate_open_questions failed for %s: %s", section_id, e)
-                proposed = []
-
-            if proposed:
-                new_qs = [(q["question"], q["section_target"], iso_today()) for q in proposed]
-                lines, inserted = insert_open_questions(lines, new_qs)
-                if inserted:
-                    changed = True
-                    change_summaries.append(f"Generated {inserted} open questions for {section_id}")
-                    open_qs, _, _ = open_questions_parse(lines)
-            else:
-                blocked.append(f"{section_id} is blank and no questions were generated.")
-
-            continue
-
-        # If answered questions exist, integrate and resolve
-        if answered and revised_sections[section_id] < 1:
-            logging.info("Integrating answers into section: %s (%d answered)", section_id, len(answered))
-            context = section_text(lines, span)
-
-            try:
-                new_body, resolved_qids = llm.integrate_answers(section_id, context, answered)
-            except Exception as e:
-                logging.error("LLM integrate_answers failed for %s: %s", section_id, e)
-                new_body, resolved_qids = context, []
-
-            if new_body.strip() != context.strip():
-                if not dry_run:
-                    lines = replace_section_data_plane(lines, span, new_body)
-                changed = True
-                revised_sections[section_id] += 1
-                change_summaries.append(f"Section updated: {section_id} (integrated {len(answered)} answers)")
-                open_qs, _, _ = open_questions_parse(lines)
-
-            if resolved_qids:
-                lines, resolved_ct = resolve_open_questions(lines, resolved_qids)
-                if resolved_ct:
-                    changed = True
-                    change_summaries.append(f"Questions resolved: {', '.join(resolved_qids)}")
-                    open_qs, _, _ = open_questions_parse(lines)
-
-        # Human-modified review hook
-        if human_modified and revised_sections[section_id] < 1:
-            logging.info("Human-modified section; reviewing: %s", section_id)
-            context = section_text(lines, span)
-            try:
-                revised = llm.review_and_revise(section_id, context)
-            except Exception as e:
-                logging.error("LLM review_and_revise failed for %s: %s", section_id, e)
-                revised = context
-
-            if revised.strip() != context.strip():
-                if not dry_run:
-                    lines = replace_section_data_plane(lines, span, revised)
-                changed = True
-                revised_sections[section_id] += 1
-                change_summaries.append(f"Section reviewed/revised: {section_id}")
-
-    return lines, changed, blocked, needs_human_input, change_summaries
-
-
-def validate_phase_2_complete(lines: List[str]) -> Tuple[bool, List[str]]:
-    """
-    Phase 2 completeness:
-    - assumptions + constraints sections contain no PLACEHOLDER_TOKEN
-    - No Open Questions with section_target in Phase 2 and status Open
-    """
-    issues: List[str] = []
-    spans = find_sections(lines)
-
-    try:
-        open_qs, _, _ = open_questions_parse(lines)
-    except Exception as e:
-        issues.append(f"Open Questions parse failed: {e}")
-        return False, issues
-
-    for sid in PHASES["phase_2_assumptions_constraints"]:
-        sp = get_section_span(spans, sid)
-        if not sp:
-            issues.append(f"Missing section: {sid}")
-            continue
-        if section_is_blank(lines, sp):
-            issues.append(f"Section still blank: {sid}")
-
-        if any(q.section_target.strip() == sid and q.status.strip() == "Open" for q in open_qs):
-            issues.append(f"Open questions remain for section: {sid}")
-
-    return (len(issues) == 0), issues
 
 def maybe_fill_bootstrap_problem(lines: List[str], problem_text: str) -> Tuple[List[str], bool]:
     """
@@ -1408,8 +772,6 @@ def main() -> int:
     template_path = Path(args.template).resolve()
     doc_path = Path(args.doc).resolve()
 
-    doc_created = False
-    change_summaries: List[str] = []
     # Pre-flight git safety (optional but smart)
     if not args.no_commit:
         if not is_working_tree_clean(REPO_ROOT):
@@ -1425,8 +787,6 @@ def main() -> int:
         logging.info("Doc missing; creating from template: %s -> %s", template_path, doc_path)
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(template_path, doc_path)
-        doc_created = True
-        change_summaries.append("Created requirements doc from template")
 
     doc_text = read_text(doc_path)
     lines = split_lines(doc_text)
@@ -1444,36 +804,6 @@ def main() -> int:
         changed = changed or did
         if did:
             logging.info("Bootstrap: filled Q-001 Answer from --problem input.")
-            change_summaries.append("Bootstrap: answered Q-001 from --problem")
-
-    lines_before_run = list(lines)
-
-    # Determine which phase to run: we run ONLY the first incomplete phase each run.
-    phase_to_run = None
-    complete_before = False
-
-    for ph in PHASE_ORDER:
-        if ph == "phase_1_intent_scope":
-            complete, _issues = validate_phase_1_complete(lines)
-        elif ph == "phase_2_assumptions_constraints":
-            # Phase 2 only matters after Phase 1 is complete.
-            p1_complete, _ = validate_phase_1_complete(lines)
-            if not p1_complete:
-                complete = False
-            else:
-                complete, _issues = validate_phase_2_complete(lines)
-        else:
-            complete = True
-
-        if not complete:
-            phase_to_run = ph
-            complete_before = False
-            break
-
-    if phase_to_run is None:
-        # Everything we currently know about is complete.
-        phase_to_run = "phase_2_assumptions_constraints"
-        complete_before = True
 
     # Initialize real LLM client
     try:
@@ -1482,39 +812,20 @@ def main() -> int:
         print(f"ERROR: LLM client init failed: {e}")
         return 2
 
-    # Run selected phase
+    # Phase 1
     try:
-        if phase_to_run == "phase_1_intent_scope":
-            lines, phase_changed, blocked, needs_human, phase_summaries = process_phase_1(lines, llm, args.dry_run)
-            complete_after, _ = validate_phase_1_complete(lines)
-        elif phase_to_run == "phase_2_assumptions_constraints":
-            lines, phase_changed, blocked, needs_human, phase_summaries = process_phase_2(lines, llm, args.dry_run)
-            complete_after, _ = validate_phase_2_complete(lines)
-        else:
-            phase_changed, blocked, needs_human, phase_summaries, complete_after = False, [], False, [], True
-
-        change_summaries.extend(phase_summaries)
+        lines, phase_changed, blocked, needs_human = process_phase_1(lines, llm, args.dry_run)
         changed = changed or phase_changed
     except Exception as e:
         logging.error("Run failed: %s", e, exc_info=True)
         return 2
 
-    # A phase completion transition is what triggers a minor version bump (0.x -> 0.(x+1)).
-    phase_completed_this_run = (not complete_before) and complete_after
-
-    lines, meta_changed = update_automation_owned_fields(lines_before_run, lines, doc_created=doc_created, phase_completed_this_run=phase_completed_this_run, change_summaries=change_summaries)
-    changed = changed or meta_changed
-    # Validate completeness for phases we know about (informational only).
-    p1_complete, p1_issues = validate_phase_1_complete(lines)
-    if not p1_complete:
-        for i in p1_issues:
+    # Validate Phase 1 completeness
+    complete, issues = validate_phase_1_complete(lines)
+    if not complete:
+        for i in issues:
             logging.info("PHASE 1 INCOMPLETE: %s", i)
 
-    if p1_complete:
-        p2_complete, p2_issues = validate_phase_2_complete(lines)
-        if not p2_complete:
-            for i in p2_issues:
-                logging.info("PHASE 2 INCOMPLETE: %s", i)
     # Outcome
     if blocked:
         outcome = "blocked"
@@ -1531,7 +842,7 @@ def main() -> int:
 
     # Commit/push (only if changed and enabled)
     if changed and not args.dry_run and not args.no_commit:
-        commit_msg = f"requirements: automation pass ({phase_to_run})"
+        commit_msg = "requirements: automation pass (phase 1)"
         allow = [str(doc_path.relative_to(REPO_ROOT)).replace("\\", "/")]
         commit_and_push(REPO_ROOT, commit_msg, allow_files=allow)
 
