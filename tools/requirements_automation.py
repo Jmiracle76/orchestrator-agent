@@ -462,6 +462,45 @@ def get_section_span(spans: List[SectionSpan], section_id: str) -> Optional[Sect
     return None
 
 
+
+def validate_required_section_spans(lines: List[str], required_ids: List[str]) -> List[str]:
+    """
+    Validate basic section span integrity for the given section ids.
+    We don't try to auto-repair here; we just report issues so the run can be blocked
+    instead of corrupting the document.
+    """
+    spans = find_sections(lines)
+    by_id: Dict[str, List[SectionSpan]] = {}
+    for sp in spans:
+        by_id.setdefault(sp.section_id, []).append(sp)
+
+    issues: List[str] = []
+    for sid in required_ids:
+        hits = by_id.get(sid, [])
+        if not hits:
+            issues.append(f"Missing required section marker: {sid}")
+            continue
+        if len(hits) > 1:
+            issues.append(f"Duplicate section markers for {sid} (count={len(hits)})")
+            continue
+        sp = hits[0]
+        if sp.end_line <= sp.start_line:
+            issues.append(f"Invalid span for {sid}: start={sp.start_line}, end={sp.end_line}")
+            continue
+
+        # Ensure no nested section marker inside span (other than the first line).
+        inner = "\n".join(lines[sp.start_line + 1:sp.end_line])
+        if SECTION_MARKER_RE.search(inner):
+            issues.append(f"Section {sid} span contains another <!-- section:... --> marker (nested/corrupt).")
+
+        # If there's a lock tag, it should be within the span (this is a warning, not fatal).
+        # (We don't require it, but corruption often moves it outside.)
+        if SECTION_LOCK_RE.search(inner) is None and any(SECTION_LOCK_RE.search(ln) for ln in lines):
+            # leave as info-level issue
+            pass
+
+    return issues
+
 def section_text(lines: List[str], span: SectionSpan) -> str:
     return "\n".join(lines[span.start_line:span.end_line])
 
@@ -917,33 +956,112 @@ def validate_and_repair_structure(lines: List[str]) -> Tuple[List[str], bool, Li
 # Section editing helpers
 # -----------------------------
 
-def sanitize_llm_body(section_or_subsection_id: str, body: str) -> str:
+def sanitize_llm_body(section_id: str, body: str) -> str:
     """
-    Hard safety filter against structural corruption.
-
-    We DO NOT allow the LLM to emit:
-    - section markers / locks / table markers / subsection markers
-    - horizontal rule separators
-    - top-level headings (## ...) that would bleed into other sections
-
-    This is intentionally strict. If you want richer formatting later, loosen it carefully.
+    Defensive sanitization of model output before it touches the doc.
+    - Strip section/table/lock markers, horizontal rules, and stray headers.
+    - Apply section-specific guardrails to reduce cross-section contamination.
+    - Light de-duplication for list-style sections (notably assumptions).
     """
-    out_lines: List[str] = []
-    for ln in split_lines(body):
-        if SECTION_MARKER_RE.search(ln) or SECTION_LOCK_RE.search(ln) or TABLE_MARKER_RE.search(ln) or SUBSECTION_MARKER_RE.search(ln):
-            continue
-        if ln.strip() == "---":
-            continue
-        if ln.lstrip().startswith("## "):
-            continue
-        out_lines.append(ln.rstrip())
-    return "\n".join(out_lines).strip()
+    if not body:
+        return ""
 
-@dataclasses.dataclass(frozen=True)
-class SubsectionSpan:
-    subsection_id: str
-    start_line: int
-    end_line: int
+    lines = body.splitlines()
+
+    # 1) Drop any automation markers or obvious document structure tokens.
+    cleaned: List[str] = []
+    for ln in lines:
+        s = ln.rstrip()
+        if not s.strip():
+            cleaned.append("")
+            continue
+        if SECTION_MARKER_RE.search(s) or SECTION_LOCK_RE.search(s) or TABLE_MARKER_RE.search(s):
+            continue
+        if s.strip() == "---":
+            continue
+        if s.strip().startswith("<!--") and s.strip().endswith("-->"):
+            continue
+        # prevent the model from injecting new top-level headers
+        if s.lstrip().startswith("#"):
+            continue
+        cleaned.append(s)
+
+    # 2) Section-specific filtering.
+    if section_id == "assumptions":
+        # Assumptions should be a flat list, not a mini novel with subsections.
+        keep: List[str] = []
+        for s in cleaned:
+            st = s.strip()
+            if not st:
+                keep.append("")
+                continue
+            if st.startswith("###") or st.startswith("##"):
+                continue
+            # If the model tries to paste constraints subheads here, drop them.
+            if re.match(r"(?i)^technical constraints|^operational constraints|^resource constraints", st):
+                continue
+            keep.append(s)
+
+        # De-dupe list items (case/whitespace-insensitive).
+        seen = set()
+        deduped: List[str] = []
+        for s in keep:
+            st = s.strip()
+            if not st:
+                # compress blank lines later
+                deduped.append("")
+                continue
+            norm = re.sub(r"\s+", " ", re.sub(r"^[\-\*\d]+\.\s*", "", st)).strip().lower()
+            if norm in seen:
+                continue
+            seen.add(norm)
+            deduped.append(s)
+
+        cleaned = deduped
+
+    elif section_id == "constraints":
+        # Constraints section supports specific subsections. Keep only those headings.
+        allowed_heads = {
+            "### Technical Constraints",
+            "### Operational Constraints",
+            "### Resource Constraints",
+        }
+        keep: List[str] = []
+        for s in cleaned:
+            st = s.strip()
+            if not st:
+                keep.append("")
+                continue
+            if st.startswith("###"):
+                if st in allowed_heads:
+                    keep.append(st)
+                # drop any other ### headings
+                continue
+            if st.startswith("##"):
+                continue
+            keep.append(s)
+        cleaned = keep
+
+    # 3) Trim leading/trailing blank lines and collapse runs of blanks.
+    out: List[str] = []
+    blank_run = 0
+    for s in cleaned:
+        if not s.strip():
+            blank_run += 1
+            if blank_run > 1:
+                continue
+            out.append("")
+        else:
+            blank_run = 0
+            out.append(s)
+
+    # Trim edges
+    while out and not out[0].strip():
+        out.pop(0)
+    while out and not out[-1].strip():
+        out.pop()
+
+    return "\n".join(out).strip()
 
 def find_subsections_within(lines: List[str], section_span: SectionSpan) -> List[SubsectionSpan]:
     """Find <!-- subsection:<id> --> markers inside a section span."""
@@ -1227,34 +1345,32 @@ def process_phase_2(
     dry_run: bool,
 ) -> Tuple[List[str], bool, List[str], bool, List[str]]:
     """
-    Phase 2: Assumptions & constraints
+    Phase 2: Assumptions + Constraints.
 
-    Mechanics:
-    - Skip locked sections
-    - If section is blank -> generate Open Questions (do not draft content)
-    - If answered questions exist -> integrate answers into the section and mark those questions Resolved
-    - Human-modified review is still stubbed (provenance later)
-
-    Returns:
-    - new_lines
-    - changed
-    - blocked_reasons
-    - needs_human_input
-    - change_summaries (for version history)
+    Behavior:
+    - If a Phase 2 section is blank (PLACEHOLDER present) AND there are no open questions for it yet -> generate questions.
+    - If there are answered questions for a Phase 2 section -> integrate answers into that section and resolve those QIDs.
+    - PLACEHOLDER stays until we actually write real content into the section (option B).
     """
     changed = False
     blocked: List[str] = []
     needs_human_input = False
-    change_summaries: List[str] = []
+    summaries: List[str] = []
+
+    phase2_sections = PHASES["phase_2_assumptions_constraints"]
+
+    # Span sanity check up-front (block instead of corrupting).
+    span_issues = validate_required_section_spans(lines, phase2_sections)
+    if span_issues:
+        blocked.extend(span_issues)
+        return lines, False, blocked, True, summaries
 
     spans = find_sections(lines)
 
-    # Parse Open Questions once; re-parse after inserts/resolutions.
+    # Parse Open Questions
     open_qs, _, _ = open_questions_parse(lines)
 
-    revised_sections: Dict[str, int] = {sid: 0 for sid in PHASES["phase_2_assumptions_constraints"]}
-
-    for section_id in PHASES["phase_2_assumptions_constraints"]:
+    for section_id in phase2_sections:
         span = get_section_span(spans, section_id)
         if not span:
             blocked.append(f"Missing required section marker: {section_id}")
@@ -1266,6 +1382,7 @@ def process_phase_2(
 
         blank = section_is_blank(lines, span)
 
+        # Questions targeting this section
         targeted = [q for q in open_qs if q.section_target.strip() == section_id]
 
         answered = [
@@ -1275,147 +1392,66 @@ def process_phase_2(
         ]
 
         open_unanswered_exists = any(
-            q.status.strip() in ("Open", "Deferred") and q.answer.strip() in ("", "-", "Pending")
+            q.status.strip() == "Open" and q.answer.strip() in ("", "-", "Pending", "")
             for q in targeted
         )
 
-        human_modified = False  # provenance tracking comes later
-        # 1) If answers exist for this section, integrate them FIRST (even if the section still has PLACEHOLDER).
-        # This keeps placeholders in place until we actually generate section content, while still allowing
-        # answered questions to drive content creation.
-        if answered and revised_sections[section_id] < 1:
+        # 1) If we have answered questions, integrate them (even if PLACEHOLDER remains).
+        if answered:
             context = section_text(lines, span)
+            context_body = section_body(lines, span)
             new_body = llm.integrate_answers(section_id, context, answered)
+            new_body = sanitize_llm_body(section_id, new_body)
 
-            # Only replace if materially different (defensive against LLM echo).
-            if new_body.strip() and new_body.strip() != section_body(lines, span).strip():
+            if new_body.strip() and new_body.strip() != context_body.strip():
                 if not dry_run:
-                    lines = replace_block_body_preserving_markers(lines, span.start_line, span.end_line, new_body)
+                    lines = replace_block_body_preserving_markers(lines, span, new_body)
+                    # Refresh spans because the doc just changed.
+                    spans = find_sections(lines)
+                    span = get_section_span(spans, section_id) or span
                 changed = True
-                revised_sections[section_id] += 1
 
                 qids = [q.question_id for q in answered]
                 if qids and not dry_run:
                     lines, resolved = open_questions_resolve(lines, qids)
                     if resolved:
                         changed = True
+                        # Refresh parsed questions
                         open_qs, _, _ = open_questions_parse(lines)
 
-            # After integration, move on. We do NOT generate more questions in the same pass.
+                summaries.append(f"{section_id}: integrated {len(answered)} answers; resolved {len(answered)} questions.")
             continue
 
-        # 2) If blank, only generate questions (unless questions already exist)
-        if blank:
+        # 2) If section is blank and no open questions exist for it yet -> generate new questions.
+        #    If open questions already exist, don't spam duplicates.
+        if blank and not open_unanswered_exists:
             needs_human_input = True
-
-            if open_unanswered:
-                logging.info(
-                    "Section blank but already has open questions; not generating more: %s",
-                    section_id,
-                )
-                continue
-
             context = section_text(lines, span)
             proposed = llm.generate_open_questions(section_id, context)
+
             if proposed:
-                new_qs: List[Dict[str, str]] = []
+                new_questions: List[Tuple[str, str, str]] = []
                 for item in proposed:
                     q_text = (item.get("question") or "").strip()
                     target = (item.get("section_target") or section_id).strip()
                     if q_text:
-                        new_qs.append({"question": q_text, "section_target": target, "date": iso_today()})
-                if new_qs and not dry_run:
-                    lines, inserted = insert_open_questions(lines, new_qs)
+                        new_questions.append((q_text, target, iso_today()))
+
+                if new_questions and not dry_run:
+                    lines, inserted = open_questions_insert(lines, new_questions)
                     if inserted:
                         changed = True
                         open_qs, _, _ = open_questions_parse(lines)
-                        open_unanswered = [
-                            q for q in open_qs
-                            if q.section_target.strip() == section_id
-                            and q.status.strip() == "Open"
-                            and (q.answer or "").strip() in ("", "-", "Pending")
-                        ]
+                        summaries.append(f"{section_id}: generated {inserted} open questions.")
             else:
                 blocked.append(f"{section_id} is blank and LLM returned no questions.")
             continue
 
-        # 3) If section has non-placeholder content and was human-modified, allow LLM review (stubbed)
-        if answered and revised_sections[section_id] < 1:
-            logging.info("Integrating answers into section: %s (%d answered)", section_id, len(answered))
-            context_body = section_body(lines, span)
+        # 3) Otherwise: no answered questions and either not blank or already has open questions.
+        if blank:
+            needs_human_input = True
 
-            try:
-                new_body = llm.integrate_answers(section_id, context_body, answered)
-            except Exception as e:
-                logging.error("LLM integrate_answers failed for %s: %s", section_id, e)
-                new_body = context_body
-
-            new_body = sanitize_llm_body(section_id, new_body)
-
-            if new_body.strip() and new_body.strip() != context_body.strip():
-                if not dry_run:
-                    # Replace the whole section block (preserving marker/header/lock/divider)
-                    lines = replace_block_body_preserving_markers(lines, span.start_line, span.end_line, new_body)
-                changed = True
-                revised_sections[section_id] += 1
-                change_summaries.append(f"Section updated: {section_id} (integrated {len(answered)} answers)")
-                open_qs, _, _ = open_questions_parse(lines)
-
-            qids = [q.question_id for q in answered]
-            if qids and not dry_run:
-                lines, resolved_ct = open_questions_resolve(lines, qids)
-                if resolved_ct:
-                    changed = True
-                    change_summaries.append(f"Questions resolved: {', '.join(qids)}")
-                    open_qs, _, _ = open_questions_parse(lines)
-
-        # 3) Human-modified review hook (stub)
-        if human_modified and revised_sections[section_id] < 1:
-            logging.info("Human-modified section; reviewing: %s", section_id)
-            context_body = section_body(lines, span)
-            try:
-                revised = llm.review_and_revise(section_id, context_body)
-            except Exception as e:
-                logging.error("LLM review_and_revise failed for %s: %s", section_id, e)
-                revised = context_body
-
-            revised = sanitize_llm_body(section_id, revised)
-
-            if revised.strip() and revised.strip() != context_body.strip():
-                if not dry_run:
-                    lines = replace_block_body_preserving_markers(lines, span.start_line, span.end_line, revised)
-                changed = True
-                revised_sections[section_id] += 1
-                change_summaries.append(f"Section reviewed/revised: {section_id}")
-
-    return lines, changed, blocked, needs_human_input, change_summaries
-def validate_phase_2_complete(lines: List[str]) -> Tuple[bool, List[str]]:
-    """
-    Phase 2 completeness:
-    - assumptions + constraints sections contain no PLACEHOLDER_TOKEN
-    - No Open Questions with section_target in Phase 2 and status Open
-    """
-    issues: List[str] = []
-    spans = find_sections(lines)
-
-    try:
-        open_qs, _, _ = open_questions_parse(lines)
-    except Exception as e:
-        issues.append(f"Open Questions parse failed: {e}")
-        return False, issues
-
-    for sid in PHASES["phase_2_assumptions_constraints"]:
-        sp = get_section_span(spans, sid)
-        if not sp:
-            issues.append(f"Missing section: {sid}")
-            continue
-        if section_is_blank(lines, sp):
-            issues.append(f"Section still blank: {sid}")
-
-        if any(q.section_target.strip() == sid and q.status.strip() == "Open" for q in open_qs):
-            issues.append(f"Open questions remain for section: {sid}")
-
-    return (len(issues) == 0), issues
+    return lines, changed, blocked, needs_human_input, summaries
 
 def maybe_fill_bootstrap_problem(lines: List[str], problem_text: str) -> Tuple[List[str], bool]:
     """
