@@ -1288,7 +1288,7 @@ def process_phase_2(
             new_body = llm.integrate_answers(section_id, context, answered)
 
             # Only replace if materially different (defensive against LLM echo).
-            if new_body.strip() and new_body.strip() != section_body(context).strip():
+            if new_body.strip() and new_body.strip() != section_body(lines, span).strip():
                 if not dry_run:
                     lines = replace_block_body_preserving_markers(lines, span, new_body)
                 changed = True
