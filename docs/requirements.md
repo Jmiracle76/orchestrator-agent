@@ -119,8 +119,10 @@ The project addresses the inconsistency, time consumption, and scope-creep risk 
 
 <!-- section_lock:goals_objectives lock=false -->
 ---
-<!-- subsection:primary_stakeholders -->
-### Primary Stakeholders
+
+
+<!-- section:stakeholders_users -->
+## 4. Stakeholders and Users
 
 - **Repo owner (project author)**: Defines intent, approves requirements, wants reliable bounded plans and repository safety
 - **Future contributors**: Implement enhancements and new phases/agents, need clear structure and guardrails
@@ -149,12 +151,8 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 - Recommend readiness for approval
 - Handoff to planning agent to produce milestones/tasks/tests from approved requirements
 
-
----
-
-<!-- section:stakeholders_users -->
-## 4. Stakeholders and Users
 <!-- subsection:primary_stakeholders -->
+### Primary Stakeholders
 
 <!-- table:primary_stakeholders -->
 | Stakeholder | Role | Interest/Need | Contact |
@@ -164,6 +162,7 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 | Maintenance team | Technical support | Sustain and troubleshoot automation framework | TBD |
 
 <!-- subsection:end_users -->
+### End Users
 
 <!-- table:end_users -->
 | User Type | Characteristics | Needs | Use Cases |
@@ -174,6 +173,7 @@ Single-owner system. Primary stakeholder contact is the repo owner; no formal co
 
 <!-- section_lock:stakeholders_users lock=false -->
 ---
+
 <!-- section:assumptions -->
 ## 5. Assumptions
 <!-- PLACEHOLDER -->
