@@ -1280,45 +1280,66 @@ def process_phase_2(
         )
 
         human_modified = False  # provenance tracking comes later
+        # 1) If answers exist for this section, integrate them FIRST (even if the section still has PLACEHOLDER).
+        # This keeps placeholders in place until we actually generate section content, while still allowing
+        # answered questions to drive content creation.
+        if answered and revised_sections[section_id] < 1:
+            context = section_text(lines, span)
+            new_body = llm.integrate_answers(section_id, context, answered)
 
-        # 1) If blank, only generate questions (unless questions already exist)
+            # Only replace if materially different (defensive against LLM echo).
+            if new_body.strip() and new_body.strip() != section_body(context).strip():
+                if not dry_run:
+                    lines = replace_block_body_preserving_markers(lines, span, new_body)
+                changed = True
+                revised_sections[section_id] += 1
+
+                qids = [q.question_id for q in answered]
+                if qids and not dry_run:
+                    lines, resolved = open_questions_resolve(lines, qids)
+                    if resolved:
+                        changed = True
+                        open_qs, _, _ = open_questions_parse(lines)
+
+            # After integration, move on. We do NOT generate more questions in the same pass.
+            continue
+
+        # 2) If blank, only generate questions (unless questions already exist)
         if blank:
             needs_human_input = True
 
-            if open_unanswered_exists:
-                logging.info("Section blank but already has open questions; not generating more: %s", section_id)
+            if open_unanswered:
+                logging.info(
+                    "Section blank but already has open questions; not generating more: %s",
+                    section_id,
+                )
                 continue
 
-            logging.info("Section blank, generating questions: %s", section_id)
-            context_body = section_body(lines, span)
-
-            try:
-                proposed = llm.generate_open_questions(section_id, context_body)
-            except Exception as e:
-                logging.error("LLM generate_open_questions failed for %s: %s", section_id, e)
-                proposed = []
-
+            context = section_text(lines, span)
+            proposed = llm.generate_open_questions(section_id, context)
             if proposed:
-                # llm returns dicts; convert to our tuple format
-                new_qs: List[Tuple[str, str, str]] = []
-                for q in proposed:
-                    qt = (q.get("question") or "").strip()
-                    st = (q.get("section_target") or section_id).strip() or section_id
-                    if qt:
-                        new_qs.append((qt, st, iso_today()))
-
+                new_qs: List[Dict[str, str]] = []
+                for item in proposed:
+                    q_text = (item.get("question") or "").strip()
+                    target = (item.get("section_target") or section_id).strip()
+                    if q_text:
+                        new_qs.append({"question": q_text, "section_target": target, "date": iso_today()})
                 if new_qs and not dry_run:
-                    lines, inserted = open_questions_insert(lines, new_qs)
+                    lines, inserted = insert_open_questions(lines, new_qs)
                     if inserted:
                         changed = True
-                        change_summaries.append(f"Generated {inserted} open questions for {section_id}")
                         open_qs, _, _ = open_questions_parse(lines)
+                        open_unanswered = [
+                            q for q in open_qs
+                            if q.section_target.strip() == section_id
+                            and q.status.strip() == "Open"
+                            and (q.answer or "").strip() in ("", "-", "Pending")
+                        ]
             else:
-                blocked.append(f"{section_id} is blank and no questions were generated.")
-
+                blocked.append(f"{section_id} is blank and LLM returned no questions.")
             continue
 
-        # 2) If answered questions exist, integrate and resolve
+        # 3) If section has non-placeholder content and was human-modified, allow LLM review (stubbed)
         if answered and revised_sections[section_id] < 1:
             logging.info("Integrating answers into section: %s (%d answered)", section_id, len(answered))
             context_body = section_body(lines, span)
