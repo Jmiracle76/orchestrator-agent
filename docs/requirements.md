@@ -360,19 +360,6 @@ Single human owner approval is required for project acceptance. The automation s
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-064 | What are the technical limitations or requirements that must be adhered to (e.g., specific technologies, platforms, programming languages, APIs, security standards, compatibility requirements)? | 2026-02-10 |  | constraints | Open |
-| Q-065 | Are there any performance requirements or limitations (e.g., response time, throughput, scalability limits, system availability)? | 2026-02-10 |  | constraints | Open |
-| Q-066 | What operational constraints exist (e.g., maintenance windows, deployment procedures, support hours, compliance requirements, regulatory restrictions)? | 2026-02-10 |  | constraints | Open |
-| Q-067 | What are the resource limitations for this project (e.g., budget cap, team size, timeline deadlines, infrastructure availability, third-party service quotas)? | 2026-02-10 |  | constraints | Open |
-| Q-068 | Are there any existing systems, legacy code, or dependencies that must be integrated with or cannot be changed? | 2026-02-10 |  | constraints | Open |
-| Q-069 | Are there data retention, privacy, or security policies that limit how the system can be designed or operated? | 2026-02-10 |  | constraints | Open |
-| Q-057 | What assumptions are you making about the target users or user behavior? | 2026-02-10 |  | assumptions | Open |
-| Q-058 | What technical or infrastructure assumptions are being made (e.g., existing systems, platforms, or technologies)? | 2026-02-10 |  | assumptions | Open |
-| Q-059 | What assumptions are you making about available resources (budget, timeline, team size)? | 2026-02-10 |  | assumptions | Open |
-| Q-060 | Are there any assumptions about third-party services, APIs, or external dependencies? | 2026-02-10 |  | assumptions | Open |
-| Q-061 | What assumptions are being made about data availability, quality, or access? | 2026-02-10 |  | assumptions | Open |
-| Q-062 | Are there assumptions about regulatory, compliance, or security requirements? | 2026-02-10 |  | assumptions | Open |
-| Q-063 | What assumptions exist about the business environment or market conditions? | 2026-02-10 |  | assumptions | Open |
 | Q-047 | What specific technologies, platforms, or programming languages must be used or avoided? | 2026-02-10 | Must use Python for the automation script. Must not require heavyweight services (no DB required). Keep dependencies minimal (anthropic SDK ok). Avoid tooling that forces a specific IDE or cloud platform. | constraints | Resolved |
 | Q-048 | Are there any required integrations with existing systems or APIs? | 2026-02-10 | Required: Anthropic Messages API via ANTHROPIC_API_KEY. Required: local git CLI for safety-net commits/push. No other integrations required for Phase 2. | constraints | Resolved |
 | Q-049 | What are the performance requirements (e.g., response time, throughput, uptime SLAs)? | 2026-02-10 | Target: complete a typical requirements pass in under ~60 seconds for small repos (dominated by LLM calls). Script should not do expensive repo scans. Must be responsive enough for iterative runs without “coffee breaks”. | constraints | Resolved |
