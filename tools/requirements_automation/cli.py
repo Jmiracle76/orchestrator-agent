@@ -4,7 +4,7 @@ from pathlib import Path
 from dataclasses import asdict
 from typing import List
 from .models import RunResult
-from .config import DEFAULT_DOC_TYPE, SPECIAL_WORKFLOW_PREFIXES, SUPPORTED_DOC_TYPES
+from .config import DEFAULT_DOC_TYPE, SUPPORTED_DOC_TYPES, is_special_workflow_target
 from .parsing import extract_metadata, extract_workflow_order, find_sections
 from .utils_io import read_text, write_text, split_lines, join_lines, backup_file_outside_repo
 from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_push
@@ -69,8 +69,7 @@ def main(argv: List[str] | None = None) -> int:
     section_ids = {sp.section_id for sp in find_sections(lines)}
     invalid_targets = [
         target for target in workflow_order
-        if not any(target.startswith(prefix) for prefix in SPECIAL_WORKFLOW_PREFIXES)
-        and target not in section_ids
+        if not is_special_workflow_target(target) and target not in section_ids
     ]
     if invalid_targets:
         valid = ", ".join(sorted(section_ids))
@@ -79,7 +78,11 @@ def main(argv: List[str] | None = None) -> int:
         logging.error("Valid section IDs: %s", valid)
         return 2
 
-    target, _ = choose_next_target(lines, workflow_order)
+    try:
+        target, _ = choose_next_target(lines, workflow_order)
+    except ValueError as e:
+        logging.error("Workflow order selection failed: %s", e)
+        return 2
     lines, phase_changed, blocked, _needs_human, _summaries = run_phase(
         target,
         lines,

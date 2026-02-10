@@ -58,6 +58,9 @@ PHASES = {
 # Workflow targets that are not section IDs.
 SPECIAL_WORKFLOW_PREFIXES = ["review_gate:"]
 
+def is_special_workflow_target(target: str) -> bool:
+    return any(target.startswith(prefix) for prefix in SPECIAL_WORKFLOW_PREFIXES)
+
 # Maps alias section IDs to canonical targets for consistency.
 TARGET_CANONICAL_MAP = {
     "primary_goals": "goals_objectives",

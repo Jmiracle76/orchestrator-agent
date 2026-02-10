@@ -1,16 +1,15 @@
 from __future__ import annotations
 from typing import List, Tuple
-from .config import PHASES, SPECIAL_WORKFLOW_PREFIXES
+from .config import PHASES, is_special_workflow_target
 from .validators import validate_section_complete
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 
-def _is_special_target(target: str) -> bool:
-    return any(target.startswith(prefix) for prefix in SPECIAL_WORKFLOW_PREFIXES)
-
 def choose_next_target(lines: List[str], workflow_order: List[str]) -> Tuple[str, bool]:
     """Return the next incomplete workflow target and whether all are complete."""
+    if not workflow_order:
+        raise ValueError("Workflow order is empty.")
     for target in workflow_order:
-        if _is_special_target(target):
+        if is_special_workflow_target(target):
             return target, False
         complete, _ = validate_section_complete(target, lines)
         if not complete:
