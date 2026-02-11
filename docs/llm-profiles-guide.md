@@ -622,7 +622,7 @@ Add comments explaining why rules exist:
 ```markdown
 ## Question Generation Guidelines
 - Do NOT ask questions answerable from existing context
-  # Rationale: Reduces user burden and avoids redundant questions
+  <!-- Rationale: Reduces user burden and avoids redundant questions -->
 ```
 
 ---
