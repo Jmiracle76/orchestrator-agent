@@ -151,28 +151,19 @@ A dedicated technical owner is assumed available to maintain orchestration logic
 ---
 <!-- section:constraints -->
 ## 6. Constraints
-<!-- PLACEHOLDER -->
-<!-- subsection:technical_constraints -->
-### Technical Constraints
-<!-- PLACEHOLDER -->
-- [Technical constraint 1] 
-- [Technical constraint 2] 
+The orchestration layer SHALL be implemented in Python. Requirements documents SHALL be Markdown-based. The system SHALL use GitHub for issue tracking and repository management. LLM integration SHALL occur exclusively via approved API endpoints. The system SHALL operate within a CLI-driven execution model. No mandatory GUI dependency exists for the initial release.
 
-<!-- subsection:operational_constraints -->
-### Operational Constraints
-<!-- PLACEHOLDER -->
-- [Operational constraint 1] 
-- [Operational constraint 2] 
+The system SHALL depend on GitHub APIs for issue creation and repository operations. LLM provider APIs SHALL be used for question generation and structured output. Existing repository structure and conventions SHALL NOT be arbitrarily altered. API rate limits and service availability SHALL be respected. Authentication mechanisms SHALL align with current credential management practices.
 
-<!-- subsection:resource_constraints -->
-### Resource Constraints
-<!-- PLACEHOLDER -->
-- [Resource constraint 1] 
-- [Resource constraint 2] 
+Repository integrity SHALL NOT be compromised under any circumstances. Existing branching and pull request workflows SHALL remain intact. The system SHALL NOT disrupt active development outside the defined scope. Agent runs SHALL be manually triggered during initial deployment. No automated merges SHALL occur without explicit approval.
 
+All AI-generated changes SHALL require human approval prior to merge. Auditability and traceability of changes are mandatory.
+
+The development team consists of 1–3 primary contributors. Limited development bandwidth exists due to parallel responsibilities. Budget constraints are tied to LLM API usage costs. The project SHALL follow an iterative development approach rather than a large upfront build. Timeline flexibility exists, but scope SHALL remain controlled to avoid expansion.
+
+No formal regulatory frameworks (e.g., GDPR, HIPAA) are in scope for initial implementation. Repository access SHALL follow least-privilege principles. The system SHALL NOT process sensitive or regulated production data.
 <!-- section_lock:constraints lock=false -->
 ---
-
 <!-- section:requirements -->
 ## 7.  Requirements
 <!-- PLACEHOLDER -->
@@ -281,11 +272,11 @@ A dedicated technical owner is assumed available to maintain orchestration logic
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-022 | What are the technical platform constraints (e.g., required operating systems, browser versions, database systems, programming languages, or frameworks that must or must not be used)? | 2026-02-11 | •	The orchestration layer must run in Python •	Requirements documents must be Markdown-based •	GitHub must be used for issue tracking and repository management •	LLM integration must occur via approved API endpoints •	The system must operate within a CLI-driven execution model •	No mandatory GUI dependency for initial release  | constraints | Open |
-| Q-023 | Are there regulatory, compliance, or legal constraints that limit design or implementation choices (e.g., GDPR, HIPAA, SOC 2, data residency requirements)? | 2026-02-11 | •	No formal regulatory frameworks (e.g., GDPR, HIPAA) are in scope for initial implementation •	Repository access must follow least-privilege principles •	All AI-generated changes must require human approval prior to merge •	Auditability and traceability of changes are mandatory •	No sensitive or regulated production data will be processed by the system   | constraints | Open |
-| Q-024 | What are the resource constraints in terms of budget, team size, available personnel skillsets, or timeline that impact scope? | 2026-02-11 | •	Small technical team (1–3 primary contributors) •	Limited development bandwidth due to parallel responsibilities •	Budget constraints tied to LLM API usage costs •	Iterative development approach rather than large upfront build •	Timeline flexibility, but scope must remain controlled to avoid expansion  | constraints | Open |
-| Q-025 | Are there operational constraints such as deployment windows, maintenance schedules, required uptime periods, or integration with existing systems that must be preserved? | 2026-02-11 | •	Repository integrity must never be compromised •	Existing branching and pull request workflows must remain intact •	No disruption to active development outside defined scope •	Agent runs must be manually triggered during initial deployment •	No automated merges without explicit approval | constraints | Open |
-| Q-026 | What third-party service dependencies or vendor constraints exist (e.g., APIs that must be used, services that cannot be changed, existing contracts)? | 2026-02-11 | •	Dependency on GitHub APIs for issue creation and repository operations •	Dependency on LLM provider APIs for question generation and structured output •	Existing repository structure and conventions cannot be arbitrarily altered •	API rate limits and service availability must be respected •	Authentication mechanisms must align with current credential management practices | constraints | Open |
+| Q-022 | What are the technical platform constraints (e.g., required operating systems, browser versions, database systems, programming languages, or frameworks that must or must not be used)? | 2026-02-11 | •	The orchestration layer must run in Python •	Requirements documents must be Markdown-based •	GitHub must be used for issue tracking and repository management •	LLM integration must occur via approved API endpoints •	The system must operate within a CLI-driven execution model •	No mandatory GUI dependency for initial release | constraints | Resolved |
+| Q-023 | Are there regulatory, compliance, or legal constraints that limit design or implementation choices (e.g., GDPR, HIPAA, SOC 2, data residency requirements)? | 2026-02-11 | •	No formal regulatory frameworks (e.g., GDPR, HIPAA) are in scope for initial implementation •	Repository access must follow least-privilege principles •	All AI-generated changes must require human approval prior to merge •	Auditability and traceability of changes are mandatory •	No sensitive or regulated production data will be processed by the system | constraints | Resolved |
+| Q-024 | What are the resource constraints in terms of budget, team size, available personnel skillsets, or timeline that impact scope? | 2026-02-11 | •	Small technical team (1–3 primary contributors) •	Limited development bandwidth due to parallel responsibilities •	Budget constraints tied to LLM API usage costs •	Iterative development approach rather than large upfront build •	Timeline flexibility, but scope must remain controlled to avoid expansion | constraints | Resolved |
+| Q-025 | Are there operational constraints such as deployment windows, maintenance schedules, required uptime periods, or integration with existing systems that must be preserved? | 2026-02-11 | •	Repository integrity must never be compromised •	Existing branching and pull request workflows must remain intact •	No disruption to active development outside defined scope •	Agent runs must be manually triggered during initial deployment •	No automated merges without explicit approval | constraints | Resolved |
+| Q-026 | What third-party service dependencies or vendor constraints exist (e.g., APIs that must be used, services that cannot be changed, existing contracts)? | 2026-02-11 | •	Dependency on GitHub APIs for issue creation and repository operations •	Dependency on LLM provider APIs for question generation and structured output •	Existing repository structure and conventions cannot be arbitrarily altered •	API rate limits and service availability must be respected •	Authentication mechanisms must align with current credential management practices | constraints | Resolved |
 | Q-017 | What assumptions are being made about the availability and reliability of external dependencies or third-party services? | 2026-02-11 | •	GitHub API availability is stable and accessible during orchestration runs •	LLM provider APIs are reachable and operational •	Authentication tokens and credentials are valid and properly scoped •	No unexpected breaking API changes occur during initial implementation •	Third-party services respond within acceptable latency thresholds for iterative workflows | assumptions | Resolved |
 | Q-018 | What assumptions exist regarding user technical proficiency, device capabilities, or network connectivity? | 2026-02-11 | •	Users have moderate to advanced technical proficiency •	Users are comfortable with CLI tools and repository workflows •	Execution environments have stable internet connectivity •	Local systems running orchestration scripts meet basic runtime requirements •	Users can interpret structured logs and error messages | assumptions | Resolved |
 | Q-019 | Are there assumptions about existing infrastructure, data availability, or legacy system behavior that the project depends on? | 2026-02-11 | •	Requirements documents follow a consistent Markdown structure •	GitHub repositories use standard branching and pull request workflows •	Version control history is intact and auditable •	Invocation scripts operate in a predictable, repeatable runtime environment •	No undocumented automation currently modifies repository state | assumptions | Resolved |
