@@ -8,6 +8,7 @@ and quality without mutating documents directly. They return structured results
 from __future__ import annotations
 import logging
 from typing import List, Dict, Tuple
+from dataclasses import replace
 from .models import HandlerConfig, ReviewIssue, ReviewPatch, ReviewResult
 from .parsing import (
     find_sections, 
@@ -206,25 +207,25 @@ class ReviewGateHandler:
             # Check section exists
             if not section_exists(patch.section, self.lines):
                 logging.warning(f"Patch targets unknown section: {patch.section}")
-                validated_patches.append(patch._replace(validated=False))
+                validated_patches.append(replace(patch, validated=False))
                 continue
             
             # Check suggestion is non-empty
             if not patch.suggestion.strip():
                 logging.warning(f"Patch has empty suggestion: {patch.section}")
-                validated_patches.append(patch._replace(validated=False))
+                validated_patches.append(replace(patch, validated=False))
                 continue
             
             # Check suggestion doesn't contain structure markers
             if contains_markers(patch.suggestion):
                 logging.warning(f"Patch contains structure markers: {patch.section}")
-                validated_patches.append(patch._replace(validated=False))
+                validated_patches.append(replace(patch, validated=False))
                 continue
             
             # Passed validation
-            validated_patches.append(patch._replace(validated=True))
+            validated_patches.append(replace(patch, validated=True))
         
-        return result._replace(patches=validated_patches)
+        return replace(result, patches=validated_patches)
     
     def apply_patches_if_configured(
         self, result: ReviewResult, config: HandlerConfig
