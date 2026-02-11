@@ -73,6 +73,11 @@ class HandlerRegistry:
         "scope",
     }
     
+    # Optional keys in handler config
+    OPTIONAL_KEYS = {
+        "validation_rules",  # for review_gate mode
+    }
+    
     def __init__(self, config_path: Path):
         """
         Initialize the handler registry from a YAML configuration file.
@@ -230,8 +235,9 @@ class HandlerRegistry:
                 "preserve_headers": [],
                 "sanitize_remove": [],
                 "llm_profile": "requirements",  # Default to requirements profile
-                "auto_apply_patches": False,
+                "auto_apply_patches": "never",
                 "scope": "current_section",
+                "validation_rules": [],
             }
         
         # Create HandlerConfig object
@@ -246,6 +252,7 @@ class HandlerRegistry:
             llm_profile=handler_data["llm_profile"],
             auto_apply_patches=handler_data["auto_apply_patches"],
             scope=handler_data["scope"],
+            validation_rules=handler_data.get("validation_rules", []),
         )
     
     def supports_doc_type(self, doc_type: str) -> bool:

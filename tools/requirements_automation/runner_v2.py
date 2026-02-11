@@ -8,6 +8,7 @@ from .parsing import find_sections, get_section_span, section_is_locked, section
 from .open_questions import open_questions_parse
 from .config import TARGET_CANONICAL_MAP
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
+from .review_gate_handler import ReviewGateHandler
 
 
 def _canon_target(t: str) -> str:
@@ -159,15 +160,30 @@ class WorkflowRunner:
         
         # Check if this is a review gate (special handling)
         if handler_config and handler_config.mode == "review_gate":
-            # Review gates not yet implemented (Issue 7)
-            logging.info("Review gate '%s' configured but not yet implemented", target_id)
+            # Execute review gate
+            handler = ReviewGateHandler(self.llm, self.lines, self.doc_type)
+            review_result = handler.execute_review(target_id, handler_config)
+            
+            # Optionally apply patches
+            self.lines, patches_applied = handler.apply_patches_if_configured(
+                review_result, handler_config
+            )
+            
+            # Convert to WorkflowResult
             return WorkflowResult(
                 target_id=target_id,
-                action_taken="skip_special",
-                changed=False,
-                blocked=True,
-                blocked_reasons=[f"Review gate '{target_id}' not implemented"],
-                summaries=[f"Skipped review gate: {target_id}"],
+                action_taken="review_gate",
+                changed=patches_applied,
+                blocked=not review_result.passed,
+                blocked_reasons=[
+                    f"{i.severity}: {i.description}" 
+                    for i in review_result.issues 
+                    if i.severity == "blocker"
+                ],
+                summaries=[review_result.summary] + [
+                    f"{i.severity}: {i.description}" 
+                    for i in review_result.issues
+                ],
                 questions_generated=0,
                 questions_resolved=0,
             )
@@ -301,8 +317,33 @@ class WorkflowRunner:
                             self.doc_type, target_id
                         )
                         if handler_config.mode == "review_gate":
-                            # Review gates not yet implemented (Issue 7)
-                            logging.info("Review gate '%s' configured but not yet implemented", target_id)
+                            # Execute review gate
+                            handler = ReviewGateHandler(self.llm, self.lines, self.doc_type)
+                            review_result = handler.execute_review(target_id, handler_config)
+                            
+                            # Optionally apply patches
+                            self.lines, patches_applied = handler.apply_patches_if_configured(
+                                review_result, handler_config
+                            )
+                            
+                            # Convert to WorkflowResult
+                            return WorkflowResult(
+                                target_id=target_id,
+                                action_taken="review_gate",
+                                changed=patches_applied,
+                                blocked=not review_result.passed,
+                                blocked_reasons=[
+                                    f"{i.severity}: {i.description}" 
+                                    for i in review_result.issues 
+                                    if i.severity == "blocker"
+                                ],
+                                summaries=[review_result.summary] + [
+                                    f"{i.severity}: {i.description}" 
+                                    for i in review_result.issues
+                                ],
+                                questions_generated=0,
+                                questions_resolved=0,
+                            )
                         else:
                             logging.warning(
                                 "Special target '%s' has non-review_gate mode: %s",
