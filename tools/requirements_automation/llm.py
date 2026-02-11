@@ -1,5 +1,8 @@
 from __future__ import annotations
-import json, os, re, logging
+import json
+import logging
+import os
+import re
 from typing import List
 from .config import MODEL, MAX_TOKENS
 from .models import OpenQuestion

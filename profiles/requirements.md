@@ -7,7 +7,7 @@ This is a technical requirements document defining system/project specifications
 - Use present tense declarative statements ("The system SHALL...")
 - Avoid conditionals ("might", "could", "possibly")
 - Be specific and measurable where possible
-- Use RFC 2119 keywords appropriately: SHALL, MUST, SHOULD, MAY
+- Use RFC 2119 keywords appropriately: SHALL, SHALL NOT, MUST, MUST NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL
 
 ## Question Generation Guidelines
 - Ask about missing critical requirements (security, performance, data)
