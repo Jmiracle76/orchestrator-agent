@@ -170,7 +170,7 @@ class WorkflowRunner:
             # Write review gate result marker to document
             self.lines, marker_changed = handler.write_review_gate_result(review_result, self.lines)
             
-            # Update handler's lines with the marker before applying patches
+            # Sync handler state with updated document lines (now includes result marker)
             handler.lines = self.lines
             
             # Optionally apply patches
@@ -581,6 +581,8 @@ class WorkflowRunner:
                         )
                         if handler_config.mode == "review_gate":
                             # Fix 2: Check if review gate already passed
+                            # Note: For large documents with many review gates, consider caching
+                            # gate results in a dictionary for better performance
                             gate_already_passed = False
                             for line in self.lines:
                                 m = REVIEW_GATE_RESULT_RE.search(line)
@@ -600,7 +602,7 @@ class WorkflowRunner:
                             # Fix 1: Write review gate result marker to document
                             self.lines, marker_changed = handler.write_review_gate_result(review_result, self.lines)
                             
-                            # Update handler's lines with the marker before applying patches
+                            # Sync handler state with updated document lines (now includes result marker)
                             handler.lines = self.lines
                             
                             # Optionally apply patches
