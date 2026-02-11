@@ -263,21 +263,19 @@ class StructuralValidator:
         subsection_exists = False
         subsection_line_idx = None
         for i in range(risks_section.start_line, risks_section.end_line):
-            if SUBSECTION_MARKER_RE.search(self.lines[i]):
-                match = SUBSECTION_MARKER_RE.search(self.lines[i])
-                if match and match.group("id") == "open_questions":
-                    subsection_exists = True
-                    subsection_line_idx = i
-                    break
+            match = SUBSECTION_MARKER_RE.search(self.lines[i])
+            if match and match.group("id") == "open_questions":
+                subsection_exists = True
+                subsection_line_idx = i
+                break
         
         # Find section lock marker position (insert before it)
         lock_line_idx = None
         for i in range(risks_section.start_line, risks_section.end_line):
-            if SECTION_LOCK_RE.search(self.lines[i]):
-                match = SECTION_LOCK_RE.search(self.lines[i])
-                if match and match.group("id") == "risks_open_issues":
-                    lock_line_idx = i
-                    break
+            match = SECTION_LOCK_RE.search(self.lines[i])
+            if match and match.group("id") == "risks_open_issues":
+                lock_line_idx = i
+                break
         
         # Determine insertion point
         if subsection_exists and subsection_line_idx is not None:
@@ -370,20 +368,26 @@ class StructuralValidator:
         missing_subsections = template_subsections - doc_subsections
         missing_tables = template_tables - doc_tables
         
-        # Report missing markers as errors
+        # Report missing markers as errors with actionable guidance
         for section_id in missing_sections:
             self.errors.append(MalformedMarkerError(
-                0, "", f"Missing section marker from template: <!-- section:{section_id} -->"
+                0, "", 
+                f"Missing section from template: <!-- section:{section_id} -->. "
+                f"Add this section marker and its content to match the template structure."
             ))
         
         for subsection_id in missing_subsections:
             self.errors.append(MalformedMarkerError(
-                0, "", f"Missing subsection marker from template: <!-- subsection:{subsection_id} -->"
+                0, "", 
+                f"Missing subsection from template: <!-- subsection:{subsection_id} -->. "
+                f"Add this subsection marker within its parent section to match the template structure."
             ))
         
         for table_id in missing_tables:
             self.errors.append(MalformedMarkerError(
-                0, "", f"Missing table marker from template: <!-- table:{table_id} -->"
+                0, "", 
+                f"Missing table from template: <!-- table:{table_id} -->. "
+                f"Add this table marker and its header within the appropriate section to match the template structure."
             ))
     
     def _validate_metadata_markers(self):
