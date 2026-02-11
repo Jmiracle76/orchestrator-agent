@@ -107,7 +107,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections
     
   interfaces_integrations:
     mode: integrate_then_questions
@@ -118,7 +118,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections
     
   data_considerations:
     mode: integrate_then_questions
@@ -129,7 +129,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections
     
   risks_open_issues:
     mode: integrate_then_questions
@@ -140,7 +140,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections
     
   approval_record:
     mode: integrate_then_questions
