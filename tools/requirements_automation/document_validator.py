@@ -29,6 +29,7 @@ from .parsing import (
     has_placeholder,
     validate_open_questions_table_schema,
 )
+from .versioning import get_current_version
 
 
 class DocumentValidator:
@@ -342,9 +343,11 @@ class DocumentValidator:
         """Build human-readable summary of completion status."""
         lines = []
 
-        # Header
+        # Header with version
         status_text = "COMPLETE" if complete else "INCOMPLETE"
+        current_version = get_current_version(self.lines)
         lines.append(f"Document Completion Status: {status_text}")
+        lines.append(f"Current Version: {current_version}")
         lines.append("")
 
         # Individual checks

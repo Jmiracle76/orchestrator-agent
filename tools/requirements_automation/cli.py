@@ -24,6 +24,7 @@ from .parsing import extract_metadata
 from .runner_v2 import WorkflowRunner
 from .structural_validator import StructuralValidator, report_structural_errors
 from .utils_io import backup_file_outside_repo, join_lines, read_text, split_lines, write_text
+from .versioning import get_current_version
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -221,13 +222,16 @@ def main(argv: List[str] | None = None) -> int:
     # Commit and push only the target doc, unless --no-commit is set.
     # Commit if either the workflow runner changed content OR we created a new doc from template.
     if (changed or doc_created) and not args.dry_run and not args.no_commit:
+        # Get current version for commit message
+        current_version = get_current_version(lines)
+
         # Use appropriate commit message based on what happened
         if doc_created and not changed:
-            commit_msg = "requirements: initialize from template"
+            commit_msg = f"requirements: initialize from template (v{current_version})"
         elif doc_created and changed:
-            commit_msg = f"requirements: initialize from template and automation pass ({target_id})"
+            commit_msg = f"requirements: initialize from template and automation pass ({target_id}) [v{current_version}]"
         else:
-            commit_msg = f"requirements: automation pass ({target_id})"
+            commit_msg = f"requirements: automation pass ({target_id}) [v{current_version}]"
         allow = [str(doc_path.relative_to(repo_root)).replace("\\", "/")]
         commit_and_push(repo_root, commit_msg, allow_files=allow)
 
