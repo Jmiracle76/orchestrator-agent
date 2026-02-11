@@ -55,3 +55,17 @@ class SectionState:
     has_placeholder: bool
     has_open_questions: bool
     has_answered_questions: bool
+
+@dataclass(frozen=True)
+class HandlerConfig:
+    """Configuration for how a section should be processed."""
+    section_id: str
+    mode: str  # "integrate_then_questions", "questions_then_integrate", "review_gate"
+    output_format: str  # "prose", "bullets", "subsections"
+    subsections: bool  # allow subsection targeting?
+    dedupe: bool  # deduplicate similar content?
+    preserve_headers: List[str]  # headers to preserve during rewrite
+    sanitize_remove: List[str]  # patterns to remove from LLM output
+    llm_profile: str  # profile name (references profiles/ directory)
+    auto_apply_patches: bool  # for review gates only
+    scope: str  # for review gates: "all_prior_sections", "current_section"

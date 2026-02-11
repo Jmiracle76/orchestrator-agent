@@ -11,6 +11,7 @@ from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_p
 from .llm import LLMClient
 from .runner import choose_next_target, run_phase
 from .runner_v2 import WorkflowRunner
+from .handler_registry import HandlerRegistry, HandlerRegistryError
 
 def main(argv: List[str] | None = None) -> int:
     """Run the requirements automation workflow for a single phase pass."""
@@ -22,6 +23,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--no-commit", action="store_true")
     parser.add_argument("--log-level", default="INFO")
     parser.add_argument("--max-steps", type=int, default=1, help="Max workflow steps to execute (default: 1)")
+    parser.add_argument("--handler-config", help="Path to handler registry YAML (default: config/handler_registry.yaml)")
     args = parser.parse_args(argv)
 
     # Configure logging once, based on the CLI log-level.
@@ -32,6 +34,19 @@ def main(argv: List[str] | None = None) -> int:
     repo_root = Path(args.repo_root).resolve()
     template_path = Path(args.template).resolve()
     doc_path = Path(args.doc).resolve()
+    
+    # Load handler registry
+    if args.handler_config:
+        handler_config_path = Path(args.handler_config).resolve()
+    else:
+        handler_config_path = repo_root / "config" / "handler_registry.yaml"
+    
+    try:
+        handler_registry = HandlerRegistry(handler_config_path)
+        logging.info("Loaded handler registry from: %s", handler_config_path)
+    except HandlerRegistryError as e:
+        print(f"ERROR: {e}")
+        return 2
 
     # Avoid committing unrelated changes unless explicitly overridden.
     if not args.no_commit and not is_working_tree_clean(repo_root):
@@ -59,6 +74,28 @@ def main(argv: List[str] | None = None) -> int:
         supported = ", ".join(SUPPORTED_DOC_TYPES)
         logging.error("Unsupported doc_type '%s'. Supported types: %s", doc_type, supported)
         return 2
+    
+    # Validate doc_type is supported by handler registry
+    # Note: supports_doc_type() returns True if doc_type exists OR if _default exists,
+    # so we just log a warning if the specific doc_type isn't found but _default is available
+    if doc_type not in handler_registry.config:
+        if "_default" in handler_registry.config:
+            logging.warning(
+                "doc_type '%s' not explicitly configured in handler registry, "
+                "will use default handler configuration",
+                doc_type
+            )
+        else:
+            # No specific config and no default - this is an error
+            supported = ", ".join([k for k in handler_registry.config.keys()])
+            logging.error(
+                "doc_type '%s' not found in handler registry and no _default exists. "
+                "Available types: %s",
+                doc_type,
+                supported
+            )
+            return 2
+    
     llm = LLMClient()
 
     # Decide which phase is next and execute it.
@@ -80,7 +117,7 @@ def main(argv: List[str] | None = None) -> int:
         return 2
 
     # Create WorkflowRunner and execute workflow
-    runner = WorkflowRunner(lines, llm, doc_type, workflow_order, handler_registry=None)
+    runner = WorkflowRunner(lines, llm, doc_type, workflow_order, handler_registry=handler_registry)
     
     if args.max_steps > 1:
         # Batch execution mode
