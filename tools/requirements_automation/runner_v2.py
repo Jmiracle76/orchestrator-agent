@@ -2,7 +2,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import List, Optional, Dict
-from .models import WorkflowResult, SectionState
+from .models import WorkflowResult, SectionState, SectionSpan, SubsectionSpan
 from .config import PHASES, is_special_workflow_target, PLACEHOLDER_TOKEN, REVIEW_GATE_RESULT_RE
 from .parsing import find_sections, get_section_span, section_is_locked, section_is_blank, find_subsections_within, section_body, section_text
 from .open_questions import open_questions_parse, open_questions_resolve, open_questions_insert
@@ -20,7 +20,7 @@ def _canon_target(t: str) -> str:
     return TARGET_CANONICAL_MAP.get(t0, t0)
 
 
-def _get_replacement_end_boundary(lines: List[str], section_span, subsections: List) -> int:
+def _get_replacement_end_boundary(lines: List[str], section_span: SectionSpan, subsections: List[SubsectionSpan]) -> int:
     """
     Calculate the effective end boundary for section body replacement.
     
@@ -578,7 +578,7 @@ class WorkflowRunner:
                 
                 if draft.strip() and draft.strip() != ctx.strip():
                     if not dry_run:
-                        # Re-calculate subsections in case they were updated during integration
+                        # Recalculate subsections in case they were updated during integration
                         subs = find_subsections_within(self.lines, span)
                         # Calculate effective end boundary to preserve open_questions subsection
                         draft_end = _get_replacement_end_boundary(self.lines, span, subs)
