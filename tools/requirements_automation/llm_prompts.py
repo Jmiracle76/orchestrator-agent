@@ -19,10 +19,19 @@ def format_prior_sections(prior_sections: dict) -> str:
     if not prior_sections:
         return ""
 
-    lines = ["## Document Context (completed sections)"]
+    lines = ["## Previously Completed Sections"]
+    lines.append("")
+    lines.append("Use the following completed sections as context when formulating new questions.")
+    lines.append("Avoid asking questions that have already been answered in these sections.")
+    lines.append("")
+    
     for section_id, content in prior_sections.items():
-        lines.append(f"### {section_id}")
+        # Format section ID as readable title
+        title = section_id.replace('_', ' ').title()
+        lines.append(f"### {title}")
         lines.append(content.strip())
+        lines.append("")
+    
     return "\n".join(lines)
 
 
@@ -50,7 +59,11 @@ def build_open_questions_prompt(
 
     # Update task instruction based on whether context is present
     task_instruction = (
-        "Given the document context above, generate 2-5 clarifying questions to help complete this section."
+        """Generate 2-5 clarifying questions that:
+- Fill gaps in the current section
+- Build on information from prior sections
+- Do NOT repeat questions already answered in prior sections
+- Help establish clear, testable requirements"""
         if prior_sections
         else "Generate 2-5 clarifying questions to help complete this section."
     )
@@ -68,6 +81,7 @@ Current Section Content:
 """{section_context}"""
 
 {task_instruction}
+
 Output JSON with this exact shape:
 
 {{
