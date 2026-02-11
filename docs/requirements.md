@@ -646,6 +646,14 @@ The resolved questions covered critical areas including problem definition, obje
 
 Future questions that arise during implementation SHALL be captured using the question generation guidelines defined in the requirements document style section, with each question assigned a unique identifier, target section reference, and resolution status tracking.
 ---
+
+<!-- subsection:open_questions -->
+### Open Questions
+
+<!-- table:open_questions -->
+| Question ID | Question | Date | Answer | Section Target | Resolution Status |
+|-------------|----------|------|--------|----------------|-------------------|
+
 <!-- section:success_criteria -->
 ## 11. Success Criteria and Acceptance
 The project SHALL be considered successful when the following quantifiable metrics are achieved:
