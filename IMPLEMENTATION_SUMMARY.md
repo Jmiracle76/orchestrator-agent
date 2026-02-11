@@ -8,7 +8,7 @@ This implementation introduces a Section Handler Registry system that maps `(doc
 ### New Files
 1. **config/handler_registry.yaml** - YAML configuration file defining handlers for all requirements document sections
 2. **tools/requirements_automation/handler_registry.py** - HandlerRegistry class for loading and managing configurations
-3. **test-scripts/test_handler_registry.py** - Unit tests for HandlerRegistry
+3. **test-archive/test_handler_registry.py** - Unit tests for HandlerRegistry (archived)
 4. **test-scripts/test_integration.py** - Integration tests for WorkflowRunner with registry
 5. **test-scripts/validate_acceptance_criteria.py** - Validation script for all acceptance criteria
 
@@ -65,9 +65,10 @@ All requirements sections now have explicit handler configurations:
 
 ## Testing Results
 
-### Unit Tests (test_handler_registry.py)
-- ✅ 8/8 tests passing
-- Tests cover: YAML loading, config lookup, default fallback, error handling
+### Unit Tests (Archived)
+- test_handler_registry.py moved to test-archive/
+- ✅ 8/8 tests were passing before archival
+- Tests covered: YAML loading, config lookup, default fallback, error handling
 
 ### Integration Tests (test_integration.py)
 - ✅ Integration test passing

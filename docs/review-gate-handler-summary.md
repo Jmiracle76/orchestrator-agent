@@ -151,9 +151,10 @@ Patches: Available for manual review (auto-apply disabled)
 
 ## Testing
 
-### Unit Tests
-- `test-scripts/test_review_gate_handler.py`: Tests core handler functionality (12 tests)
+### Unit Tests (Archived)
+- `test-archive/test_review_gate_handler.py`: Tests core handler functionality (12 tests)
 - Covers scope determination, patch validation, auto-apply logic, and helper functions
+- **Note**: Archived as part of test cleanup, focusing on integration tests
 
 ### Acceptance Criteria Tests
 - `test-scripts/validate_review_gate_acceptance_criteria.py`: Validates all 12 acceptance criteria
@@ -184,7 +185,7 @@ Potential future improvements (out of scope for current implementation):
 ### New Files
 - `tools/requirements_automation/review_gate_handler.py`: Main handler implementation
 - `tools/requirements_automation/formatting.py`: CLI output formatting utilities
-- `test-scripts/test_review_gate_handler.py`: Unit tests
+- `test-archive/test_review_gate_handler.py`: Unit tests (archived)
 - `test-scripts/validate_review_gate_acceptance_criteria.py`: Acceptance criteria validation
 
 ### Modified Files

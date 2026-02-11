@@ -126,9 +126,13 @@ orchestrator-agent/
 │       ├── git_utils.py            # Git integration
 │       └── phases/                 # Legacy phase-based code (deprecated)
 ├── test-scripts/
-│   ├── test_handler_registry.py    # Unit tests for handler registry
 │   ├── test_integration.py         # Integration tests
-│   └── validate_acceptance_criteria.py  # Acceptance criteria validation
+│   ├── test_e2e_prior_context.py   # End-to-end tests
+│   ├── test_cli_*.py               # CLI tests
+│   └── validate_*.py               # Validation tests
+├── test-archive/
+│   ├── ARCHIVE_README.md           # Archive documentation
+│   └── *.py                        # Archived unit tests
 ├── README.md                       # Main documentation
 └── contributing.md                 # This file
 ```
@@ -161,14 +165,19 @@ Follow these principles:
 ### 3. Test Your Changes
 
 ```bash
-# Run unit tests
-python test-scripts/test_handler_registry.py
-
 # Run integration tests
 python test-scripts/test_integration.py
+python test-scripts/test_e2e_prior_context.py
+
+# Run CLI tests
+python test-scripts/test_cli_template_creation.py
+python test-scripts/test_cli_validate.py
 
 # Run acceptance criteria validation
 python test-scripts/validate_acceptance_criteria.py
+python test-scripts/validate_prior_context_acceptance_criteria.py
+python test-scripts/validate_review_gate_acceptance_criteria.py
+python test-scripts/validate_structural_validation_acceptance_criteria.py
 
 # Test with real document (dry run)
 python -m tools.requirements_automation.cli \
@@ -212,32 +221,20 @@ Then create a pull request on GitHub with:
 
 ## Testing Guidelines
 
-### Unit Tests
+### Active Tests
 
-**Purpose**: Test individual components in isolation.
+The project maintains integration and validation tests in `test-scripts/`. Unit tests have been archived in `test-archive/` to focus on MVP delivery.
 
-**Location**: `test-scripts/test_*.py`
+**Active Test Types**:
+- **Integration Tests**: End-to-end workflow testing (`test_integration.py`, `test_e2e_prior_context.py`)
+- **CLI Tests**: Command-line interface testing (`test_cli_*.py`)
+- **Validation Tests**: Acceptance criteria validation (`validate_*.py`)
 
-**Example**:
+**Location**: `test-scripts/`
 
-```python
-# test-scripts/test_handler_registry.py
+### Archived Unit Tests
 
-def test_get_handler_for_known_section():
-    """Test retrieving handler for known section."""
-    registry = HandlerRegistry("config/handler_registry.yaml")
-    config = registry.get_handler("requirements", "problem_statement")
-    
-    assert config.mode == "integrate_then_questions"
-    assert config.output_format == "prose"
-    assert config.llm_profile == "requirements"
-```
-
-**Run**:
-
-```bash
-python test-scripts/test_handler_registry.py
-```
+Unit tests for individual components have been archived to `test-archive/` as part of focusing on integration and validation testing. See `test-archive/ARCHIVE_README.md` for details on archived tests.
 
 ### Integration Tests
 
@@ -316,9 +313,14 @@ python test-scripts/test_integration.py
 
 1. Run all tests:
    ```bash
-   python test-scripts/test_handler_registry.py
    python test-scripts/test_integration.py
+   python test-scripts/test_e2e_prior_context.py
+   python test-scripts/test_cli_template_creation.py
+   python test-scripts/test_cli_validate.py
    python test-scripts/validate_acceptance_criteria.py
+   python test-scripts/validate_prior_context_acceptance_criteria.py
+   python test-scripts/validate_review_gate_acceptance_criteria.py
+   python test-scripts/validate_structural_validation_acceptance_criteria.py
    ```
 
 2. Test with existing documents:
