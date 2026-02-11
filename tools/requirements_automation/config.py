@@ -67,3 +67,26 @@ TARGET_CANONICAL_MAP = {
     "secondary_goals": "goals_objectives",
     "non_goals": "goals_objectives",
 }
+
+# Review gate result marker for persistence
+REVIEW_GATE_RESULT_RE = re.compile(
+    r"<!--\s*review_gate_result:(?P<gate_id>[a-z0-9_:]+)"
+    r"\s+status=(?P<status>passed|failed)"
+    r"(?:\s+issues=(?P<issues>\d+))?"
+    r"(?:\s+warnings=(?P<warnings>\d+))?\s*-->"
+)
+
+# Document completion requirements
+COMPLETION_CRITERIA = {
+    "no_placeholders_in_required_sections": True,    # Required sections must not have PLACEHOLDER token
+    "no_open_questions": True,                       # No questions with status "Open"
+    "all_review_gates_pass": True,                   # All review gates in workflow must pass
+    "structure_valid": True,                         # All structural validators pass (markers, table schema)
+    "all_workflow_targets_complete": True,           # All targets in workflow order marked complete
+}
+
+# Optional criteria (can be disabled via flags)
+OPTIONAL_CRITERIA = {
+    "no_deferred_questions": False,  # Strict mode: even "Deferred" questions must be resolved
+    "no_warnings_from_review": False, # Strict mode: review gates must have zero warnings
+}

@@ -9,6 +9,7 @@ from .config import (
     META_MARKER_RE,
     PLACEHOLDER_TOKEN,
     SUPPORTED_METADATA_KEYS,
+    REVIEW_GATE_RESULT_RE,
 )
 from .models import SectionSpan, SubsectionSpan
 
@@ -285,3 +286,74 @@ def apply_patch(section_id: str, suggestion: str, lines: List[str]) -> List[str]
             new_lines.append(line)
     
     return new_lines
+
+def extract_review_gate_results(lines: List[str]) -> Dict[str, Tuple[str, int, int]]:
+    """
+    Extract review gate results from document markers.
+    
+    Returns:
+        Dict mapping gate_id to (status, issues_count, warnings_count)
+        where status is "passed" or "failed"
+    """
+    results: Dict[str, Tuple[str, int, int]] = {}
+    
+    for line in lines:
+        m = REVIEW_GATE_RESULT_RE.search(line)
+        if m:
+            gate_id = m.group("gate_id")
+            status = m.group("status")
+            issues = int(m.group("issues") or "0")
+            warnings = int(m.group("warnings") or "0")
+            results[gate_id] = (status, issues, warnings)
+    
+    return results
+
+def find_duplicate_section_markers(lines: List[str]) -> List[str]:
+    """
+    Find duplicate section markers in the document.
+    
+    Returns:
+        List of section IDs that have duplicate markers
+    """
+    section_counts: Dict[str, int] = {}
+    
+    for line in lines:
+        m = SECTION_MARKER_RE.search(line)
+        if m:
+            section_id = m.group("id")
+            section_counts[section_id] = section_counts.get(section_id, 0) + 1
+    
+    duplicates = [sid for sid, count in section_counts.items() if count > 1]
+    return duplicates
+
+def has_placeholder(span: SectionSpan, lines: List[str]) -> bool:
+    """Check if a section span contains PLACEHOLDER token."""
+    section_lines = lines[span.start_line:span.end_line]
+    return any(PLACEHOLDER_TOKEN in line for line in section_lines)
+
+def validate_open_questions_table_schema(lines: List[str]) -> bool:
+    """
+    Validate that the Open Questions table has the correct schema.
+    
+    Returns:
+        True if the table schema is valid, False otherwise
+    """
+    from .config import OPEN_Q_COLUMNS
+    
+    span = find_table_block(lines, "open_questions")
+    if not span:
+        return False
+    
+    start, end = span
+    table_lines = lines[start:end]
+    
+    if len(table_lines) < 2:
+        return False
+    
+    # Parse header row
+    header_line = table_lines[0]
+    if not header_line.lstrip().startswith("|"):
+        return False
+    
+    header_cells = [c.strip() for c in header_line.strip().strip("|").split("|")]
+    return header_cells == OPEN_Q_COLUMNS

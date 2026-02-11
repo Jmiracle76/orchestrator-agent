@@ -96,3 +96,20 @@ class ReviewResult:
     patches: List[ReviewPatch]
     scope_sections: List[str]  # sections actually reviewed
     summary: str       # human-readable summary
+
+@dataclass(frozen=True)
+class CompletionCheck:
+    """Individual completion criterion check result."""
+    criterion: str          # Which completion criterion
+    passed: bool           # Did this criterion pass?
+    details: str           # Human-readable explanation
+    blocking: bool         # Is this a blocking failure?
+
+@dataclass(frozen=True)
+class CompletionStatus:
+    """Overall document completion status."""
+    complete: bool                    # Overall: document meets all criteria?
+    checks: List[CompletionCheck]     # Individual criterion results
+    blocking_failures: List[str]      # List of blocking criterion names that failed
+    warnings: List[str]               # Non-blocking issues
+    summary: str                      # Human-readable overall status
