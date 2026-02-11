@@ -1,15 +1,19 @@
 """Core workflow runner implementation."""
+
 from __future__ import annotations
+
 import logging
-from typing import List
+from typing import Any, List, Optional
+
+from .config import REVIEW_GATE_RESULT_RE, is_special_workflow_target
+from .handler_registry import HandlerRegistry
 from .models import WorkflowResult
-from .config import is_special_workflow_target, REVIEW_GATE_RESULT_RE
-from .runner_state import get_section_state, gather_prior_sections
 from .runner_handlers import (
+    execute_phase_based_handler,
     execute_review_gate,
     execute_unified_handler,
-    execute_phase_based_handler
 )
+from .runner_state import gather_prior_sections, get_section_state
 
 
 class WorkflowRunner:
@@ -22,11 +26,11 @@ class WorkflowRunner:
     def __init__(
         self,
         lines: List[str],
-        llm,
+        llm: Any,
         doc_type: str,
         workflow_order: List[str],
-        handler_registry=None,
-    ):
+        handler_registry: Optional[HandlerRegistry] = None,
+    ) -> None:
         """
         Initialize the workflow runner.
 
@@ -43,9 +47,7 @@ class WorkflowRunner:
         self.workflow_order = workflow_order
         self.handler_registry = handler_registry
 
-    def _execute_section(
-        self, target_id: str, state, dry_run: bool
-    ) -> WorkflowResult:
+    def _execute_section(self, target_id: str, state: Any, dry_run: bool) -> WorkflowResult:
         """
         Execute processing for a section target.
 
@@ -64,9 +66,7 @@ class WorkflowRunner:
         handler_config = None
         if self.handler_registry:
             try:
-                handler_config = self.handler_registry.get_handler_config(
-                    self.doc_type, target_id
-                )
+                handler_config = self.handler_registry.get_handler_config(self.doc_type, target_id)
                 logging.debug(
                     "Using handler config for %s: mode=%s, output_format=%s",
                     target_id,
@@ -79,36 +79,35 @@ class WorkflowRunner:
                     target_id,
                     e,
                 )
-        
+
         # Check if this is a review gate (special handling)
         if handler_config and handler_config.mode == "review_gate":
             # Execute review gate
             self.lines, result = execute_review_gate(
-                self.lines, target_id, self.llm, self.doc_type,
-                handler_config, dry_run
+                self.lines, target_id, self.llm, self.doc_type, handler_config, dry_run
             )
             return result
-        
+
         # Check if this uses integrate_then_questions or questions_then_integrate mode
         # If so, use unified handler logic driven by handler config
-        if handler_config and handler_config.mode in ("integrate_then_questions", "questions_then_integrate"):
+        if handler_config and handler_config.mode in (
+            "integrate_then_questions",
+            "questions_then_integrate",
+        ):
             # Gather prior completed sections for context based on scope config
             if handler_config.scope == "all_prior_sections":
                 prior_sections = gather_prior_sections(self.lines, self.workflow_order, target_id)
             else:
                 # For current_section scope or any other scope, don't pass prior context
                 prior_sections = {}
-            
+
             self.lines, result = execute_unified_handler(
-                self.lines, target_id, state, self.llm,
-                handler_config, prior_sections, dry_run
+                self.lines, target_id, state, self.llm, handler_config, prior_sections, dry_run
             )
             return result
-        
+
         # For sections without handler config, fall back to phase-based logic
-        self.lines, result = execute_phase_based_handler(
-            self.lines, target_id, self.llm, dry_run
-        )
+        self.lines, result = execute_phase_based_handler(self.lines, target_id, self.llm, dry_run)
         return result
 
     def run_once(self, dry_run: bool = False) -> WorkflowResult:
@@ -145,19 +144,29 @@ class WorkflowRunner:
                             gate_already_passed = False
                             for line in self.lines:
                                 m = REVIEW_GATE_RESULT_RE.search(line)
-                                if m and m.group("gate_id") == target_id and m.group("status") == "passed":
+                                if (
+                                    m
+                                    and m.group("gate_id") == target_id
+                                    and m.group("status") == "passed"
+                                ):
                                     gate_already_passed = True
-                                    logging.info("Review gate '%s' already passed, skipping", target_id)
+                                    logging.info(
+                                        "Review gate '%s' already passed, skipping", target_id
+                                    )
                                     break
-                            
+
                             if gate_already_passed:
                                 # Skip this gate and continue to next workflow target
                                 continue
-                            
+
                             # Execute review gate
                             self.lines, result = execute_review_gate(
-                                self.lines, target_id, self.llm, self.doc_type,
-                                handler_config, dry_run
+                                self.lines,
+                                target_id,
+                                self.llm,
+                                self.doc_type,
+                                handler_config,
+                                dry_run,
                             )
                             return result
                         else:
@@ -172,7 +181,7 @@ class WorkflowRunner:
                             target_id,
                             e,
                         )
-                
+
                 return WorkflowResult(
                     target_id=target_id,
                     action_taken="skip_special",
@@ -222,9 +231,7 @@ class WorkflowRunner:
             questions_resolved=0,
         )
 
-    def run_until_blocked(
-        self, dry_run: bool = False, max_steps: int = 10
-    ) -> List[WorkflowResult]:
+    def run_until_blocked(self, dry_run: bool = False, max_steps: int = 10) -> List[WorkflowResult]:
         """
         Execute workflow targets until blocked or complete.
 
@@ -246,9 +253,7 @@ class WorkflowRunner:
 
             # Stop if blocked, complete, or no changes
             if result.blocked or result.action_taken == "complete":
-                logging.info(
-                    "Stopping after %d steps: %s", step + 1, result.action_taken
-                )
+                logging.info("Stopping after %d steps: %s", step + 1, result.action_taken)
                 break
 
             if not result.changed:

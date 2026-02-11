@@ -1,19 +1,36 @@
 from __future__ import annotations
+
 import logging
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
+
 from ..config import PHASES, TARGET_CANONICAL_MAP
-from ..models import OpenQuestion
-from ..parsing import find_sections, get_section_span, section_is_locked, section_is_blank, section_body, find_subsections_within, get_subsection_span
-from ..open_questions import open_questions_parse, open_questions_insert, open_questions_resolve
 from ..editing import replace_block_body_preserving_markers
+from ..models import OpenQuestion
+from ..open_questions import open_questions_insert, open_questions_parse, open_questions_resolve
+from ..parsing import (
+    find_sections,
+    find_subsections_within,
+    get_section_span,
+    get_subsection_span,
+    section_body,
+    section_is_blank,
+    section_is_locked,
+)
 from ..utils_io import iso_today
+
+
+from typing import Any, List, Tuple
+
 
 def _canon_target(t: str) -> str:
     """Normalize alias section IDs to canonical targets."""
     t0 = (t or "").strip()
     return TARGET_CANONICAL_MAP.get(t0, t0)
 
-def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | None = None) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+
+def process_phase_1(
+    lines: List[str], llm: Any, dry_run: bool, target_section: str | None = None
+) -> Tuple[List[str], bool, List[str], bool, List[str]]:
     """Fill intent/scope sections or create open questions when missing."""
     changed = False
     blocked: List[str] = []
@@ -28,7 +45,7 @@ def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | 
     phase_sections = PHASES["phase_1_intent_scope"]
     if target_section:
         phase_sections = [target_section]
-    revised: Dict[str,int] = {sid: 0 for sid in phase_sections}
+    revised: Dict[str, int] = {sid: 0 for sid in phase_sections}
 
     for section_id in phase_sections:
         span = get_section_span(spans, section_id)
@@ -45,8 +62,16 @@ def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | 
         subs = find_subsections_within(lines, span)
         target_ids = {section_id} | {s.subsection_id for s in subs}
         targeted = [q for q in open_qs if _canon_target(q.section_target) in target_ids]
-        answered = [q for q in targeted if q.answer.strip() not in ("", "-", "Pending") and q.status.strip() in ("Open","Deferred")]
-        open_unanswered_exists = any(q.status.strip() in ("Open","Deferred") and q.answer.strip() in ("", "-", "Pending") for q in targeted)
+        answered = [
+            q
+            for q in targeted
+            if q.answer.strip() not in ("", "-", "Pending")
+            and q.status.strip() in ("Open", "Deferred")
+        ]
+        open_unanswered_exists = any(
+            q.status.strip() in ("Open", "Deferred") and q.answer.strip() in ("", "-", "Pending")
+            for q in targeted
+        )
 
         # If answers exist, integrate them into the section/subsection body.
         if answered and revised[section_id] < 1:
@@ -61,7 +86,10 @@ def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | 
                 else:
                     subspan = get_subsection_span(subs, tgt)
                     if not subspan:
-                        logging.warning("Answered questions target '%s' but no matching subsection marker exists; skipping.", tgt)
+                        logging.warning(
+                            "Answered questions target '%s' but no matching subsection marker exists; skipping.",
+                            tgt,
+                        )
                         continue
                     start, end = subspan.start_line, subspan.end_line
                 # Provide the LLM the current context for a targeted block.
@@ -69,7 +97,9 @@ def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | 
                 new_body = llm.integrate_answers(tgt, context, qs)
                 if new_body.strip() and new_body.strip() != context.strip():
                     if not dry_run:
-                        lines = replace_block_body_preserving_markers(lines, start, end, section_id=tgt, new_body=new_body)
+                        lines = replace_block_body_preserving_markers(
+                            lines, start, end, section_id=tgt, new_body=new_body
+                        )
                     any_integrated = True
 
             if any_integrated:
@@ -88,7 +118,10 @@ def process_phase_1(lines: List[str], llm, dry_run: bool, target_section: str | 
         if blank:
             needs_human = True
             if open_unanswered_exists:
-                logging.info("Section blank but already has open questions; not generating more: %s", section_id)
+                logging.info(
+                    "Section blank but already has open questions; not generating more: %s",
+                    section_id,
+                )
                 continue
             ctx = section_body(lines, span)
             proposed = llm.generate_open_questions(section_id, ctx)

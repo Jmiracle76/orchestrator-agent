@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -17,9 +18,12 @@ if __name__ == "__main__":
 
     # Pass defaults plus any user-provided CLI args through to the main CLI.
     argv = [
-        "--repo-root", str(repo_root),
-        "--template", str(template),
-        "--doc", str(doc),
+        "--repo-root",
+        str(repo_root),
+        "--template",
+        str(template),
+        "--doc",
+        str(doc),
     ] + sys.argv[1:]
 
     raise SystemExit(main(argv))
