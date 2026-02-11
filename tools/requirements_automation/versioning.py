@@ -30,13 +30,14 @@ VERSION_MILESTONES = {
 
 
 def get_version_for_section(section_id: str) -> str:
-    """Return target version when section completes.
+    """Return target version milestone associated with a section.
 
     Args:
         section_id: Section identifier
 
     Returns:
-        Version string (e.g., "0.1") or "0.0" if no milestone defined
+        Version string (e.g., "0.1") for sections with defined milestones,
+        or "0.0" if no milestone is defined for this section
     """
     return VERSION_MILESTONES.get(section_id, "0.0")
 
