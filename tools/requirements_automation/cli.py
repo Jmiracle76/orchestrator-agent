@@ -9,7 +9,6 @@ from .parsing import extract_metadata, extract_workflow_order, find_sections
 from .utils_io import read_text, write_text, split_lines, join_lines, backup_file_outside_repo
 from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_push
 from .llm import LLMClient
-from .runner import choose_next_target, run_phase
 from .runner_v2 import WorkflowRunner
 from .handler_registry import HandlerRegistry, HandlerRegistryError
 from .document_validator import DocumentValidator
