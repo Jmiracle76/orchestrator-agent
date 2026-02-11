@@ -699,8 +699,9 @@ Ensure profile changes don't break existing behavior:
 
 ```bash
 # Run full test suite
-python test-scripts/test_handler_registry.py
 python test-scripts/test_integration.py
+python test-scripts/test_e2e_prior_context.py
+python test-scripts/validate_acceptance_criteria.py
 
 # Process existing documents
 python -m tools.requirements_automation.cli \

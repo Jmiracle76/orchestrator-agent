@@ -300,24 +300,39 @@ orchestrator-agent/
 │       ├── parsing.py              # Document parsing utilities
 │       ├── document_validator.py   # Completion validation
 │       └── structural_validator.py # Structure validation
-└── test-scripts/
-    └── test_*.py                   # Unit and integration tests
+├── test-scripts/
+│   ├── test_integration.py         # Integration tests
+│   ├── test_e2e_prior_context.py   # End-to-end tests
+│   ├── test_cli_*.py               # CLI tests
+│   └── validate_*.py               # Validation tests
+└── test-archive/
+    ├── ARCHIVE_README.md           # Archive documentation
+    └── *.py                        # Archived unit tests
 ```
 
 ## Development
 
 ### Running Tests
 
-```bash
-# Run unit tests
-python test-scripts/test_handler_registry.py
+The project maintains integration and validation tests in `test-scripts/`. Archived unit tests can be found in `test-archive/`.
 
+```bash
 # Run integration tests
 python test-scripts/test_integration.py
+python test-scripts/test_e2e_prior_context.py
+
+# Run CLI tests
+python test-scripts/test_cli_template_creation.py
+python test-scripts/test_cli_validate.py
 
 # Validate acceptance criteria
 python test-scripts/validate_acceptance_criteria.py
+python test-scripts/validate_prior_context_acceptance_criteria.py
+python test-scripts/validate_review_gate_acceptance_criteria.py
+python test-scripts/validate_structural_validation_acceptance_criteria.py
 ```
+
+See `test-archive/ARCHIVE_README.md` for information about archived unit tests.
 
 ### Adding a New Document Type
 
