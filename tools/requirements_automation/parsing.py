@@ -225,7 +225,7 @@ def section_exists(section_id: str, lines: List[str]) -> bool:
     return get_section_span(spans, section_id) is not None
 
 def contains_markers(text: str) -> bool:
-    """Check if text contains structure markers."""
+    """Check if text contains structure markers or HTML comments."""
     markers = [
         SECTION_MARKER_RE,
         SECTION_LOCK_RE,
@@ -236,6 +236,9 @@ def contains_markers(text: str) -> bool:
     for marker_re in markers:
         if marker_re.search(text):
             return True
+    # Also check for any HTML comments (which would be structural markers)
+    if "<!--" in text and "-->" in text:
+        return True
     return False
 
 def apply_patch(section_id: str, suggestion: str, lines: List[str]) -> List[str]:
