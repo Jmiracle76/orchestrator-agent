@@ -193,6 +193,60 @@ Output only the rewritten section body (no markers, no headers, no lock tags).
 '''
         return self._call(prompt).strip()
 
+    def draft_section(self, section_id: str, section_context: str, prior_sections: dict[str, str], 
+                     llm_profile: str = "requirements", output_format: str = "prose") -> str:
+        """Draft initial section content from prior section context.
+        
+        This is distinct from integrate_answers() because it has no Q&A pairs to integrate.
+        Instead, it synthesizes content directly from what is known in prior sections.
+        
+        Args:
+            section_id: Section identifier
+            section_context: Current section content (typically contains placeholder)
+            prior_sections: Dict of completed section IDs to their content
+            llm_profile: Profile name to use (default: "requirements")
+            output_format: Output format hint ("prose", "bullets", "subsections")
+            
+        Returns:
+            Drafted section body text
+        """
+        # Load profile
+        full_profile = self.profile_loader.build_full_profile(llm_profile)
+        
+        # Build format guidance
+        format_guidance = {
+            "prose": "Write content as flowing prose paragraphs.",
+            "bullets": "Write content as a bullet list (dash-prefixed, one item per line).",
+            "subsections": "Organize content under appropriate subsection headers (###)."
+        }.get(output_format, "Write content as prose.")
+        
+        # Build document context - this is required for drafting
+        doc_context = ""
+        if prior_sections:
+            doc_context = f"\n\n{self._format_prior_sections(prior_sections)}\n"
+        
+        prompt = f'''
+{full_profile}
+{doc_context}
+---
+
+## Task: Draft Section Content from Prior Context
+
+Section ID: {section_id}
+Output Format: {format_guidance}
+
+Current Section Content (for structural reference):
+"""{section_context}"""
+
+Based on the document context above, draft initial content for the {section_id} section.
+Synthesize the content from what is already known in the completed sections.
+Be thorough but stay within what can be reasonably inferred from the prior context.
+If something truly cannot be determined from the context, note it but still draft what you can.
+Remove any placeholder wording.
+Output only the section body (no markers, no headers, no lock tags).
+'''
+        return self._call(prompt).strip()
+
     def perform_review(self, gate_id: str, doc_type: str, section_contents: dict, 
                       llm_profile: str, validation_rules: List[str]) -> dict:
         """Ask the LLM to review multiple sections and return structured feedback.
