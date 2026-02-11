@@ -48,7 +48,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections  # Use prior context to inform questions
     
   stakeholders_users:
     mode: integrate_then_questions
@@ -59,7 +59,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections  # Use prior context to inform questions
     
   success_criteria:
     mode: integrate_then_questions
@@ -70,7 +70,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections  # Use prior context to inform questions
     
   assumptions:
     mode: integrate_then_questions
@@ -82,7 +82,7 @@ requirements:
       - "constraint classification headers"
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections  # Use prior context to inform questions
     
   constraints:
     mode: integrate_then_questions
@@ -96,7 +96,7 @@ requirements:
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
-    scope: current_section
+    scope: all_prior_sections  # Use prior context to inform questions
     
   requirements:
     mode: integrate_then_questions
