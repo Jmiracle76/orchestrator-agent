@@ -439,13 +439,22 @@ class WorkflowRunner:
                 # Mark questions as resolved
                 qids = [q.question_id for q in answered_questions]
                 if not dry_run:
-                    self.lines, resolved = open_questions_resolve(self.lines, qids)
-                    if resolved:
+                    try:
+                        self.lines, resolved = open_questions_resolve(self.lines, qids)
+                        if resolved:
+                            summaries.append(
+                                f"Integrated {len(answered_questions)} answers; resolved {resolved} questions"
+                            )
+                            # Re-parse questions after resolving
+                            try:
+                                open_qs, _, _ = open_questions_parse(self.lines)
+                            except Exception:
+                                open_qs = []
+                    except Exception as e:
+                        logging.warning("Failed to resolve questions: %s", e)
                         summaries.append(
-                            f"Integrated {len(answered_questions)} answers; resolved {resolved} questions"
+                            f"Integrated {len(answered_questions)} answers (questions table not available)"
                         )
-                        # Re-parse questions after resolving
-                        open_qs, _, _ = open_questions_parse(self.lines)
                 
                 # Update span after integration
                 spans = find_sections(self.lines)
@@ -458,15 +467,20 @@ class WorkflowRunner:
         # Step 3: If section is blank and no open questions exist, generate new ones
         if is_blank:
             # Re-check for unanswered questions after integration
-            open_qs, _, _ = open_questions_parse(self.lines)
-            targeted_questions = [
-                q for q in open_qs if _canon_target(q.section_target) in target_ids
-            ]
-            open_unanswered = [
-                q for q in targeted_questions
-                if q.status.strip() in ("Open", "Deferred")
-                and q.answer.strip() in ("", "-", "Pending")
-            ]
+            try:
+                open_qs, _, _ = open_questions_parse(self.lines)
+                targeted_questions = [
+                    q for q in open_qs if _canon_target(q.section_target) in target_ids
+                ]
+                open_unanswered = [
+                    q for q in targeted_questions
+                    if q.status.strip() in ("Open", "Deferred")
+                    and q.answer.strip() in ("", "-", "Pending")
+                ]
+            except Exception as e:
+                logging.warning("Failed to parse open questions: %s", e)
+                open_qs = []
+                open_unanswered = []
             
             if not open_unanswered:
                 # Generate new questions
@@ -495,12 +509,18 @@ class WorkflowRunner:
                 
                 if new_qs and not dry_run:
                     from .open_questions import open_questions_insert
-                    self.lines, inserted = open_questions_insert(self.lines, new_qs)
-                    if inserted:
-                        changed = True
-                        questions_generated = inserted
+                    try:
+                        self.lines, inserted = open_questions_insert(self.lines, new_qs)
+                        if inserted:
+                            changed = True
+                            questions_generated = inserted
+                            summaries.append(
+                                f"Generated {inserted} open questions for {target_id}"
+                            )
+                    except Exception as e:
+                        logging.warning("Failed to insert open questions: %s", e)
                         summaries.append(
-                            f"Generated {inserted} open questions for {target_id}"
+                            f"Generated {len(new_qs)} questions but could not insert (no questions table)"
                         )
             else:
                 # Section is blank but has open questions - blocked waiting for answers
