@@ -527,6 +527,58 @@ class WorkflowRunner:
         # A section is blank if it contains the PLACEHOLDER token
         is_blank = section_is_blank(self.lines, span)
         
+        # Step 2.5: If section is blank and prior context is available, try drafting first
+        # Skip drafting if answered_questions exist because Step 1 just integrated them,
+        # and we should give the integration a chance to complete the section before drafting.
+        # Drafting is only appropriate when starting from a completely blank section.
+        if is_blank and prior_sections and not answered_questions:
+            logging.info(
+                "Section '%s' is blank with prior context available; attempting to draft content",
+                target_id,
+            )
+            
+            try:
+                ctx = section_body(self.lines, span)
+                draft = self.llm.draft_section(
+                    target_id,
+                    ctx,
+                    prior_sections,
+                    llm_profile=handler_config.llm_profile,
+                    output_format=handler_config.output_format,
+                )
+                
+                if draft.strip() and draft.strip() != ctx.strip():
+                    if not dry_run:
+                        # Write the draft to the section body
+                        self.lines = replace_block_body_preserving_markers(
+                            self.lines,
+                            span.start_line,
+                            span.end_line,
+                            section_id=target_id,
+                            new_body=draft,
+                        )
+                        # Update spans after modification
+                        spans = find_sections(self.lines)
+                        span = get_section_span(spans, target_id)
+                    
+                    changed = True
+                    summaries.append(f"Drafted initial content for {target_id} using prior section context")
+                    
+                    # Re-check if section is still blank after drafting
+                    is_blank = section_is_blank(self.lines, span)
+                    logging.info(
+                        "Draft completed for '%s'; section is_blank=%s",
+                        target_id,
+                        is_blank,
+                    )
+                else:
+                    logging.info(
+                        "Draft for '%s' was empty or unchanged; will fall through to question generation",
+                        target_id,
+                    )
+            except Exception as e:
+                logging.warning("Failed to draft section '%s': %s; falling back to question generation", target_id, e)
+        
         # Step 3: If section is blank and no open questions exist, generate new ones
         if is_blank:
             # Re-check for unanswered questions after integration
