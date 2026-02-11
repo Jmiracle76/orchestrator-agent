@@ -9,6 +9,7 @@ from .open_questions import open_questions_parse
 from .config import TARGET_CANONICAL_MAP
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 from .review_gate_handler import ReviewGateHandler
+from .formatting import format_review_gate_output
 
 
 def _canon_target(t: str) -> str:
@@ -170,7 +171,7 @@ class WorkflowRunner:
             )
             
             # Convert to WorkflowResult
-            return WorkflowResult(
+            result = WorkflowResult(
                 target_id=target_id,
                 action_taken="review_gate",
                 changed=patches_applied,
@@ -187,6 +188,13 @@ class WorkflowRunner:
                 questions_generated=0,
                 questions_resolved=0,
             )
+            
+            # Log formatted output for human readability
+            formatted_output = format_review_gate_output(result)
+            if formatted_output:
+                print(formatted_output)
+            
+            return result
         
         # For all other modes (integrate_then_questions, questions_then_integrate),
         # fall through to phase-based logic below. This is temporary until Issue 5
@@ -327,7 +335,7 @@ class WorkflowRunner:
                             )
                             
                             # Convert to WorkflowResult
-                            return WorkflowResult(
+                            result = WorkflowResult(
                                 target_id=target_id,
                                 action_taken="review_gate",
                                 changed=patches_applied,
@@ -344,6 +352,13 @@ class WorkflowRunner:
                                 questions_generated=0,
                                 questions_resolved=0,
                             )
+                            
+                            # Log formatted output for human readability
+                            formatted_output = format_review_gate_output(result)
+                            if formatted_output:
+                                print(formatted_output)
+                            
+                            return result
                         else:
                             logging.warning(
                                 "Special target '%s' has non-review_gate mode: %s",
