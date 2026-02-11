@@ -64,12 +64,17 @@ approval_record
 
 <!-- section:problem_statement -->
 ## 2. Problem Statement
-<!-- PLACEHOLDER -->
-[Describe the problem your project addresses.]
+The project addresses the inconsistency, time consumption, and scope-creep risk inherent in manually translating approved requirements into execution plans and managing AI-assisted code changes. Without structured automation, developers and teams experience several critical inefficiencies:
 
+**Incomplete or unbounded plans:** Manual markdown planning and issue trackers fail to enforce structure or guarantee scope boundaries, leading to ambiguous execution paths and unpredictable deliverables.
+
+**Idea limbo:** Projects remain unstarted or unfinished due to planning overhead. The friction between concept and actionable work prevents valuable initiatives from progressing beyond ideation.
+
+**Wasted replanning effort:** Iterative edits and multi-agent handoffs do not reliably preserve intent. Each revision cycle introduces risk of drift from original objectives, requiring developers to repeatedly validate alignment.
+
+**Unintended repository mutations:** Ad hoc AI prompting risks scope drift and accidental changes that diverge from original intent. Without enforcement mechanisms, AI-assisted modifications may introduce breaking changes, violate architectural constraints, or expand beyond approved boundaries.
 <!-- section_lock:problem_statement lock=false -->
 ---
-
 <!-- section:goals_objectives -->
 ## 3. Goals and Objectives
 
@@ -261,7 +266,12 @@ approval_record
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-001 | What problem are we trying to solve? | [Date] | The project addresses the inconsistency, time consumption, and scope-creep risk inherent in manually translating approved requirements into execution plans and managing AI-assisted code changes. Without structured automation, developers and teams experience: - **Incomplete or unbounded plans:** Manual markdown planning and issue trackers fail to enforce structure or guarantee scope boundaries. - **Idea limbo:** Projects remain unstarted or unfinished due to planning overhead. - **Wasted replanning effort:** Iterative edits and multi-agent handoffs do not reliably preserve intent. - **Unintended repository mutations:** Ad hoc AI prompting risks scope drift and accidental changes that diverge from original intent. | problem_statement | Open |
+| Q-002 | What is the primary business or technical problem this project solves? | 2026-02-11 |  | goals_objectives | Open |
+| Q-003 | What measurable outcomes define success for this project? | 2026-02-11 |  | goals_objectives | Open |
+| Q-004 | Are there any related features, use cases, or scope areas that are explicitly out of scope? | 2026-02-11 |  | goals_objectives | Open |
+| Q-005 | What stakeholder or operational improvements are desired but not critical to initial delivery? | 2026-02-11 |  | goals_objectives | Open |
+| Q-006 | What existing systems, processes, or workflows will this project replace or integrate with? | 2026-02-11 |  | goals_objectives | Open |
+| Q-001 | What problem are we trying to solve? | [Date] | The project addresses the inconsistency, time consumption, and scope-creep risk inherent in manually translating approved requirements into execution plans and managing AI-assisted code changes. Without structured automation, developers and teams experience: - **Incomplete or unbounded plans:** Manual markdown planning and issue trackers fail to enforce structure or guarantee scope boundaries. - **Idea limbo:** Projects remain unstarted or unfinished due to planning overhead. - **Wasted replanning effort:** Iterative edits and multi-agent handoffs do not reliably preserve intent. - **Unintended repository mutations:** Ad hoc AI prompting risks scope drift and accidental changes that diverge from original intent. | problem_statement | Resolved |
 
 ---
 
