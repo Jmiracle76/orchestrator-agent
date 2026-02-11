@@ -3,6 +3,29 @@
 # This decouples section processing logic from code, allowing new document types
 # and section behaviors to be defined via YAML configuration without engine changes.
 
+# Handler Modes:
+#   - integrate_then_questions: Default mode (current phase1/phase2 behavior)
+#       * If section has answered questions → integrate answers via LLM
+#       * If section still blank after integration → generate new questions
+#       * If section has open questions but no answers → skip (blocked)
+#   - questions_then_integrate: Alternative mode (future use)
+#       * If section blank and no questions → generate questions
+#       * If section has answered questions → integrate answers
+#       * Never generate questions after integration (single pass)
+#   - review_gate: Special mode for review gates (Issue 7)
+#       * LLM reviews specified scope (prior sections or current)
+#       * Returns pass/fail + optional patches
+#       * No direct document mutation
+
+# Output Formats:
+#   - prose: Paragraph format (default)
+#   - bullets: Bullet list format
+#   - subsections: Preserve subsection headers (e.g., ### Technical Constraints)
+
+# Scope Values:
+#   - current_section: Process/review only the current section
+#   - all_prior_sections: Review all sections before this gate (for review_gate mode)
+
 # Handler definitions for requirements document type
 requirements:
   problem_statement:
