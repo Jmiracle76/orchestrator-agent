@@ -17,7 +17,7 @@ Thank you for your interest in contributing to the Orchestrator Agent project! T
 
 ## Architecture Overview
 
-The Orchestrator Agent uses a **document-driven workflow model** where processing order is declared in templates, not hardcoded in the application. For comprehensive architecture details, see the [Architecture Guide](docs/architecture.md).
+The Orchestrator Agent uses a **document-driven workflow model** where processing order is declared in templates, not hardcoded in the application. For comprehensive architecture details, see the [Architecture Guide](../architecture/overview.md).
 
 ### Core Components
 
@@ -38,9 +38,9 @@ The Orchestrator Agent uses a **document-driven workflow model** where processin
 5. **Review Gates**: Quality assurance checkpoints in workflow
 
 For detailed explanations, see:
-- [Architecture Guide](docs/architecture.md)
-- [Handler Registry Guide](docs/handler-registry-guide.md)
-- [LLM Profiles Guide](docs/llm-profiles-guide.md)
+- [Architecture Guide](../architecture/overview.md)
+- [Handler Registry Guide](handler-registry-guide.md)
+- [LLM Profiles Guide](llm-profiles-guide.md)
 
 ---
 
@@ -98,9 +98,12 @@ orchestrator-agent/
 ├── config/
 │   └── handler_registry.yaml       # Section handler configurations
 ├── docs/
-│   ├── architecture.md             # Architecture documentation
-│   ├── handler-registry-guide.md   # Handler configuration guide
-│   ├── llm-profiles-guide.md       # LLM profiles guide
+│   ├── architecture/
+│   │   └── overview.md             # Architecture documentation
+│   ├── developer/
+│   │   ├── contributing.md         # This file
+│   │   ├── handler-registry-guide.md   # Handler configuration guide
+│   │   └── llm-profiles-guide.md       # LLM profiles guide
 │   └── templates/                  # Document templates
 │       └── requirements-template.md
 ├── profiles/
@@ -406,7 +409,7 @@ Brief introduction paragraph that wraps at 100 characters for readability.
 
 ## Second-Level Header
 
-Some content with a [meaningful link](docs/architecture.md).
+Some content with a [meaningful link](../architecture/overview.md).
 
 ```python
 # Code block with language identifier
@@ -475,7 +478,7 @@ Relates to #456
 
 ### Adding a New Section Type
 
-See [Handler Registry Guide](docs/handler-registry-guide.md#adding-a-new-section-type) for step-by-step instructions.
+See [Handler Registry Guide](handler-registry-guide.md#adding-a-new-section-type) for step-by-step instructions.
 
 **Quick Steps**:
 
@@ -486,7 +489,7 @@ See [Handler Registry Guide](docs/handler-registry-guide.md#adding-a-new-section
 
 ### Adding a New Document Type
 
-See [Handler Registry Guide](docs/handler-registry-guide.md#adding-a-new-doc-type) for step-by-step instructions.
+See [Handler Registry Guide](handler-registry-guide.md#adding-a-new-doc-type) for step-by-step instructions.
 
 **Quick Steps**:
 
@@ -498,7 +501,7 @@ See [Handler Registry Guide](docs/handler-registry-guide.md#adding-a-new-doc-typ
 
 ### Adding a New LLM Profile
 
-See [LLM Profiles Guide](docs/llm-profiles-guide.md#adding-new-profiles) for step-by-step instructions.
+See [LLM Profiles Guide](llm-profiles-guide.md#adding-new-profiles) for step-by-step instructions.
 
 **Quick Steps**:
 
@@ -611,7 +614,7 @@ See [LLM Profiles Guide](docs/llm-profiles-guide.md#adding-new-profiles) for ste
 
 ## Getting Help
 
-- **Documentation**: Start with [README.md](README.md) and [Architecture Guide](docs/architecture.md)
+- **Documentation**: Start with [README.md](../../README.md) and [Architecture Guide](../architecture/overview.md)
 - **Issues**: Check [GitHub Issues](https://github.com/Jmiracle76/orchestrator-agent/issues) for known problems
 - **Questions**: Open a GitHub Discussion or create an issue with the "question" label
 

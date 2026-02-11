@@ -841,7 +841,7 @@ LLM profiles guide AI behavior through rules-based prompts:
 For more information:
 - [Architecture Guide](architecture.md) - Core concepts and design
 - [Handler Registry Guide](handler-registry-guide.md) - Configuration details
-- [Contributing Guide](../contributing.md) - Development workflow
+- [Contributing Guide](contributing.md) - Development workflow
 
 **Next Steps**:
 - Review existing profiles in `profiles/` directory

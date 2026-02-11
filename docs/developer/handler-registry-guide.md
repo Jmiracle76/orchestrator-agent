@@ -1015,7 +1015,7 @@ The handler registry is the central configuration system for section processing:
 For more information:
 - [Architecture Guide](architecture.md) - Core concepts and design
 - [LLM Profiles Guide](llm-profiles-guide.md) - Profile structure and best practices
-- [Contributing Guide](../contributing.md) - Development workflow
+- [Contributing Guide](contributing.md) - Development workflow
 
 **Next Steps**:
 - Review example configurations in `config/handler_registry.yaml`
