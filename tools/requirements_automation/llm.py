@@ -1,8 +1,9 @@
 from __future__ import annotations
-import json, os, re
+import json, os, re, logging
 from typing import List
 from .config import MODEL, MAX_TOKENS
 from .models import OpenQuestion
+from .profile_loader import ProfileLoader
 
 def extract_json_object(text: str) -> str:
     """Extract a JSON object from LLM output that may include extra prose."""
@@ -26,6 +27,7 @@ class LLMClient:
         self.model = model
         self.max_tokens = max_tokens
         self._client = self._make_client()
+        self.profile_loader = ProfileLoader()
 
     @staticmethod
     def _make_client():
@@ -47,18 +49,34 @@ class LLMClient:
         )
         return resp.content[0].text
 
-    def generate_open_questions(self, section_id: str, section_context: str) -> List[dict]:
-        """Ask the LLM to propose clarifying questions for a blank section."""
+    def generate_open_questions(self, section_id: str, section_context: str, llm_profile: str = "requirements") -> List[dict]:
+        """Ask the LLM to propose clarifying questions for a blank section.
+        
+        Args:
+            section_id: Section identifier
+            section_context: Current section content
+            llm_profile: Profile name to use (default: "requirements")
+            
+        Returns:
+            List of question dictionaries with fields: question, section_target, rationale
+        """
+        # Load profile
+        full_profile = self.profile_loader.build_full_profile(llm_profile)
+        
         prompt = f'''
-You are a requirements assistant. Produce ONLY valid JSON.
+{full_profile}
 
-TASK:
-Generate clarifying questions needed to fill the section "{section_id}".
+---
 
-RULES:
-- Do NOT edit the document.
-- Do NOT include markdown tables.
-- Output JSON with this exact shape:
+## Task: Generate Clarifying Questions
+
+Section ID: {section_id}
+
+Current Section Content:
+"""{section_context}"""
+
+Generate 2-5 clarifying questions to help complete this section.
+Output JSON with this exact shape:
 
 {{
   "questions": [
@@ -69,9 +87,6 @@ RULES:
     }}
   ]
 }}
-
-CONTEXT (current section text):
-\"\"\"{section_context}\"\"\"
 
 Return JSON only. No prose.
 '''
@@ -93,27 +108,47 @@ Return JSON only. No prose.
                 cleaned.append({"question": qt, "section_target": st, "rationale": rat})
         return cleaned
 
-    def integrate_answers(self, section_id: str, section_context: str, answered_questions: List[OpenQuestion]) -> str:
-        """Ask the LLM to rewrite a section using the provided Q&A context."""
+    def integrate_answers(self, section_id: str, section_context: str, answered_questions: List[OpenQuestion], llm_profile: str = "requirements", output_format: str = "prose") -> str:
+        """Ask the LLM to rewrite a section using the provided Q&A context.
+        
+        Args:
+            section_id: Section identifier
+            section_context: Current section content
+            answered_questions: List of OpenQuestion objects with answers
+            llm_profile: Profile name to use (default: "requirements")
+            output_format: Output format hint ("prose", "bullets", "subsections")
+            
+        Returns:
+            Rewritten section body text
+        """
+        # Load profile
+        full_profile = self.profile_loader.build_full_profile(llm_profile)
+        
+        # Build format guidance
+        format_guidance = {
+            "prose": "Write integrated content as flowing prose paragraphs.",
+            "bullets": "Write integrated content as a bullet list (dash-prefixed, one item per line).",
+            "subsections": "Organize content under appropriate subsection headers (###)."
+        }.get(output_format, "Write integrated content as prose.")
+        
         qa = "\n".join(f"- {q.question_id}: {q.question}\n  Answer: {q.answer}" for q in answered_questions)
         prompt = f'''
-You are a requirements assistant.
+{full_profile}
 
-TASK:
-Integrate the provided Q&A into section "{section_id}".
-Return ONLY the updated section body text (data-plane). No markers, no section headers, no lock tags.
+---
 
-RULES:
-- Keep it crisp and requirements-style.
-- Remove placeholder wording.
-- If answers conflict, do NOT guess: add a short "Open issues" note at end describing the conflict (do not create table rows).
+## Task: Integrate Answers into Section
 
-CURRENT SECTION TEXT:
-\"\"\"{section_context}\"\"\"
+Section ID: {section_id}
+Output Format: {format_guidance}
 
-ANSWERED QUESTIONS:
+Current Section Content:
+"""{section_context}"""
+
+Answered Questions:
 {qa}
 
-Return updated body text only.
+Rewrite the section incorporating answers. Remove placeholder wording.
+Output only the rewritten section body (no markers, no headers, no lock tags).
 '''
         return self._call(prompt).strip()
