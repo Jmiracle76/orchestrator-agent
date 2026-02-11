@@ -3,9 +3,40 @@ from typing import List
 from .config import SECTION_LOCK_RE, PLACEHOLDER_TOKEN
 from .utils_io import split_lines
 from .sanitize import sanitize_llm_body
+from .structural_validator import StructuralValidator
+from .validation_errors import StructuralError, InvalidSpanError
 
 def replace_block_body_preserving_markers(lines: List[str], start: int, end: int, *, section_id: str, new_body: str) -> List[str]:
-    """Replace a section body while preserving markers, headings, and locks."""
+    """
+    Replace a section body while preserving markers, headings, and locks.
+    
+    Validates document structure before and after the replacement to prevent corruption.
+    
+    Args:
+        lines: Document content as list of strings
+        start: Start line index of section span
+        end: End line index of section span
+        section_id: ID of the section being edited
+        new_body: New body content to insert
+        
+    Returns:
+        Updated document lines
+        
+    Raises:
+        InvalidSpanError: If span is invalid
+        StructuralError: If edit would corrupt structure
+    """
+    # Validate structure before edit
+    validator = StructuralValidator(lines)
+    validator.validate_or_raise()
+    
+    # Validate span is sensible
+    if start >= end:
+        raise InvalidSpanError(section_id, f"Invalid span: start={start} >= end={end}")
+    
+    if start < 0 or end > len(lines):
+        raise InvalidSpanError(section_id, f"Span out of bounds: start={start}, end={end}, len={len(lines)}")
+    
     block_lines = lines[start:end]
     if not block_lines:
         return lines
@@ -39,4 +70,14 @@ def replace_block_body_preserving_markers(lines: List[str], start: int, end: int
     if keep_divider:
         new_block.append("---")
 
-    return lines[:start] + new_block + lines[end:]
+    new_lines = lines[:start] + new_block + lines[end:]
+    
+    # Validate structure after edit
+    validator_after = StructuralValidator(new_lines)
+    errors_after = validator_after.validate_all()
+    if errors_after:
+        raise StructuralError(
+            f"Edit to '{section_id}' would corrupt structure: {errors_after[0]}"
+        )
+    
+    return new_lines
