@@ -210,3 +210,7 @@ def main(argv: List[str] | None = None) -> int:
     result = RunResult(outcome=outcome, changed=changed, blocked_reasons=blocked_reasons)
     print(json.dumps(asdict(result), indent=2))
     return 0 if outcome in ("no-op", "updated") else 1
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
