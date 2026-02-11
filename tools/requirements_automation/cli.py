@@ -78,9 +78,21 @@ def main(argv: List[str] | None = None) -> int:
 
     # Handle --validate-structure flag: check structure without processing
     if args.validate_structure:
-        validator = StructuralValidator(lines)
+        # Load template if provided for cross-reference validation
+        template_lines = None
+        if template_path.exists():
+            template_lines = split_lines(read_text(template_path))
+        
+        validator = StructuralValidator(lines, template_lines)
         errors = validator.validate_all()
-        if errors:
+        
+        # Check if repairs were made
+        if validator.repairs_made:
+            # Save repaired document
+            write_text(doc_path, join_lines(validator.lines))
+            print(report_structural_errors(errors, validator.repairs_made))
+            return 1  # Non-zero exit to indicate repair was performed
+        elif errors:
             print(report_structural_errors(errors))
             return 1
         else:
