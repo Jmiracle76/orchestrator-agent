@@ -17,7 +17,6 @@ review_gate:final_review
 approval_record
 -->
 
-<!-- review_gate_result:review_gate:coherence_check status=passed issues=0 warnings=5 -->
 # Requirements Document
 
 <!-- meta:project_name -->
