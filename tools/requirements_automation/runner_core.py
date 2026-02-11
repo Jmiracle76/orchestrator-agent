@@ -14,6 +14,12 @@ from .runner_handlers import (
     execute_unified_handler,
 )
 from .runner_state import gather_prior_sections, get_section_state
+from .versioning import (
+    get_current_version,
+    get_version_for_section,
+    should_increment_version,
+    update_document_version,
+)
 
 
 class WorkflowRunner:
@@ -46,6 +52,38 @@ class WorkflowRunner:
         self.doc_type = doc_type
         self.workflow_order = workflow_order
         self.handler_registry = handler_registry
+
+    def _check_and_update_version(self, target_id: str, result: WorkflowResult) -> None:
+        """Check if version should be updated after processing a target.
+        
+        Args:
+            target_id: Target ID that was just processed
+            result: WorkflowResult from processing the target
+        """
+        # Only update version if something changed and action was successful
+        if not result.changed:
+            return
+        
+        # Skip version update for certain actions that don't complete sections
+        if result.action_taken in ("skip_locked", "no_action", "skip_special"):
+            return
+        
+        # Get current version
+        current_version = get_current_version(self.lines)
+        
+        # Check if version should increment
+        if should_increment_version(target_id, current_version):
+            new_version = get_version_for_section(target_id)
+            
+            # Create change description based on target type
+            if target_id.startswith("review_gate:"):
+                changes = f"{target_id.replace('review_gate:', '').replace('_', ' ').title()} completed"
+            else:
+                changes = f"{target_id.replace('_', ' ').title()} completed"
+            
+            # Update document version
+            self.lines = update_document_version(self.lines, new_version, changes)
+            logging.info("Document version updated: %s -> %s", current_version, new_version)
 
     def _execute_section(self, target_id: str, state: Any, dry_run: bool) -> WorkflowResult:
         """
@@ -168,6 +206,10 @@ class WorkflowRunner:
                                 handler_config,
                                 dry_run,
                             )
+                            
+                            # Check and update version if review gate passed
+                            self._check_and_update_version(target_id, result)
+                            
                             return result
                         else:
                             logging.warning(
@@ -215,6 +257,10 @@ class WorkflowRunner:
             # Section is incomplete, process it
             logging.info("Processing incomplete section: %s", target_id)
             result = self._execute_section(target_id, state, dry_run)
+            
+            # Check and update version if section completed successfully
+            self._check_and_update_version(target_id, result)
+            
             return result
 
         # All targets complete
