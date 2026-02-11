@@ -12,6 +12,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+import yaml
 
 # Add the tools directory to the path
 repo_root = Path(__file__).parent.parent
@@ -19,6 +20,35 @@ sys.path.insert(0, str(repo_root / "tools"))
 
 from requirements_automation.cli import main as cli_main
 from requirements_automation.utils_io import read_text, write_text
+
+
+def setup_test_config_with_all_prior_sections_scope(tmpdir_path):
+    """
+    Helper function to setup handler registry with modified scope.
+    
+    Creates a copy of the handler registry and modifies the requirements
+    section to use scope: all_prior_sections for testing.
+    
+    Args:
+        tmpdir_path: Path to temporary directory
+    """
+    config_dir = tmpdir_path / "config"
+    config_dir.mkdir(exist_ok=True)
+    registry_src = repo_root / "config" / "handler_registry.yaml"
+    registry_dst = config_dir / "handler_registry.yaml"
+    
+    # Parse YAML, modify, and write back
+    with open(registry_src, 'r') as f:
+        config_data = yaml.safe_load(f)
+    
+    # Modify the requirements section scope
+    if 'requirements' in config_data and 'requirements' in config_data['requirements']:
+        config_data['requirements']['requirements']['scope'] = 'all_prior_sections'
+    
+    with open(registry_dst, 'w') as f:
+        yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+    
+    return registry_dst
 
 
 def test_cli_with_prior_context():
@@ -74,24 +104,8 @@ We need to build a GitHub API integration that syncs issues and pull requests to
         tmpdir_path = Path(tmpdir)
         doc_path = tmpdir_path / "test_requirements.md"
         
-        # Create config directory and copy handler registry
-        config_dir = tmpdir_path / "config"
-        config_dir.mkdir(exist_ok=True)
-        registry_src = repo_root / "config" / "handler_registry.yaml"
-        registry_dst = config_dir / "handler_registry.yaml"
-        
-        # Read the registry and modify requirements section to have scope: all_prior_sections
-        with open(registry_src, 'r') as f:
-            registry_content = f.read()
-        
-        # Modify the requirements section scope
-        registry_content = registry_content.replace(
-            "requirements:\n    mode: integrate_then_questions\n    output_format: prose\n    subsections: false\n    dedupe: false\n    preserve_headers: []\n    sanitize_remove: []\n    llm_profile: requirements\n    auto_apply_patches: never\n    scope: current_section",
-            "requirements:\n    mode: integrate_then_questions\n    output_format: prose\n    subsections: false\n    dedupe: false\n    preserve_headers: []\n    sanitize_remove: []\n    llm_profile: requirements\n    auto_apply_patches: never\n    scope: all_prior_sections"
-        )
-        
-        with open(registry_dst, 'w') as f:
-            f.write(registry_content)
+        # Setup test config with modified scope
+        setup_test_config_with_all_prior_sections_scope(tmpdir_path)
         
         # Write test document
         write_text(doc_path, test_doc)
@@ -267,24 +281,8 @@ We need a real-time data synchronization system for IoT sensors that collects te
         tmpdir_path = Path(tmpdir)
         doc_path = tmpdir_path / "test_iot_requirements.md"
         
-        # Create config directory and copy handler registry
-        config_dir = tmpdir_path / "config"
-        config_dir.mkdir(exist_ok=True)
-        registry_src = repo_root / "config" / "handler_registry.yaml"
-        registry_dst = config_dir / "handler_registry.yaml"
-        
-        # Read the registry and modify requirements section to have scope: all_prior_sections
-        with open(registry_src, 'r') as f:
-            registry_content = f.read()
-        
-        # Modify the requirements section scope
-        registry_content = registry_content.replace(
-            "requirements:\n    mode: integrate_then_questions\n    output_format: prose\n    subsections: false\n    dedupe: false\n    preserve_headers: []\n    sanitize_remove: []\n    llm_profile: requirements\n    auto_apply_patches: never\n    scope: current_section",
-            "requirements:\n    mode: integrate_then_questions\n    output_format: prose\n    subsections: false\n    dedupe: false\n    preserve_headers: []\n    sanitize_remove: []\n    llm_profile: requirements\n    auto_apply_patches: never\n    scope: all_prior_sections"
-        )
-        
-        with open(registry_dst, 'w') as f:
-            f.write(registry_content)
+        # Setup test config with modified scope
+        setup_test_config_with_all_prior_sections_scope(tmpdir_path)
         
         write_text(doc_path, test_doc)
         print(f"  Created test document: {doc_path}")
