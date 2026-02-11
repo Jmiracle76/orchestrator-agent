@@ -381,8 +381,14 @@ class WorkflowRunner:
         questions_generated = 0
         questions_resolved = 0
         
-        # Gather prior completed sections for context
-        prior_sections = self._gather_prior_sections(target_id)
+        # Gather prior completed sections for context based on scope config
+        # - scope: current_section → empty dict (no prior context)
+        # - scope: all_prior_sections → gather all prior completed sections
+        if handler_config.scope == "all_prior_sections":
+            prior_sections = self._gather_prior_sections(target_id)
+        else:
+            # For current_section scope or any other scope, don't pass prior context
+            prior_sections = {}
         
         # Get current section span
         spans = find_sections(self.lines)
