@@ -17,6 +17,7 @@ review_gate:final_review
 approval_record
 -->
 
+<!-- review_gate_result:review_gate:coherence_check status=passed issues=0 warnings=5 -->
 # Requirements Document
 
 <!-- meta:project_name -->
@@ -273,6 +274,11 @@ No formal regulatory frameworks (e.g., GDPR, HIPAA) are in scope for initial imp
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
+| Q-027 | What are the core functional capabilities the system SHALL provide to its users? | 2026-02-11 |  | requirements | Open |
+| Q-028 | What are the performance requirements for response time, throughput, and concurrent users? | 2026-02-11 |  | requirements | Open |
+| Q-029 | What are the security and authentication requirements for the system? | 2026-02-11 |  | requirements | Open |
+| Q-030 | What are the availability, reliability, and data retention requirements? | 2026-02-11 |  | requirements | Open |
+| Q-031 | Which requirements are considered high priority versus optional for initial release? | 2026-02-11 |  | requirements | Open |
 | Q-022 | What are the technical platform constraints (e.g., required operating systems, browser versions, database systems, programming languages, or frameworks that must or must not be used)? | 2026-02-11 | •	The orchestration layer must run in Python •	Requirements documents must be Markdown-based •	GitHub must be used for issue tracking and repository management •	LLM integration must occur via approved API endpoints •	The system must operate within a CLI-driven execution model •	No mandatory GUI dependency for initial release | constraints | Resolved |
 | Q-023 | Are there regulatory, compliance, or legal constraints that limit design or implementation choices (e.g., GDPR, HIPAA, SOC 2, data residency requirements)? | 2026-02-11 | •	No formal regulatory frameworks (e.g., GDPR, HIPAA) are in scope for initial implementation •	Repository access must follow least-privilege principles •	All AI-generated changes must require human approval prior to merge •	Auditability and traceability of changes are mandatory •	No sensitive or regulated production data will be processed by the system | constraints | Resolved |
 | Q-024 | What are the resource constraints in terms of budget, team size, available personnel skillsets, or timeline that impact scope? | 2026-02-11 | •	Small technical team (1–3 primary contributors) •	Limited development bandwidth due to parallel responsibilities •	Budget constraints tied to LLM API usage costs •	Iterative development approach rather than large upfront build •	Timeline flexibility, but scope must remain controlled to avoid expansion | constraints | Resolved |
