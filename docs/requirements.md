@@ -77,31 +77,38 @@ The project addresses the inconsistency, time consumption, and scope-creep risk 
 ---
 <!-- section:goals_objectives -->
 ## 3. Goals and Objectives
+The project SHALL solve the lack of structured, deterministic translation from approved requirements into bounded execution plans and controlled AI-driven code changes. The system SHALL address the absence of enforceable workflow controls that prevent scope drift, planning inconsistency, and unintended repository mutations during AI-assisted development.
 
-<!-- PLACEHOLDER -->
+Success SHALL be defined by the following measurable outcomes:
 
-<!-- subsection:primary_goals -->
-### Primary Goals
-<!-- PLACEHOLDER -->
-1. [Primary goal 1]
-2. [Primary goal 2]
+1. 100% structured parsing of requirements documents into section-scoped tasks
+2. Deterministic issue generation aligned to documented scope
+3. Zero unauthorized file modifications outside defined boundaries
+4. Reduction in manual replanning cycles
+5. Traceable linkage between requirements, issues, and code changes
+6. Predictable agent behavior across iterative runs
 
-<!-- subsection:secondary_goals -->
-### Secondary Goals
-<!-- PLACEHOLDER -->
-1. [Secondary goal 1]
-2. [Secondary goal 2]
+The following improvements are desired but not critical to initial delivery:
 
+1. Dashboard visibility into agent state transitions
+2. Automated executive summaries of project status
+3. Metrics on AI productivity gains
+4. Integration with external PM tools beyond GitHub Issues
+5. Visualization of requirement-to-code traceability
 
-<!-- subsection:non_goals -->
-### Non-Goals
-<!-- PLACEHOLDER -->
-1. [Non-goal 1]
-2. [Non-goal 2]
+These capabilities SHALL improve transparency and usability but are not required to validate core workflow integrity.
 
+The following features and use cases are explicitly out of scope for initial delivery:
+
+1. Full autonomous code generation without human gating
+2. Business-level strategy automation
+3. Non-markdown document ingestion
+4. Natural language freeform repo edits without scope validation
+5. Multi-repository orchestration
+
+The initial focus SHALL be controlled document-to-plan-to-execution workflow enforcement.
 <!-- section_lock:goals_objectives lock=false -->
 ---
-
 <!-- section:stakeholders_users -->
 ## 4. Stakeholders and Users
 <!-- PLACEHOLDER -->
@@ -266,11 +273,16 @@ The project addresses the inconsistency, time consumption, and scope-creep risk 
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-002 | What is the primary business or technical problem this project solves? | 2026-02-11 | The project solves the lack of structured, deterministic translation from approved requirements into bounded execution plans and controlled AI-driven code changes. It addresses the absence of enforceable workflow controls that prevent scope drift, planning inconsistency, and unintended repository mutations during AI-assisted development. | goals_objectives | Open |
-| Q-003 | What measurable outcomes define success for this project? | 2026-02-11 | Success is defined by: •	100% structured parsing of requirements documents into section-scoped tasks •	Deterministic issue generation aligned to documented scope •	Zero unauthorized file modifications outside defined boundaries •	Reduction in manual replanning cycles •	Traceable linkage between requirements, issues, and code changes •	Predictable agent behavior across iterative runs  | goals_objectives | Open |
-| Q-004 | Are there any related features, use cases, or scope areas that are explicitly out of scope? | 2026-02-11 | Out of scope for initial delivery: •	Full autonomous code generation without human gating •	Business-level strategy automation •	Non-markdown document ingestion •	Natural language freeform repo edits without scope validation •	Multi-repository orchestration The initial focus is controlled document-to-plan-to-execution workflow enforcement. | goals_objectives | Open |
-| Q-005 | What stakeholder or operational improvements are desired but not critical to initial delivery? | 2026-02-11 | Desired but non-critical: •	Dashboard visibility into agent state transitions •	Automated executive summaries of project status •	Metrics on AI productivity gains •	Integration with external PM tools beyond GitHub Issues •	Visualization of requirement-to-code traceability These improve transparency but are not required to validate core workflow integrity. | goals_objectives | Open |
-| Q-006 | What existing systems, processes, or workflows will this project replace or integrate with? | 2026-02-11 | This project integrates with: •	Markdown-based requirements documents •	GitHub Issues for execution tracking •	Python invocation scripts for agent orchestration •	Repository version control workflows It replaces: •	Manual translation of requirements into task lists •	Ad hoc AI prompting for planning and refactoring •	Informal scope management using freeform markdown notes | goals_objectives | Open |
+| Q-007 | Who are the primary stakeholders for this system (e.g., project sponsor, product owner, business units, compliance officers)? | 2026-02-11 |  | stakeholders_users | Open |
+| Q-008 | What are the distinct end user types who will interact with the system (e.g., administrators, operators, customers, analysts)? | 2026-02-11 |  | stakeholders_users | Open |
+| Q-009 | What are the key characteristics of each user type (e.g., technical skill level, frequency of use, location, department)? | 2026-02-11 |  | stakeholders_users | Open |
+| Q-010 | What are the primary use cases or workflows that each user type needs to accomplish with the system? | 2026-02-11 |  | stakeholders_users | Open |
+| Q-011 | Are there regulatory, approval, or oversight stakeholders whose requirements must be satisfied (e.g., legal, security, auditors)? | 2026-02-11 |  | stakeholders_users | Open |
+| Q-002 | What is the primary business or technical problem this project solves? | 2026-02-11 | The project solves the lack of structured, deterministic translation from approved requirements into bounded execution plans and controlled AI-driven code changes. It addresses the absence of enforceable workflow controls that prevent scope drift, planning inconsistency, and unintended repository mutations during AI-assisted development. | goals_objectives | Resolved |
+| Q-003 | What measurable outcomes define success for this project? | 2026-02-11 | Success is defined by: •	100% structured parsing of requirements documents into section-scoped tasks •	Deterministic issue generation aligned to documented scope •	Zero unauthorized file modifications outside defined boundaries •	Reduction in manual replanning cycles •	Traceable linkage between requirements, issues, and code changes •	Predictable agent behavior across iterative runs | goals_objectives | Resolved |
+| Q-004 | Are there any related features, use cases, or scope areas that are explicitly out of scope? | 2026-02-11 | Out of scope for initial delivery: •	Full autonomous code generation without human gating •	Business-level strategy automation •	Non-markdown document ingestion •	Natural language freeform repo edits without scope validation •	Multi-repository orchestration The initial focus is controlled document-to-plan-to-execution workflow enforcement. | goals_objectives | Resolved |
+| Q-005 | What stakeholder or operational improvements are desired but not critical to initial delivery? | 2026-02-11 | Desired but non-critical: •	Dashboard visibility into agent state transitions •	Automated executive summaries of project status •	Metrics on AI productivity gains •	Integration with external PM tools beyond GitHub Issues •	Visualization of requirement-to-code traceability These improve transparency but are not required to validate core workflow integrity. | goals_objectives | Resolved |
+| Q-006 | What existing systems, processes, or workflows will this project replace or integrate with? | 2026-02-11 | This project integrates with: •	Markdown-based requirements documents •	GitHub Issues for execution tracking •	Python invocation scripts for agent orchestration •	Repository version control workflows It replaces: •	Manual translation of requirements into task lists •	Ad hoc AI prompting for planning and refactoring •	Informal scope management using freeform markdown notes | goals_objectives | Resolved |
 | Q-001 | What problem are we trying to solve? | [Date] | The project addresses the inconsistency, time consumption, and scope-creep risk inherent in manually translating approved requirements into execution plans and managing AI-assisted code changes. Without structured automation, developers and teams experience: - **Incomplete or unbounded plans:** Manual markdown planning and issue trackers fail to enforce structure or guarantee scope boundaries. - **Idea limbo:** Projects remain unstarted or unfinished due to planning overhead. - **Wasted replanning effort:** Iterative edits and multi-agent handoffs do not reliably preserve intent. - **Unintended repository mutations:** Ad hoc AI prompting risks scope drift and accidental changes that diverge from original intent. | problem_statement | Resolved |
 
 ---
