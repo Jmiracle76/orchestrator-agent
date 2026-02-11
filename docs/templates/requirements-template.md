@@ -8,11 +8,12 @@ stakeholders_users
 success_criteria
 assumptions
 constraints
+review_gate:coherence_check
 requirements
 interfaces_integrations
 data_considerations
 risks_open_issues
-review_gate:coherence_check
+review_gate:final_review
 approval_record
 -->
 

@@ -1,15 +1,17 @@
 from __future__ import annotations
 import logging
 import re
-from typing import List, Optional
+from typing import List, Optional, Dict
 from .models import WorkflowResult, SectionState
 from .config import PHASES, is_special_workflow_target, PLACEHOLDER_TOKEN
-from .parsing import find_sections, get_section_span, section_is_locked, section_is_blank, find_subsections_within
-from .open_questions import open_questions_parse
+from .parsing import find_sections, get_section_span, section_is_locked, section_is_blank, find_subsections_within, section_body, section_text
+from .open_questions import open_questions_parse, open_questions_resolve, open_questions_insert
 from .config import TARGET_CANONICAL_MAP
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 from .review_gate_handler import ReviewGateHandler
 from .formatting import format_review_gate_output
+from .editing import replace_block_body_preserving_markers
+from .utils_io import iso_today
 
 
 def _canon_target(t: str) -> str:
@@ -199,10 +201,12 @@ class WorkflowRunner:
             
             return result
         
-        # For all other modes (integrate_then_questions, questions_then_integrate),
-        # fall through to phase-based logic below. This is temporary until Issue 5
-        # implements unified handlers that use the full handler config.
-        # Currently, the handler config is loaded and logged but not used for dispatch.
+        # Check if this uses integrate_then_questions or questions_then_integrate mode
+        # If so, use unified handler logic driven by handler config
+        if handler_config and handler_config.mode in ("integrate_then_questions", "questions_then_integrate"):
+            return self._execute_unified_handler(target_id, state, handler_config, dry_run)
+        
+        # For sections without handler config, fall back to phase-based logic
         
         # Map section to phase for backward compatibility
         phase_name = None
@@ -296,6 +300,251 @@ class WorkflowRunner:
             summaries=summaries,
             questions_generated=questions_generated,
             questions_resolved=resolved_count,
+        )
+
+    def _execute_unified_handler(
+        self, target_id: str, state: SectionState, handler_config, dry_run: bool
+    ) -> WorkflowResult:
+        """
+        Execute unified handler using handler config parameters.
+        
+        This implements the integrate-then-questions pattern using configuration
+        from the handler registry, replacing hardcoded phase-specific logic.
+        
+        Args:
+            target_id: Section ID to process
+            state: Section state information
+            handler_config: Handler configuration from registry
+            dry_run: Whether to run in dry-run mode
+            
+        Returns:
+            WorkflowResult with execution details
+        """
+        changed = False
+        blocked_reasons = []
+        summaries = []
+        questions_generated = 0
+        questions_resolved = 0
+        
+        # Get current section span
+        spans = find_sections(self.lines)
+        span = get_section_span(spans, target_id)
+        
+        if not span:
+            return WorkflowResult(
+                target_id=target_id,
+                action_taken="error",
+                changed=False,
+                blocked=True,
+                blocked_reasons=[f"Section span not found: {target_id}"],
+                summaries=[],
+                questions_generated=0,
+                questions_resolved=0,
+            )
+        
+        # Parse open questions
+        try:
+            open_qs, _, _ = open_questions_parse(self.lines)
+        except Exception as e:
+            logging.warning("Failed to parse open questions: %s", e)
+            open_qs = []
+        
+        # Include subsections when checking questions
+        subs = find_subsections_within(self.lines, span)
+        target_ids = {target_id} | {s.subsection_id for s in subs}
+        
+        targeted_questions = [
+            q for q in open_qs if _canon_target(q.section_target) in target_ids
+        ]
+        
+        # Find questions with answers (status "Open"/"Deferred" with non-empty answers)
+        answered_questions = [
+            q for q in targeted_questions
+            if q.answer.strip() not in ("", "-", "Pending")
+            and q.status.strip() in ("Open", "Deferred")
+        ]
+        
+        # Find questions without answers
+        open_unanswered = [
+            q for q in targeted_questions
+            if q.status.strip() in ("Open", "Deferred")
+            and q.answer.strip() in ("", "-", "Pending")
+        ]
+        
+        # Step 1: If section has answered questions, integrate them
+        if answered_questions:
+            logging.info(
+                "Integrating %d answered questions into section: %s",
+                len(answered_questions),
+                target_id,
+            )
+            
+            # Group questions by target (section or subsection)
+            by_target: Dict[str, List] = {}
+            for q in answered_questions:
+                tgt = _canon_target(q.section_target)
+                by_target.setdefault(tgt, []).append(q)
+            
+            any_integrated = False
+            for tgt, qs in by_target.items():
+                # Get the span for this target (section or subsection)
+                if tgt == target_id:
+                    target_start, target_end = span.start_line, span.end_line
+                else:
+                    # Find subsection span
+                    subspan = None
+                    for s in subs:
+                        if s.subsection_id == tgt:
+                            subspan = s
+                            break
+                    if not subspan:
+                        logging.warning(
+                            "Answered questions target '%s' but no matching subsection exists; skipping.",
+                            tgt,
+                        )
+                        continue
+                    target_start, target_end = subspan.start_line, subspan.end_line
+                
+                # Get current context for this target
+                context = "\n".join(self.lines[target_start:target_end])
+                
+                # Call LLM to integrate answers using handler config parameters
+                new_body = self.llm.integrate_answers(
+                    tgt,
+                    context,
+                    qs,
+                    llm_profile=handler_config.llm_profile,
+                    output_format=handler_config.output_format,
+                )
+                
+                if new_body.strip() and new_body.strip() != context.strip():
+                    if not dry_run:
+                        self.lines = replace_block_body_preserving_markers(
+                            self.lines,
+                            target_start,
+                            target_end,
+                            section_id=tgt,
+                            new_body=new_body,
+                        )
+                        # Update spans after modification
+                        spans = find_sections(self.lines)
+                    any_integrated = True
+            
+            if any_integrated:
+                changed = True
+                questions_resolved = len(answered_questions)
+                
+                # Mark questions as resolved
+                qids = [q.question_id for q in answered_questions]
+                if not dry_run:
+                    try:
+                        self.lines, resolved = open_questions_resolve(self.lines, qids)
+                        if resolved:
+                            summaries.append(
+                                f"Integrated {len(answered_questions)} answers; resolved {resolved} questions"
+                            )
+                            # Re-parse questions after resolving
+                            try:
+                                open_qs, _, _ = open_questions_parse(self.lines)
+                            except Exception:
+                                open_qs = []
+                    except Exception as e:
+                        logging.warning("Failed to resolve questions: %s", e)
+                        summaries.append(
+                            f"Integrated {len(answered_questions)} answers (questions table not available)"
+                        )
+                
+                # Update span after integration
+                spans = find_sections(self.lines)
+                span = get_section_span(spans, target_id)
+        
+        # Step 2: Check if section is still blank after integration
+        # A section is blank if it contains the PLACEHOLDER token
+        is_blank = section_is_blank(self.lines, span)
+        
+        # Step 3: If section is blank and no open questions exist, generate new ones
+        if is_blank:
+            # Re-check for unanswered questions after integration
+            try:
+                open_qs, _, _ = open_questions_parse(self.lines)
+                targeted_questions = [
+                    q for q in open_qs if _canon_target(q.section_target) in target_ids
+                ]
+                open_unanswered = [
+                    q for q in targeted_questions
+                    if q.status.strip() in ("Open", "Deferred")
+                    and q.answer.strip() in ("", "-", "Pending")
+                ]
+            except Exception as e:
+                logging.warning("Failed to parse open questions: %s", e)
+                open_qs = []
+                open_unanswered = []
+            
+            if not open_unanswered:
+                # Generate new questions
+                logging.info(
+                    "Section '%s' is blank and has no open questions; generating questions",
+                    target_id,
+                )
+                
+                ctx = section_body(self.lines, span)
+                proposed = self.llm.generate_open_questions(
+                    target_id, ctx, llm_profile=handler_config.llm_profile
+                )
+                
+                new_qs = []
+                for item in proposed:
+                    q_text = (item.get("question") or "").strip()
+                    q_target = _canon_target(
+                        (item.get("section_target") or target_id).strip()
+                    )
+                    # Validate that target is this section or a subsection
+                    if q_target not in target_ids:
+                        q_target = target_id
+                    if q_text:
+                        new_qs.append((q_text, q_target, iso_today()))
+                
+                if new_qs and not dry_run:
+                    try:
+                        self.lines, inserted = open_questions_insert(self.lines, new_qs)
+                        if inserted:
+                            changed = True
+                            questions_generated = inserted
+                            summaries.append(
+                                f"Generated {inserted} open questions for {target_id}"
+                            )
+                    except Exception as e:
+                        logging.warning("Failed to insert open questions: %s", e)
+                        summaries.append(
+                            f"Generated {len(new_qs)} questions but could not insert (no questions table)"
+                        )
+            else:
+                # Section is blank but has open questions - blocked waiting for answers
+                logging.info(
+                    "Section '%s' is blank but has %d open questions; waiting for answers",
+                    target_id,
+                    len(open_unanswered),
+                )
+                blocked_reasons.append(
+                    f"Waiting for {len(open_unanswered)} questions to be answered"
+                )
+        
+        # Determine action taken
+        action = "no_action"
+        if questions_generated > 0:
+            action = "question_gen"
+        elif questions_resolved > 0 or changed:
+            action = "integration"
+        
+        return WorkflowResult(
+            target_id=target_id,
+            action_taken=action,
+            changed=changed,
+            blocked=len(blocked_reasons) > 0,
+            blocked_reasons=blocked_reasons,
+            summaries=summaries,
+            questions_generated=questions_generated,
+            questions_resolved=questions_resolved,
         )
 
     def run_once(self, dry_run: bool = False) -> WorkflowResult:
