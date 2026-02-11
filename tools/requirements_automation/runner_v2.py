@@ -578,9 +578,8 @@ class WorkflowRunner:
                 
                 if draft.strip() and draft.strip() != ctx.strip():
                     if not dry_run:
-                        # Recalculate subsections in case they were updated during integration
-                        subs = find_subsections_within(self.lines, span)
                         # Calculate effective end boundary to preserve open_questions subsection
+                        # Using subs from line 443 which is still valid since integration didn't run
                         draft_end = _get_replacement_end_boundary(self.lines, span, subs)
                         
                         # Write the draft to the section body
