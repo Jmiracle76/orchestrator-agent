@@ -52,7 +52,8 @@ def main(argv: List[str] | None = None) -> int:
         return 2
 
     # Avoid committing unrelated changes unless explicitly overridden.
-    if not args.no_commit and not is_working_tree_clean(repo_root):
+    # Skip this check for --validate mode since we're not committing anything
+    if not args.validate and not args.no_commit and not is_working_tree_clean(repo_root):
         print("ERROR: Working tree has uncommitted changes.\n")
         print(git_status_porcelain(repo_root))
         return 2
@@ -99,8 +100,6 @@ def main(argv: List[str] | None = None) -> int:
             )
             return 2
     
-    llm = LLMClient()
-
     # Decide which phase is next and execute it.
     try:
         workflow_order = extract_workflow_order(lines)
@@ -133,6 +132,9 @@ def main(argv: List[str] | None = None) -> int:
         print(json.dumps(asdict(status), indent=2))
         
         return 0 if status.complete else 1
+
+    # Create LLM client only if we're not in validate mode
+    llm = LLMClient()
 
     # Create WorkflowRunner and execute workflow
     runner = WorkflowRunner(lines, llm, doc_type, workflow_order, handler_registry=handler_registry)
