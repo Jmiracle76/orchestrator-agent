@@ -1,0 +1,156 @@
+# Section Handler Registry
+# Maps (doc_type, section_id) -> handler configuration
+# This decouples section processing logic from code, allowing new document types
+# and section behaviors to be defined via YAML configuration without engine changes.
+
+# Handler definitions for requirements document type
+requirements:
+  problem_statement:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  goals_objectives:
+    mode: integrate_then_questions
+    output_format: bullets
+    subsections: true  # supports primary_goals, secondary_goals, non_goals
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  stakeholders_users:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  success_criteria:
+    mode: integrate_then_questions
+    output_format: bullets
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  assumptions:
+    mode: integrate_then_questions
+    output_format: bullets
+    subsections: false
+    dedupe: true  # remove duplicate assumptions after integration
+    preserve_headers: []
+    sanitize_remove:
+      - "constraint classification headers"
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  constraints:
+    mode: integrate_then_questions
+    output_format: subsections  # preserve ### Technical/Operational/Resource Constraints
+    subsections: false
+    dedupe: false
+    preserve_headers:
+      - "### Technical Constraints"
+      - "### Operational Constraints"
+      - "### Resource Constraints"
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  requirements:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  interfaces_integrations:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  data_considerations:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  risks_open_issues:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+    
+  approval_record:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section
+  
+  # Review gate example (for future Issue 7 implementation)
+  review_gate:coherence_check:
+    mode: review_gate
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements_review
+    auto_apply_patches: false  # configurable per gate
+    scope: all_prior_sections  # review all sections before this gate
+
+# Default handler for unknown sections
+_default:
+  requirements:
+    mode: integrate_then_questions
+    output_format: prose
+    subsections: false
+    dedupe: false
+    preserve_headers: []
+    sanitize_remove: []
+    llm_profile: requirements
+    auto_apply_patches: false
+    scope: current_section

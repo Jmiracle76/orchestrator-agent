@@ -126,8 +126,8 @@ class WorkflowRunner:
         """
         Execute processing for a section target.
 
-        This is a temporary adapter to the old phase logic. Future issues
-        (4-5) will replace this with unified handlers.
+        Uses handler registry to determine section processing behavior.
+        Falls back to phase-based logic if handler_registry is not provided.
 
         Args:
             target_id: Section ID to process
@@ -137,6 +137,44 @@ class WorkflowRunner:
         Returns:
             WorkflowResult with execution details
         """
+        # Try to get handler config from registry
+        handler_config = None
+        if self.handler_registry:
+            try:
+                handler_config = self.handler_registry.get_handler_config(
+                    self.doc_type, target_id
+                )
+                logging.debug(
+                    "Using handler config for %s: mode=%s, output_format=%s",
+                    target_id,
+                    handler_config.mode,
+                    handler_config.output_format,
+                )
+            except Exception as e:
+                logging.warning(
+                    "Failed to get handler config for %s: %s. Falling back to phase logic.",
+                    target_id,
+                    e,
+                )
+        
+        # If we have a handler config, use it to dispatch
+        if handler_config:
+            # For now, we still use the old phase processors but log the handler config
+            # Future Issue 5 will implement unified handlers that use the full config
+            if handler_config.mode == "review_gate":
+                # Review gates not yet implemented (Issue 7)
+                logging.info("Review gate '%s' not yet implemented", target_id)
+                return WorkflowResult(
+                    target_id=target_id,
+                    action_taken="skip_special",
+                    changed=False,
+                    blocked=True,
+                    blocked_reasons=[f"Review gate '{target_id}' not implemented"],
+                    summaries=[f"Skipped review gate: {target_id}"],
+                    questions_generated=0,
+                    questions_resolved=0,
+                )
+        
         # Map section to phase for backward compatibility
         phase_name = None
         for phase, sections in PHASES.items():
@@ -254,8 +292,28 @@ class WorkflowRunner:
         for target_id in self.workflow_order:
             # Handle special workflow targets (e.g., review gates)
             if is_special_workflow_target(target_id):
-                # Placeholder for Issue 7: review gate handler
-                logging.info("Special workflow target '%s' not yet implemented", target_id)
+                # Check handler registry for review gate config
+                if self.handler_registry:
+                    try:
+                        handler_config = self.handler_registry.get_handler_config(
+                            self.doc_type, target_id
+                        )
+                        if handler_config.mode == "review_gate":
+                            # Review gates not yet implemented (Issue 7)
+                            logging.info("Review gate '%s' configured but not yet implemented", target_id)
+                        else:
+                            logging.warning(
+                                "Special target '%s' has non-review_gate mode: %s",
+                                target_id,
+                                handler_config.mode,
+                            )
+                    except Exception as e:
+                        logging.warning(
+                            "Failed to get handler config for special target '%s': %s",
+                            target_id,
+                            e,
+                        )
+                
                 return WorkflowResult(
                     target_id=target_id,
                     action_taken="skip_special",
