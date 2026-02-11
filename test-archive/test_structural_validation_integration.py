@@ -23,9 +23,9 @@ def test_editing_validates_before_after():
     """Test that editing validates structure before and after changes."""
     print("\nTest: Editing Validates Before and After")
     print("=" * 70)
-    
+
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "-->",
@@ -35,20 +35,20 @@ def test_editing_validates_before_after():
         "Old content.",
         "",
     ]
-    
+
     spans = find_sections(lines)
     span = get_section_span(spans, "problem_statement")
-    
+
     try:
         new_lines = replace_block_body_preserving_markers(
             lines,
             span.start_line,
             span.end_line,
             section_id="problem_statement",
-            new_body="New content that is valid."
+            new_body="New content that is valid.",
         )
         print("  ✓ Valid edit accepted")
-        
+
         # Verify the content was actually changed
         if "New content that is valid." in "\n".join(new_lines):
             print("  ✓ Content updated correctly")
@@ -65,9 +65,9 @@ def test_editing_rejects_invalid_span():
     """Test that editing rejects invalid spans."""
     print("\nTest: Editing Rejects Invalid Span")
     print("=" * 70)
-    
+
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "-->",
@@ -77,7 +77,7 @@ def test_editing_rejects_invalid_span():
         "Old content.",
         "",
     ]
-    
+
     try:
         # Try to edit with invalid span (start >= end)
         new_lines = replace_block_body_preserving_markers(
@@ -85,7 +85,7 @@ def test_editing_rejects_invalid_span():
             5,  # start
             5,  # end (same as start - invalid!)
             section_id="problem_statement",
-            new_body="New content."
+            new_body="New content.",
         )
         print("  ✗ Invalid span accepted (should have been rejected)")
         return False
@@ -101,9 +101,9 @@ def test_editing_rejects_out_of_bounds_span():
     """Test that editing rejects out-of-bounds spans."""
     print("\nTest: Editing Rejects Out-of-Bounds Span")
     print("=" * 70)
-    
+
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "-->",
@@ -113,15 +113,15 @@ def test_editing_rejects_out_of_bounds_span():
         "Old content.",
         "",
     ]
-    
+
     try:
         # Try to edit with out-of-bounds span
         new_lines = replace_block_body_preserving_markers(
             lines,
-            5,   # start
-            100, # end (beyond document length)
+            5,  # start
+            100,  # end (beyond document length)
             section_id="problem_statement",
-            new_body="New content."
+            new_body="New content.",
         )
         print("  ✗ Out-of-bounds span accepted (should have been rejected)")
         return False
@@ -137,9 +137,9 @@ def test_patch_validates_structure():
     """Test that patching validates structure before applying."""
     print("\nTest: Patch Validates Structure")
     print("=" * 70)
-    
+
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "-->",
@@ -149,15 +149,11 @@ def test_patch_validates_structure():
         "Old content.",
         "",
     ]
-    
+
     try:
-        new_lines = apply_patch(
-            "problem_statement",
-            "New patched content.",
-            lines
-        )
+        new_lines = apply_patch("problem_statement", "New patched content.", lines)
         print("  ✓ Valid patch accepted")
-        
+
         # Verify the content was changed
         if "New patched content." in "\n".join(new_lines):
             print("  ✓ Patch applied correctly")
@@ -174,9 +170,9 @@ def test_patch_rejects_markers():
     """Test that patching rejects suggestions containing structure markers."""
     print("\nTest: Patch Rejects Markers in Suggestion")
     print("=" * 70)
-    
+
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "-->",
@@ -186,16 +182,12 @@ def test_patch_rejects_markers():
         "Old content.",
         "",
     ]
-    
+
     # Try to inject a section marker
     malicious_suggestion = "New content.\n<!-- section:injected -->\nMalicious content."
-    
+
     try:
-        new_lines = apply_patch(
-            "problem_statement",
-            malicious_suggestion,
-            lines
-        )
+        new_lines = apply_patch("problem_statement", malicious_suggestion, lines)
         print("  ✗ Patch with markers accepted (should have been rejected)")
         return False
     except ValueError as e:
@@ -214,9 +206,9 @@ def test_patch_rejects_nonexistent_section():
     """Test that patching rejects patches for nonexistent sections."""
     print("\nTest: Patch Rejects Nonexistent Section")
     print("=" * 70)
-    
+
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "-->",
@@ -226,13 +218,9 @@ def test_patch_rejects_nonexistent_section():
         "Old content.",
         "",
     ]
-    
+
     try:
-        new_lines = apply_patch(
-            "nonexistent_section",
-            "New content.",
-            lines
-        )
+        new_lines = apply_patch("nonexistent_section", "New content.", lines)
         print("  ✗ Patch for nonexistent section accepted (should have been rejected)")
         return False
     except (InvalidSpanError, ValueError) as e:
@@ -247,10 +235,10 @@ def test_editing_detects_corruption_after():
     """Test that editing detects corruption caused by the edit."""
     print("\nTest: Editing Detects Corruption After Edit")
     print("=" * 70)
-    
+
     # Create a document that would become corrupted if we allowed duplicate markers
     lines = [
-        "<!-- meta:doc_type value=\"requirements\" -->",
+        '<!-- meta:doc_type value="requirements" -->',
         "<!-- workflow:order",
         "problem_statement",
         "goals_objectives",
@@ -265,20 +253,20 @@ def test_editing_detects_corruption_after():
         "Goals here.",
         "",
     ]
-    
+
     # This test is a bit contrived since our sanitize function should remove markers,
     # but we're testing the validation layer independently
     # Let's test with a valid edit instead and ensure it passes
     spans = find_sections(lines)
     span = get_section_span(spans, "problem_statement")
-    
+
     try:
         new_lines = replace_block_body_preserving_markers(
             lines,
             span.start_line,
             span.end_line,
             section_id="problem_statement",
-            new_body="Valid new content."
+            new_body="Valid new content.",
         )
         print("  ✓ Valid edit that maintains structure accepted")
         return True
@@ -292,7 +280,7 @@ def main():
     print("\n" + "=" * 70)
     print("STRUCTURAL VALIDATION INTEGRATION TEST SUITE")
     print("=" * 70)
-    
+
     tests = [
         test_editing_validates_before_after,
         test_editing_rejects_invalid_span,
@@ -302,7 +290,7 @@ def main():
         test_patch_rejects_nonexistent_section,
         test_editing_detects_corruption_after,
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -311,23 +299,24 @@ def main():
         except Exception as e:
             print(f"  ✗ Test crashed: {e}")
             import traceback
+
             traceback.print_exc()
             results.append((test.__name__, False))
-    
+
     print("\n" + "=" * 70)
     print("TEST RESULTS")
     print("=" * 70)
-    
+
     passed = sum(1 for _, result in results if result)
     total = len(results)
-    
+
     for name, result in results:
         status = "✓ PASS" if result else "✗ FAIL"
         print(f"{status}: {name}")
-    
+
     print()
     print(f"Passed: {passed}/{total}")
-    
+
     return 0 if passed == total else 1
 
 

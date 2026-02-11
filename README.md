@@ -179,6 +179,30 @@ See the [LLM Profiles Guide](docs/developer/llm-profiles-guide.md) for details.
 
 ## Development
 
+### Code Quality Tools
+
+This project uses automated code quality tools to maintain consistent code style and type safety:
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Format code with black
+black tools/
+
+# Sort imports with isort
+isort tools/
+
+# Type check with mypy
+mypy tools/
+
+# Install pre-commit hooks (runs automatically on git commit)
+pre-commit install
+
+# Run all pre-commit checks manually
+pre-commit run --all-files
+```
+
 ### Running Tests
 
 ```bash

@@ -1,27 +1,36 @@
 from __future__ import annotations
-import os, shutil, datetime as dt
+
+import datetime as dt
+import os
+import shutil
 from pathlib import Path
 from typing import List
+
 
 def iso_today() -> str:
     """Return today's date in ISO-8601 format (YYYY-MM-DD)."""
     return dt.date.today().isoformat()
 
+
 def read_text(path: Path) -> str:
     """Read a UTF-8 text file into a string."""
     return path.read_text(encoding="utf-8")
+
 
 def write_text(path: Path, text: str) -> None:
     """Write a UTF-8 string to disk."""
     path.write_text(text, encoding="utf-8")
 
+
 def split_lines(doc: str) -> List[str]:
     """Split a document string into a list of lines without trailing newline."""
     return doc.splitlines()
 
+
 def join_lines(lines: List[str]) -> str:
     """Join lines into a single string with a trailing newline."""
     return "\n".join(lines) + "\n"
+
 
 def backup_file_outside_repo(path: Path) -> Path:
     """Copy a file to a temp backup folder for rollback safety."""

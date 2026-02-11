@@ -1,34 +1,37 @@
 """Section handler execution logic."""
+
 from __future__ import annotations
+
 import logging
 import re
-from typing import List
-from .models import WorkflowResult, SectionState
+from typing import Any, List
+
 from .config import PHASES
+from .formatting import format_review_gate_output
+from .models import SectionState, WorkflowResult
+from .open_questions import open_questions_parse
+from .parsing import find_sections, get_section_span, section_is_blank
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 from .review_gate_handler import ReviewGateHandler
-from .formatting import format_review_gate_output
-from .open_questions import open_questions_parse
-from .runner_state import _canon_target, get_section_state
 from .runner_integration import (
-    integrate_answered_questions,
     draft_section_content,
-    generate_questions_for_section
+    generate_questions_for_section,
+    integrate_answered_questions,
 )
-from .parsing import section_is_blank, get_section_span, find_sections
+from .runner_state import _canon_target, get_section_state
 
 
 def execute_review_gate(
     lines: List[str],
     target_id: str,
-    llm,
+    llm: Any,
     doc_type: str,
-    handler_config,
-    dry_run: bool = False
+    handler_config: Any,
+    dry_run: bool = False,
 ) -> tuple[List[str], WorkflowResult]:
     """
     Execute a review gate handler.
-    
+
     Args:
         lines: Document content as list of strings
         target_id: Review gate ID
@@ -36,25 +39,23 @@ def execute_review_gate(
         doc_type: Document type
         handler_config: Handler configuration from registry
         dry_run: If True, don't modify the document
-        
+
     Returns:
         Tuple of (updated_lines, WorkflowResult)
     """
     # Execute review gate
     handler = ReviewGateHandler(llm, lines, doc_type)
     review_result = handler.execute_review(target_id, handler_config)
-    
+
     # Write review gate result marker to document
     lines, marker_changed = handler.write_review_gate_result(review_result, lines)
-    
+
     # Sync handler state with updated document lines (now includes result marker)
     handler.lines = lines
-    
+
     # Optionally apply patches
-    lines, patches_applied = handler.apply_patches_if_configured(
-        review_result, handler_config
-    )
-    
+    lines, patches_applied = handler.apply_patches_if_configured(review_result, handler_config)
+
     # Convert to WorkflowResult
     result = WorkflowResult(
         target_id=target_id,
@@ -62,23 +63,21 @@ def execute_review_gate(
         changed=marker_changed or patches_applied,
         blocked=not review_result.passed,
         blocked_reasons=[
-            f"{i.severity}: {i.description}" 
-            for i in review_result.issues 
+            f"{i.severity}: {i.description}"
+            for i in review_result.issues
             if i.severity == "blocker"
         ],
-        summaries=[review_result.summary] + [
-            f"{i.severity}: {i.description}" 
-            for i in review_result.issues
-        ],
+        summaries=[review_result.summary]
+        + [f"{i.severity}: {i.description}" for i in review_result.issues],
         questions_generated=0,
         questions_resolved=0,
     )
-    
+
     # Log formatted output for human readability
     formatted_output = format_review_gate_output(result)
     if formatted_output:
         print(formatted_output)
-    
+
     return lines, result
 
 
@@ -86,17 +85,17 @@ def execute_unified_handler(
     lines: List[str],
     target_id: str,
     state: SectionState,
-    llm,
-    handler_config,
+    llm: Any,
+    handler_config: Any,
     prior_sections: dict[str, str],
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> tuple[List[str], WorkflowResult]:
     """
     Execute unified handler using handler config parameters.
-    
+
     This implements the integrate-then-questions pattern using configuration
     from the handler registry, replacing hardcoded phase-specific logic.
-    
+
     Args:
         lines: Document content as list of strings
         target_id: Section ID to process
@@ -105,7 +104,7 @@ def execute_unified_handler(
         handler_config: Handler configuration from registry
         prior_sections: Dict of completed section IDs to their content
         dry_run: If True, don't modify the document
-        
+
     Returns:
         Tuple of (updated_lines, WorkflowResult)
     """
@@ -114,21 +113,21 @@ def execute_unified_handler(
     summaries = []
     questions_generated = 0
     questions_resolved = 0
-    
+
     # Step 1: If section has answered questions, integrate them
     lines, int_changed, int_resolved, int_summaries = integrate_answered_questions(
         lines, target_id, llm, handler_config, prior_sections, dry_run
     )
-    
+
     if int_changed:
         changed = True
         questions_resolved = int_resolved
         summaries.extend(int_summaries)
-    
+
     # Get updated section span after integration
     spans = find_sections(lines)
     span = get_section_span(spans, target_id)
-    
+
     if not span:
         return lines, WorkflowResult(
             target_id=target_id,
@@ -140,32 +139,33 @@ def execute_unified_handler(
             questions_generated=0,
             questions_resolved=0,
         )
-    
+
     # Step 2: Check if section is still blank after integration
     is_blank = section_is_blank(lines, span)
-    
+
     # Step 2.5: If section is blank and prior context is available, try drafting first
     # Skip drafting if answered_questions exist because Step 1 just integrated them
     if is_blank and prior_sections and not int_changed:
         lines, draft_changed, draft_summaries = draft_section_content(
             lines, target_id, llm, handler_config, prior_sections, dry_run
         )
-        
+
         if draft_changed:
             changed = True
             summaries.extend(draft_summaries)
-            
+
             # Re-check if section is still blank after drafting
             spans = find_sections(lines)
             span = get_section_span(spans, target_id)
-            is_blank = section_is_blank(lines, span)
-    
+            if span is not None:
+                is_blank = section_is_blank(lines, span)
+
     # Step 3: If section is blank and no open questions exist, generate new ones
     if is_blank:
         lines, gen_changed, gen_count, gen_summaries = generate_questions_for_section(
             lines, target_id, llm, handler_config, prior_sections, dry_run
         )
-        
+
         if gen_changed:
             changed = True
             questions_generated = gen_count
@@ -174,33 +174,36 @@ def execute_unified_handler(
             # Section is blank but has open questions - blocked waiting for answers
             try:
                 from .parsing import find_subsections_within
-                subs = find_subsections_within(lines, span)
+
+                if span is not None:
+                    subs = find_subsections_within(lines, span)
                 target_ids = {target_id} | {s.subsection_id for s in subs}
-                
+
                 open_qs, _, _ = open_questions_parse(lines)
                 targeted_questions = [
                     q for q in open_qs if _canon_target(q.section_target) in target_ids
                 ]
                 open_unanswered = [
-                    q for q in targeted_questions
+                    q
+                    for q in targeted_questions
                     if q.status.strip() in ("Open", "Deferred")
                     and q.answer.strip() in ("", "-", "Pending")
                 ]
-                
+
                 if open_unanswered:
                     blocked_reasons.append(
                         f"Waiting for {len(open_unanswered)} questions to be answered"
                     )
             except Exception:
                 pass
-    
+
     # Determine action taken
     action = "no_action"
     if questions_generated > 0:
         action = "question_gen"
     elif questions_resolved > 0 or changed:
         action = "integration"
-    
+
     return lines, WorkflowResult(
         target_id=target_id,
         action_taken=action,
@@ -214,20 +217,17 @@ def execute_unified_handler(
 
 
 def execute_phase_based_handler(
-    lines: List[str],
-    target_id: str,
-    llm,
-    dry_run: bool = False
+    lines: List[str], target_id: str, llm: Any, dry_run: bool = False
 ) -> tuple[List[str], WorkflowResult]:
     """
     Execute phase-based handler for backward compatibility.
-    
+
     Args:
         lines: Document content as list of strings
         target_id: Section ID to process
         llm: LLM client instance
         dry_run: If True, don't modify the document
-        
+
     Returns:
         Tuple of (updated_lines, WorkflowResult)
     """
@@ -240,8 +240,8 @@ def execute_phase_based_handler(
 
     if not phase_name:
         # Unknown section, use placeholder processor
-        lines, changed, blocked, needs_human, summaries = (
-            process_placeholder_phase(target_id, lines, llm, dry_run)
+        lines, changed, blocked, needs_human, summaries = process_placeholder_phase(
+            target_id, lines, llm, dry_run
         )
         return lines, WorkflowResult(
             target_id=target_id,
@@ -258,11 +258,7 @@ def execute_phase_based_handler(
     try:
         open_qs_before, _, _ = open_questions_parse(lines)
         questions_before = len(
-            [
-                q
-                for q in open_qs_before
-                if _canon_target(q.section_target) == target_id
-            ]
+            [q for q in open_qs_before if _canon_target(q.section_target) == target_id]
         )
     except Exception:
         questions_before = 0
@@ -277,19 +273,15 @@ def execute_phase_based_handler(
             lines, llm, dry_run, target_section=target_id
         )
     else:
-        lines, changed, blocked, needs_human, summaries = (
-            process_placeholder_phase(target_id, lines, llm, dry_run)
+        lines, changed, blocked, needs_human, summaries = process_placeholder_phase(
+            target_id, lines, llm, dry_run
         )
 
     # Count questions after processing
     try:
         open_qs_after, _, _ = open_questions_parse(lines)
         questions_after = len(
-            [
-                q
-                for q in open_qs_after
-                if _canon_target(q.section_target) == target_id
-            ]
+            [q for q in open_qs_after if _canon_target(q.section_target) == target_id]
         )
         resolved_count = 0
         # Count resolved questions from summaries

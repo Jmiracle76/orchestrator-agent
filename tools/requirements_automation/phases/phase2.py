@@ -1,13 +1,26 @@
 from __future__ import annotations
+
 import logging
-from typing import List, Tuple
+from typing import Any, List, Tuple
+
 from ..config import PHASES
-from ..parsing import find_sections, get_section_span, section_is_locked, section_is_blank, section_text, section_body, validate_required_section_spans
-from ..open_questions import open_questions_parse, open_questions_insert, open_questions_resolve
 from ..editing import replace_block_body_preserving_markers
+from ..open_questions import open_questions_insert, open_questions_parse, open_questions_resolve
+from ..parsing import (
+    find_sections,
+    get_section_span,
+    section_body,
+    section_is_blank,
+    section_is_locked,
+    section_text,
+    validate_required_section_spans,
+)
 from ..utils_io import iso_today
 
-def process_phase_2(lines: List[str], llm, dry_run: bool, target_section: str | None = None) -> Tuple[List[str], bool, List[str], bool, List[str]]:
+
+def process_phase_2(
+    lines: List[str], llm: Any, dry_run: bool, target_section: str | None = None
+) -> Tuple[List[str], bool, List[str], bool, List[str]]:
     """Fill assumptions/constraints or generate questions for missing content."""
     changed = False
     blocked: List[str] = []
@@ -37,8 +50,16 @@ def process_phase_2(lines: List[str], llm, dry_run: bool, target_section: str | 
 
         blank = section_is_blank(lines, span)
         targeted = [q for q in open_qs if q.section_target.strip() == section_id]
-        answered = [q for q in targeted if q.answer.strip() not in ("","-","Pending") and q.status.strip() in ("Open","Deferred")]
-        open_unanswered_exists = any(q.status.strip() in ("Open","Deferred") and q.answer.strip() in ("","-","Pending") for q in targeted)
+        answered = [
+            q
+            for q in targeted
+            if q.answer.strip() not in ("", "-", "Pending")
+            and q.status.strip() in ("Open", "Deferred")
+        ]
+        open_unanswered_exists = any(
+            q.status.strip() in ("Open", "Deferred") and q.answer.strip() in ("", "-", "Pending")
+            for q in targeted
+        )
 
         # Integrate answered questions into the section if present.
         if answered:
@@ -47,7 +68,13 @@ def process_phase_2(lines: List[str], llm, dry_run: bool, target_section: str | 
             new_body = llm.integrate_answers(section_id, ctx, answered)
             if new_body.strip() and new_body.strip() != current_body.strip():
                 if not dry_run:
-                    lines = replace_block_body_preserving_markers(lines, span.start_line, span.end_line, section_id=section_id, new_body=new_body)
+                    lines = replace_block_body_preserving_markers(
+                        lines,
+                        span.start_line,
+                        span.end_line,
+                        section_id=section_id,
+                        new_body=new_body,
+                    )
                     spans = find_sections(lines)
                 changed = True
                 qids = [q.question_id for q in answered]
@@ -55,7 +82,9 @@ def process_phase_2(lines: List[str], llm, dry_run: bool, target_section: str | 
                     lines, resolved = open_questions_resolve(lines, qids)
                     if resolved:
                         open_qs, _, _ = open_questions_parse(lines)
-                summaries.append(f"{section_id}: integrated {len(answered)} answers; resolved {len(answered)} questions.")
+                summaries.append(
+                    f"{section_id}: integrated {len(answered)} answers; resolved {len(answered)} questions."
+                )
             continue
 
         # If blank and no unanswered questions exist, generate new questions.

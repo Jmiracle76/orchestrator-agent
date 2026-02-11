@@ -1,21 +1,30 @@
 from __future__ import annotations
-import argparse, json, logging, shutil
-from pathlib import Path
+
+import argparse
+import json
+import logging
+import shutil
 from dataclasses import asdict
+from pathlib import Path
 from typing import List
-from .models import RunResult
-from .parsing import extract_metadata
-from .utils_io import read_text, write_text, split_lines, join_lines, backup_file_outside_repo
+
+from .cli_config import load_handler_registry
+from .cli_validators import (
+    validate_doc_type,
+    validate_handler_registry_support,
+    validate_paths,
+    validate_workflow_order,
+    validate_working_tree,
+)
+from .document_validator import DocumentValidator
 from .git_utils import commit_and_push
 from .llm import LLMClient
+from .models import RunResult
+from .parsing import extract_metadata
 from .runner_v2 import WorkflowRunner
-from .document_validator import DocumentValidator
 from .structural_validator import StructuralValidator, report_structural_errors
-from .cli_validators import (
-    validate_paths, validate_working_tree, validate_doc_type,
-    validate_handler_registry_support, validate_workflow_order
-)
-from .cli_config import load_handler_registry
+from .utils_io import backup_file_outside_repo, join_lines, read_text, split_lines, write_text
+
 
 def main(argv: List[str] | None = None) -> int:
     """Run the requirements automation workflow for a single phase pass."""
@@ -26,16 +35,33 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-commit", action="store_true")
     parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--max-steps", type=int, default=1, help="Max workflow steps to execute (default: 1)")
-    parser.add_argument("--handler-config", help="Path to handler registry YAML (default: tools/config/handler_registry.yaml)")
-    parser.add_argument("--validate", action="store_true", help="Validate document completion without processing")
-    parser.add_argument("--strict", action="store_true", help="Enable strict completion checking (includes optional criteria)")
-    parser.add_argument("--validate-structure", action="store_true", help="Check document structure without processing")
+    parser.add_argument(
+        "--max-steps", type=int, default=1, help="Max workflow steps to execute (default: 1)"
+    )
+    parser.add_argument(
+        "--handler-config",
+        help="Path to handler registry YAML (default: tools/config/handler_registry.yaml)",
+    )
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate document completion without processing"
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Enable strict completion checking (includes optional criteria)",
+    )
+    parser.add_argument(
+        "--validate-structure",
+        action="store_true",
+        help="Check document structure without processing",
+    )
     args = parser.parse_args(argv)
 
     # Configure logging once, based on the CLI log-level.
-    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO),
-                        format="%(levelname)s %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="%(levelname)s %(message)s",
+    )
 
     # Normalize paths early so later comparisons are consistent.
     repo_root = Path(args.repo_root).resolve()
@@ -44,11 +70,14 @@ def main(argv: List[str] | None = None) -> int:
 
     # Load handler registry
     handler_registry, exit_code = load_handler_registry(
-        Path(args.handler_config) if args.handler_config else None,
-        repo_root
+        Path(args.handler_config) if args.handler_config else None, repo_root
     )
     if exit_code != 0:
         return exit_code
+
+    # At this point, handler_registry cannot be None because load_handler_registry
+    # only returns non-zero exit_code when handler_registry is None
+    assert handler_registry is not None
 
     # Avoid committing unrelated changes unless explicitly overridden.
     # Skip this check for --validate and --validate-structure modes since we're not committing anything
@@ -81,15 +110,15 @@ def main(argv: List[str] | None = None) -> int:
         template_lines = None
         if template_path.exists():
             template_lines = split_lines(read_text(template_path))
-        
-        validator = StructuralValidator(lines, template_lines)
-        errors = validator.validate_all()
-        
+
+        struct_validator = StructuralValidator(lines, template_lines)
+        errors = struct_validator.validate_all()
+
         # Check if repairs were made
-        if validator.repairs_made:
+        if struct_validator.repairs_made:
             # Save repaired document
-            write_text(doc_path, join_lines(validator.lines))
-            print(report_structural_errors(errors, validator.repairs_made))
+            write_text(doc_path, join_lines(struct_validator.lines))
+            print(report_structural_errors(errors, struct_validator.repairs_made))
             return 1  # Non-zero exit to indicate repair was performed
         elif errors:
             print(report_structural_errors(errors))
@@ -99,8 +128,8 @@ def main(argv: List[str] | None = None) -> int:
             return 0
 
     # Fail fast if structure is corrupted
-    validator = StructuralValidator(lines)
-    errors = validator.validate_all()
+    struct_validator = StructuralValidator(lines)
+    errors = struct_validator.validate_all()
     if errors:
         print("ERROR: Document structure validation failed:")
         for error in errors:
@@ -127,8 +156,8 @@ def main(argv: List[str] | None = None) -> int:
 
     # Handle --validate flag: check completion without processing
     if args.validate:
-        validator = DocumentValidator(lines, workflow_order, handler_registry, doc_type)
-        status = validator.validate_completion(strict=args.strict)
+        doc_validator = DocumentValidator(lines, workflow_order, handler_registry, doc_type)
+        status = doc_validator.validate_completion(strict=args.strict)
 
         # Print human-readable summary
         print(status.summary)
@@ -163,8 +192,13 @@ def main(argv: List[str] | None = None) -> int:
 
         # Log summary of all steps
         for i, result in enumerate(results):
-            logging.info("Step %d: target=%s action=%s changed=%s", 
-                        i + 1, result.target_id, result.action_taken, result.changed)
+            logging.info(
+                "Step %d: target=%s action=%s changed=%s",
+                i + 1,
+                result.target_id,
+                result.action_taken,
+                result.changed,
+            )
     else:
         # Single-step execution mode (default)
         result = runner.run_once(args.dry_run)
@@ -198,10 +232,12 @@ def main(argv: List[str] | None = None) -> int:
         commit_and_push(repo_root, commit_msg, allow_files=allow)
 
     # Return a machine-readable summary for callers.
-    result = RunResult(outcome=outcome, changed=changed, blocked_reasons=blocked_reasons)
-    print(json.dumps(asdict(result), indent=2))
+    run_result = RunResult(outcome=outcome, changed=changed, blocked_reasons=blocked_reasons)
+    print(json.dumps(asdict(run_result), indent=2))
     return 0 if outcome in ("no-op", "updated") else 1
+
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

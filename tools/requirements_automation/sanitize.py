@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import re
 from typing import List
-from .config import SECTION_MARKER_RE, SECTION_LOCK_RE, TABLE_MARKER_RE
+
+from .config import SECTION_LOCK_RE, SECTION_MARKER_RE, TABLE_MARKER_RE
+
 
 def sanitize_llm_body(section_id: str, body: str) -> str:
     """Normalize LLM output by removing markers, headers, and duplicates."""
@@ -35,7 +38,9 @@ def sanitize_llm_body(section_id: str, body: str) -> str:
                 continue
             if st.startswith("###") or st.startswith("##"):
                 continue
-            if re.match(r"(?i)^technical constraints|^operational constraints|^resource constraints", st):
+            if re.match(
+                r"(?i)^technical constraints|^operational constraints|^resource constraints", st
+            ):
                 continue
             keep.append(s)
         seen = set()
@@ -54,21 +59,25 @@ def sanitize_llm_body(section_id: str, body: str) -> str:
 
     # Constraints should only keep the known constraint sub-headings.
     elif section_id == "constraints":
-        allowed = {"### Technical Constraints", "### Operational Constraints", "### Resource Constraints"}
-        keep: List[str] = []
+        allowed = {
+            "### Technical Constraints",
+            "### Operational Constraints",
+            "### Resource Constraints",
+        }
+        keep_constraints: List[str] = []
         for s in cleaned:
             st = s.strip()
             if not st:
-                keep.append("")
+                keep_constraints.append("")
                 continue
             if st.startswith("###"):
                 if st in allowed:
-                    keep.append(st)
+                    keep_constraints.append(st)
                 continue
             if st.startswith("##"):
                 continue
-            keep.append(s)
-        cleaned = keep
+            keep_constraints.append(s)
+        cleaned = keep_constraints
 
     # Collapse repeated blank lines to keep formatting tight.
     out: List[str] = []

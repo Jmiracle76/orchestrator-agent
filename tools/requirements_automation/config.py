@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import re
 
 # LLM configuration for question generation and answer integration.
@@ -10,8 +11,10 @@ AUTOMATION_ACTOR = "requirements-automation"
 
 # Markers used inside markdown to delineate structure.
 SECTION_MARKER_RE = re.compile(r"<!--\s*section:(?P<id>[a-z0-9_]+)\s*-->")
-SECTION_LOCK_RE   = re.compile(r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->")
-TABLE_MARKER_RE   = re.compile(r"<!--\s*table:(?P<id>[a-z0-9_]+)\s*-->")
+SECTION_LOCK_RE = re.compile(
+    r"<!--\s*section_lock:(?P<id>[a-z0-9_]+)\s+lock=(?P<lock>true|false)\s*-->"
+)
+TABLE_MARKER_RE = re.compile(r"<!--\s*table:(?P<id>[a-z0-9_]+)\s*-->")
 SUBSECTION_MARKER_RE = re.compile(r"<!--\s*subsection:(?P<id>[a-z0-9_]+)\s*-->")
 META_MARKER_RE = re.compile(
     r"<!--\s*meta:(?P<key>[a-z_]+)"
@@ -53,18 +56,29 @@ PHASE_ORDER = [
 
 # Sections required for each phase (deprecated in favor of workflow order).
 PHASES = {
-    "phase_1_intent_scope": ["problem_statement", "goals_objectives", "stakeholders_users", "success_criteria"],
+    "phase_1_intent_scope": [
+        "problem_statement",
+        "goals_objectives",
+        "stakeholders_users",
+        "success_criteria",
+    ],
     "phase_2_assumptions_constraints": ["assumptions", "constraints"],
     "phase_3_requirements": ["requirements"],
-    "phase_4_interfaces_data_risks": ["interfaces_integrations", "data_considerations", "risks_open_issues"],
+    "phase_4_interfaces_data_risks": [
+        "interfaces_integrations",
+        "data_considerations",
+        "risks_open_issues",
+    ],
     "phase_5_approval": ["approval_record"],
 }
 
 # Workflow targets that are not section IDs (extensible prefix list).
 SPECIAL_WORKFLOW_PREFIXES = ["review_gate:"]
 
+
 def is_special_workflow_target(target: str) -> bool:
     return any(target.startswith(prefix) for prefix in SPECIAL_WORKFLOW_PREFIXES)
+
 
 # Maps alias section IDs to canonical targets for consistency.
 TARGET_CANONICAL_MAP = {
@@ -83,15 +97,15 @@ REVIEW_GATE_RESULT_RE = re.compile(
 
 # Document completion requirements
 COMPLETION_CRITERIA = {
-    "no_placeholders_in_required_sections": True,    # Required sections must not have PLACEHOLDER token
-    "no_open_questions": True,                       # No questions with status "Open"
-    "all_review_gates_pass": True,                   # All review gates in workflow must pass
-    "structure_valid": True,                         # All structural validators pass (markers, table schema)
-    "all_workflow_targets_complete": True,           # All targets in workflow order marked complete
+    "no_placeholders_in_required_sections": True,  # Required sections must not have PLACEHOLDER token
+    "no_open_questions": True,  # No questions with status "Open"
+    "all_review_gates_pass": True,  # All review gates in workflow must pass
+    "structure_valid": True,  # All structural validators pass (markers, table schema)
+    "all_workflow_targets_complete": True,  # All targets in workflow order marked complete
 }
 
 # Optional criteria (can be disabled via flags)
 OPTIONAL_CRITERIA = {
     "no_deferred_questions": False,  # Strict mode: even "Deferred" questions must be resolved
-    "no_warnings_from_review": False, # Strict mode: review gates must have zero warnings
+    "no_warnings_from_review": False,  # Strict mode: review gates must have zero warnings
 }

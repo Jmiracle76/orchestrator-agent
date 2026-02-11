@@ -19,10 +19,11 @@ from requirements_automation.cli import main
 def test_validate_incomplete_document():
     """Test --validate flag with incomplete document."""
     print("Test 1: CLI --validate with incomplete document...")
-    
+
     # Create a temporary incomplete document
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write("""<!-- meta:doc_type value="requirements" -->
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(
+            """<!-- meta:doc_type value="requirements" -->
 <!-- meta:doc_format version="1.0" -->
 
 <!-- workflow:order
@@ -45,22 +46,26 @@ goals_objectives
 <!-- section:goals_objectives -->
 ## Goals & Objectives
 - Goal 1
-""")
+"""
+        )
         temp_doc = Path(f.name)
-    
+
     template_path = repo_root / "docs" / "templates" / "requirements-template.md"
-    
+
     try:
         # Run CLI with --validate flag
         argv = [
-            "--template", str(template_path),
-            "--doc", str(temp_doc),
-            "--repo-root", str(repo_root),
+            "--template",
+            str(template_path),
+            "--doc",
+            str(temp_doc),
+            "--repo-root",
+            str(repo_root),
             "--validate",
         ]
-        
+
         exit_code = main(argv)
-        
+
         if exit_code == 1:
             print("  ✓ CLI returned exit code 1 (incomplete)")
             return True
@@ -74,10 +79,11 @@ goals_objectives
 def test_validate_complete_document():
     """Test --validate flag with complete document."""
     print("\nTest 2: CLI --validate with complete document...")
-    
+
     # Create a temporary complete document
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write("""<!-- meta:doc_type value="requirements" -->
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(
+            """<!-- meta:doc_type value="requirements" -->
 <!-- meta:doc_format version="1.0" -->
 
 <!-- workflow:order
@@ -101,22 +107,26 @@ This is a complete problem statement.
 ## Goals & Objectives
 - Goal 1
 - Goal 2
-""")
+"""
+        )
         temp_doc = Path(f.name)
-    
+
     template_path = repo_root / "docs" / "templates" / "requirements-template.md"
-    
+
     try:
         # Run CLI with --validate flag
         argv = [
-            "--template", str(template_path),
-            "--doc", str(temp_doc),
-            "--repo-root", str(repo_root),
+            "--template",
+            str(template_path),
+            "--doc",
+            str(temp_doc),
+            "--repo-root",
+            str(repo_root),
             "--validate",
         ]
-        
+
         exit_code = main(argv)
-        
+
         if exit_code == 0:
             print("  ✓ CLI returned exit code 0 (complete)")
             return True
@@ -130,10 +140,11 @@ This is a complete problem statement.
 def test_validate_strict_mode():
     """Test --validate --strict flag with deferred questions."""
     print("\nTest 3: CLI --validate --strict with deferred questions...")
-    
+
     # Create a document with deferred questions
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write("""<!-- meta:doc_type value="requirements" -->
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(
+            """<!-- meta:doc_type value="requirements" -->
 <!-- meta:doc_format version="1.0" -->
 
 <!-- workflow:order
@@ -157,33 +168,40 @@ This is a complete problem statement.
 ## Goals & Objectives
 - Goal 1
 - Goal 2
-""")
+"""
+        )
         temp_doc = Path(f.name)
-    
+
     template_path = repo_root / "docs" / "templates" / "requirements-template.md"
-    
+
     try:
         # Run CLI with --validate flag (normal mode - should pass)
         argv_normal = [
-            "--template", str(template_path),
-            "--doc", str(temp_doc),
-            "--repo-root", str(repo_root),
+            "--template",
+            str(template_path),
+            "--doc",
+            str(temp_doc),
+            "--repo-root",
+            str(repo_root),
             "--validate",
         ]
-        
+
         exit_code_normal = main(argv_normal)
-        
+
         # Run CLI with --validate --strict flag (should fail)
         argv_strict = [
-            "--template", str(template_path),
-            "--doc", str(temp_doc),
-            "--repo-root", str(repo_root),
+            "--template",
+            str(template_path),
+            "--doc",
+            str(temp_doc),
+            "--repo-root",
+            str(repo_root),
             "--validate",
             "--strict",
         ]
-        
+
         exit_code_strict = main(argv_strict)
-        
+
         if exit_code_normal == 0 and exit_code_strict == 1:
             print("  ✓ Normal mode: exit code 0 (complete)")
             print("  ✓ Strict mode: exit code 1 (incomplete)")
@@ -201,13 +219,13 @@ def main_test():
     print("=" * 70)
     print("CLI Validation Test Suite")
     print("=" * 70)
-    
+
     tests = [
         test_validate_incomplete_document,
         test_validate_complete_document,
         test_validate_strict_mode,
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -216,15 +234,16 @@ def main_test():
         except Exception as e:
             print(f"  ✗ Test failed with exception: {e}")
             import traceback
+
             traceback.print_exc()
             results.append(False)
-    
+
     print("\n" + "=" * 70)
     passed = sum(results)
     total = len(results)
     print(f"Results: {passed}/{total} tests passed")
     print("=" * 70)
-    
+
     return 0 if all(results) else 1
 
 
