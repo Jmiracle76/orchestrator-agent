@@ -261,7 +261,7 @@ approval_record
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-001 | What problem are we trying to solve? | [Date] |  | problem_statement | Open |
+| Q-001 | What problem are we trying to solve? | [Date] | The project addresses the inconsistency, time consumption, and scope-creep risk inherent in manually translating approved requirements into execution plans and managing AI-assisted code changes. Without structured automation, developers and teams experience: - **Incomplete or unbounded plans:** Manual markdown planning and issue trackers fail to enforce structure or guarantee scope boundaries. - **Idea limbo:** Projects remain unstarted or unfinished due to planning overhead. - **Wasted replanning effort:** Iterative edits and multi-agent handoffs do not reliably preserve intent. - **Unintended repository mutations:** Ad hoc AI prompting risks scope drift and accidental changes that diverge from original intent. | problem_statement | Open |
 
 ---
 
