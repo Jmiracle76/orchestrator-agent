@@ -277,11 +277,16 @@ The system supports four distinct end user types, each with specific characteris
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-012 | What quantifiable metrics define project success (e.g., performance benchmarks, user adoption rates, error rates)? | 2026-02-11 | •	100% accurate parsing of structured Markdown sections into scoped tasks •	100% alignment between generated GitHub Issues and documented requirements •	0 unauthorized file modifications outside declared scope •	≥90% reduction in manual replanning effort compared to baseline workflow •	Deterministic section-loop completion with no skipped or duplicated sections •	Complete traceability between requirement ID → issue → code change | success_criteria | Open |
-| Q-013 | What is the minimum viable functionality or scope required to consider this project successful? | 2026-02-11 | The system must: •	Ingest a structured requirements document •	Loop through each section deterministically •	Generate scoped clarification questions •	Produce bounded execution artifacts (e.g., GitHub Issues) •	Prevent out-of-scope file changes •	Maintain traceable linkage between document sections and outputs If those work reliably, the core objective is met. | success_criteria | Open |
-| Q-014 | What specific deliverables or artifacts must be completed and approved before project acceptance? | 2026-02-11 | •	Validated requirements document with section IDs •	Verified section-loop execution logs •	Generated GitHub Issues aligned to scope •	Demonstrated enforcement of file-boundary guardrails •	Documented traceability mapping between requirements and execution artifacts •	Basic runbook describing invocation and workflow behavior | success_criteria | Open |
-| Q-015 | Who are the stakeholders authorized to approve acceptance criteria and what is their approval process? | 2026-02-11 | Authorized approvers: •	Project Sponsor •	Product Owner •	Lead Developer / Technical Architect Approval process: 1.	Review generated artifacts for scope alignment 2.	Validate no unintended repository changes occurred 3.	Confirm measurable success metrics are met 4.	Provide formal sign-off in the issue tracker or project documentation | success_criteria | Open |
-| Q-016 | What are the pass/fail thresholds for testing, quality assurance, or validation activities? | 2026-02-11 | Pass Criteria: •	No skipped or duplicated sections during loop execution •	All generated issues trace back to explicit requirement IDs •	No file modifications outside declared boundaries •	No unhandled runtime exceptions during orchestration Fail Criteria: •	Any unauthorized file mutation •	Any loss of requirement-to-output traceability •	Any deviation from defined workflow sequence  | success_criteria | Open |
+| Q-017 | What assumptions are being made about the availability and reliability of external dependencies or third-party services? | 2026-02-11 |  | assumptions | Open |
+| Q-018 | What assumptions exist regarding user technical proficiency, device capabilities, or network connectivity? | 2026-02-11 |  | assumptions | Open |
+| Q-019 | Are there assumptions about existing infrastructure, data availability, or legacy system behavior that the project depends on? | 2026-02-11 |  | assumptions | Open |
+| Q-020 | What assumptions are being made about regulatory compliance, data privacy requirements, or security standards that must be met? | 2026-02-11 |  | assumptions | Open |
+| Q-021 | Are there assumptions about resource availability (budget, personnel, timeline) or organizational support that could impact delivery? | 2026-02-11 |  | assumptions | Open |
+| Q-012 | What quantifiable metrics define project success (e.g., performance benchmarks, user adoption rates, error rates)? | 2026-02-11 | •	100% accurate parsing of structured Markdown sections into scoped tasks •	100% alignment between generated GitHub Issues and documented requirements •	0 unauthorized file modifications outside declared scope •	≥90% reduction in manual replanning effort compared to baseline workflow •	Deterministic section-loop completion with no skipped or duplicated sections •	Complete traceability between requirement ID → issue → code change | success_criteria | Resolved |
+| Q-013 | What is the minimum viable functionality or scope required to consider this project successful? | 2026-02-11 | The system must: •	Ingest a structured requirements document •	Loop through each section deterministically •	Generate scoped clarification questions •	Produce bounded execution artifacts (e.g., GitHub Issues) •	Prevent out-of-scope file changes •	Maintain traceable linkage between document sections and outputs If those work reliably, the core objective is met. | success_criteria | Resolved |
+| Q-014 | What specific deliverables or artifacts must be completed and approved before project acceptance? | 2026-02-11 | •	Validated requirements document with section IDs •	Verified section-loop execution logs •	Generated GitHub Issues aligned to scope •	Demonstrated enforcement of file-boundary guardrails •	Documented traceability mapping between requirements and execution artifacts •	Basic runbook describing invocation and workflow behavior | success_criteria | Resolved |
+| Q-015 | Who are the stakeholders authorized to approve acceptance criteria and what is their approval process? | 2026-02-11 | Authorized approvers: •	Project Sponsor •	Product Owner •	Lead Developer / Technical Architect Approval process: 1.	Review generated artifacts for scope alignment 2.	Validate no unintended repository changes occurred 3.	Confirm measurable success metrics are met 4.	Provide formal sign-off in the issue tracker or project documentation | success_criteria | Resolved |
+| Q-016 | What are the pass/fail thresholds for testing, quality assurance, or validation activities? | 2026-02-11 | Pass Criteria: •	No skipped or duplicated sections during loop execution •	All generated issues trace back to explicit requirement IDs •	No file modifications outside declared boundaries •	No unhandled runtime exceptions during orchestration Fail Criteria: •	Any unauthorized file mutation •	Any loss of requirement-to-output traceability •	Any deviation from defined workflow sequence | success_criteria | Resolved |
 | Q-007 | Who are the primary stakeholders for this system (e.g., project sponsor, product owner, business units, compliance officers)? | 2026-02-11 | Primary stakeholders include: •	Project Sponsor – Accountable for strategic direction and funding approval •	Product Owner – Defines workflow requirements and scope boundaries •	Lead Developer / Technical Architect – Ensures safe integration with the repository and tooling •	Engineering Team – Consumers of generated execution plans and code updates • Security / Governance Lead – Ensures repository safety and controlled AI behavior | stakeholders_users | Resolved |
 | Q-008 | What are the distinct end user types who will interact with the system (e.g., administrators, operators, customers, analysts)? | 2026-02-11 | What are the distinct end user types who will interact with the system? •	Requirements Author – Creates and maintains structured requirements documents •	Workflow Operator – Executes Python invocation scripts and monitors agent runs •	Repository Maintainer – Reviews and approves AI-generated issues or code changes •	Agent Maintainer – Tunes prompts, guardrails, and orchestration logic | stakeholders_users | Resolved |
 | Q-009 | What are the key characteristics of each user type (e.g., technical skill level, frequency of use, location, department)? | 2026-02-11 | What are the key characteristics of each user type? •	Requirements Author o	Moderate technical skill o	Works primarily in Markdown o	Interacts during planning phases •	Workflow Operator o	Technical user o	Familiar with CLI and automation tools o	Executes runs frequently during development cycles •	Repository Maintainer o	Senior technical skill o	Owns code review and merge approval o	Ensures scope and quality alignment •	Agent Maintainer o	Advanced technical skill o	Understands orchestration logic and prompt engineering o	Engages during refinement or failure scenarios | stakeholders_users | Resolved |
@@ -298,22 +303,36 @@ The system supports four distinct end user types, each with specific characteris
 
 <!-- section:success_criteria -->
 ## 11. Success Criteria and Acceptance
+The project SHALL be considered successful when the following quantifiable metrics are achieved:
 
-<!-- subsection:project_success_criteria -->
-### Project Success Criteria
-<!-- PLACEHOLDER -->
-1. [Success criterion 1] 
-2. [Success criterion 2] 
+1. **Parsing Accuracy**: The system SHALL achieve 100% accurate parsing of structured Markdown sections into scoped tasks with no loss of context or metadata.
 
-<!-- subsection:acceptance_criteria -->
-### Acceptance Criteria
-<!-- PLACEHOLDER -->
-- [ ] Acceptance criterion 1 
-- [ ] Acceptance criterion 2
+2. **Requirements Alignment**: Generated GitHub Issues SHALL demonstrate 100% alignment with documented requirements, maintaining complete traceability between requirement IDs and generated artifacts.
 
+3. **Scope Enforcement**: The system SHALL perform zero unauthorized file modifications outside declared scope boundaries throughout all execution phases.
+
+4. **Workflow Efficiency**: Manual replanning effort SHALL be reduced by at least 90% compared to baseline workflow measurements.
+
+5. **Execution Integrity**: Section-loop processing SHALL complete deterministically with no skipped or duplicated sections across all document structures.
+
+6. **Traceability**: Complete bidirectional traceability SHALL be maintained between requirement ID → GitHub Issue → code change for all generated artifacts.
+
+The minimum viable functionality required for project success includes: ingestion of structured requirements documents, deterministic section-loop execution, generation of scoped clarification questions, production of bounded execution artifacts, enforcement of file-boundary constraints, and maintenance of traceable linkage between document sections and outputs.
+
+The project SHALL be accepted upon completion and approval of the following deliverables:
+
+- A validated requirements document with properly defined section IDs and structure
+- Verified section-loop execution logs demonstrating deterministic processing
+- Generated GitHub Issues with verified alignment to documented scope
+- Demonstrated enforcement of file-boundary guardrails with zero violations
+- Documented traceability mapping between requirements and execution artifacts
+- Basic runbook describing invocation procedures and workflow behavior
+
+**Authorized Approvers**: Project Sponsor, Product Owner, and Lead Developer/Technical Architect SHALL review and approve acceptance criteria through the following process: review generated artifacts for scope alignment, validate no unintended repository changes occurred, confirm measurable success metrics are met, and provide formal sign-off in the issue tracker or project documentation.
+
+**Pass/Fail Thresholds**: The system SHALL pass validation when no sections are skipped or duplicated during loop execution, all generated issues trace to explicit requirement IDs, no file modifications occur outside declared boundaries, and no unhandled runtime exceptions occur during orchestration. The system SHALL fail validation if any unauthorized file mutation occurs, requirement-to-output traceability is lost, or deviation from defined workflow sequence is detected.
 <!-- section_lock:success_criteria lock=false -->
 ---
-
 <!-- section:out_of_scope -->
 ## 12. Out of Scope
 <!-- PLACEHOLDER -->
