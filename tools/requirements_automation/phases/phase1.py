@@ -19,9 +19,6 @@ from ..parsing import (
 from ..utils_io import iso_today
 
 
-from typing import Any, List, Tuple
-
-
 def _canon_target(t: str) -> str:
     """Normalize alias section IDs to canonical targets."""
     t0 = (t or "").strip()

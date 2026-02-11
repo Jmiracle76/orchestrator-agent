@@ -71,9 +71,6 @@ def validate_doc_type(lines: List[str]) -> Tuple[str, str]:
     return doc_type, ""
 
 
-from typing import Tuple
-
-
 def validate_handler_registry_support(doc_type: str, handler_registry: Any) -> Tuple[bool, str]:
     """
     Validate that handler registry supports the document type.
