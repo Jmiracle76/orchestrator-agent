@@ -81,7 +81,6 @@ def main(argv: List[str] | None = None) -> int:
         # Load template if provided for cross-reference validation
         template_lines = None
         if template_path.exists():
-            from .utils_io import split_lines
             template_lines = split_lines(read_text(template_path))
         
         validator = StructuralValidator(lines, template_lines)
