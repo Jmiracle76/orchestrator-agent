@@ -271,3 +271,72 @@ class ReviewGateHandler:
             return updated_lines, patches_applied > 0
         
         raise ValueError(f"Unknown auto_apply_patches config: {auto_apply}")
+    
+    def write_review_gate_result(
+        self, result: ReviewResult, lines: List[str]
+    ) -> List[str]:
+        """
+        Write review gate result marker to document.
+        
+        Args:
+            result: ReviewResult to persist
+            lines: Document lines to update
+            
+        Returns:
+            Updated document lines with result marker
+        """
+        # Count blocker issues and warnings
+        blocker_count = sum(1 for issue in result.issues if issue.severity == "blocker")
+        warning_count = sum(1 for issue in result.issues if issue.severity == "warning")
+        
+        # Determine status
+        status = "passed" if result.passed else "failed"
+        
+        # Create result marker
+        marker = (
+            f"<!-- review_gate_result:{result.gate_id} "
+            f"status={status} "
+            f"issues={blocker_count} "
+            f"warnings={warning_count} -->"
+        )
+        
+        # Find where to insert the marker - at the beginning of the document
+        # (after metadata but before first section)
+        insert_index = 0
+        
+        # Skip past metadata and workflow order blocks
+        in_comment = False
+        for i, line in enumerate(lines):
+            # Check if we're entering a comment block
+            if "<!--" in line and "-->" not in line:
+                in_comment = True
+            # Check if we're exiting a comment block
+            if in_comment and "-->" in line:
+                in_comment = False
+                insert_index = i + 1
+                continue
+            # If we hit a section marker or non-comment content, stop
+            if not in_comment and line.strip() and not line.strip().startswith("<!--"):
+                break
+            if not in_comment:
+                insert_index = i + 1
+        
+        # Check if result marker already exists for this gate
+        from .config import REVIEW_GATE_RESULT_RE
+        new_lines = []
+        marker_replaced = False
+        
+        for line in lines:
+            m = REVIEW_GATE_RESULT_RE.search(line)
+            if m and m.group("gate_id") == result.gate_id:
+                # Replace existing marker
+                new_lines.append(marker)
+                marker_replaced = True
+            else:
+                new_lines.append(line)
+        
+        if not marker_replaced:
+            # Insert new marker
+            new_lines = lines[:insert_index] + [marker] + lines[insert_index:]
+        
+        return new_lines
