@@ -328,6 +328,9 @@ class WorkflowRunner:
             # Target not in workflow order, return empty dict
             return prior_sections
         
+        # Parse sections once for efficiency
+        spans = find_sections(self.lines)
+        
         # Iterate through sections before target_id
         for section_id in self.workflow_order[:target_index]:
             # Skip review gates
@@ -344,7 +347,6 @@ class WorkflowRunner:
                 continue
             
             # Extract section body
-            spans = find_sections(self.lines)
             span = get_section_span(spans, section_id)
             
             if span:
