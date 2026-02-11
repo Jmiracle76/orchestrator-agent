@@ -528,6 +528,9 @@ class WorkflowRunner:
         is_blank = section_is_blank(self.lines, span)
         
         # Step 2.5: If section is blank and prior context is available, try drafting first
+        # Skip drafting if answered_questions exist because Step 1 just integrated them,
+        # and we should give the integration a chance to complete the section before drafting.
+        # Drafting is only appropriate when starting from a completely blank section.
         if is_blank and prior_sections and not answered_questions:
             logging.info(
                 "Section '%s' is blank with prior context available; attempting to draft content",
