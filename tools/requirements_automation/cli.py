@@ -60,6 +60,9 @@ def main(argv: List[str] | None = None) -> int:
         print(git_status_porcelain(repo_root))
         return 2
 
+    # Track whether we created a new document from template
+    doc_created = False
+    
     # If the requirements doc does not exist, seed it from the template.
     if not doc_path.exists():
         if not template_path.exists():
@@ -68,6 +71,7 @@ def main(argv: List[str] | None = None) -> int:
         logging.info("Doc missing; creating from template: %s -> %s", template_path, doc_path)
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(template_path, doc_path)
+        doc_created = True
 
     # Load document into memory and construct the LLM client.
     lines = split_lines(read_text(doc_path))
@@ -201,8 +205,15 @@ def main(argv: List[str] | None = None) -> int:
         write_text(doc_path, join_lines(lines))
 
     # Commit and push only the target doc, unless --no-commit is set.
-    if changed and not args.dry_run and not args.no_commit:
-        commit_msg = f"requirements: automation pass ({target_id})"
+    # Commit if either the workflow runner changed content OR we created a new doc from template.
+    if (changed or doc_created) and not args.dry_run and not args.no_commit:
+        # Use appropriate commit message based on what happened
+        if doc_created and not changed:
+            commit_msg = "requirements: initialize from template"
+        elif doc_created and changed:
+            commit_msg = f"requirements: initialize from template and automation pass ({target_id})"
+        else:
+            commit_msg = f"requirements: automation pass ({target_id})"
         allow = [str(doc_path.relative_to(repo_root)).replace("\\", "/")]
         commit_and_push(repo_root, commit_msg, allow_files=allow)
 
