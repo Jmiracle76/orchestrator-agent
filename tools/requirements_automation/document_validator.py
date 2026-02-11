@@ -12,6 +12,9 @@ from .config import (
     OPTIONAL_CRITERIA,
     PLACEHOLDER_TOKEN,
     is_special_workflow_target,
+    QUESTION_STATUS_OPEN,
+    QUESTION_STATUS_RESOLVED,
+    QUESTION_STATUS_DEFERRED,
 )
 from .parsing import (
     find_sections,
@@ -131,10 +134,13 @@ class DocumentValidator:
         
         if strict:
             # Strict mode: even Deferred questions count as incomplete
-            incomplete = [q for q in open_questions if q.status in ("Open", "Deferred")]
+            incomplete = [
+                q for q in open_questions 
+                if q.status in (QUESTION_STATUS_OPEN, QUESTION_STATUS_DEFERRED)
+            ]
         else:
             # Normal mode: only Open questions count
-            incomplete = [q for q in open_questions if q.status == "Open"]
+            incomplete = [q for q in open_questions if q.status == QUESTION_STATUS_OPEN]
         
         passed = len(incomplete) == 0
         if passed:
@@ -319,7 +325,7 @@ class DocumentValidator:
         target_ids = {section_id} | {s.subsection_id for s in subs}
         
         for q in open_qs:
-            if q.status.strip() == "Open" and _canon_target(q.section_target) in target_ids:
+            if q.status.strip() == QUESTION_STATUS_OPEN and _canon_target(q.section_target) in target_ids:
                 return False
         
         return True

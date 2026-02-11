@@ -166,7 +166,7 @@ class WorkflowRunner:
             review_result = handler.execute_review(target_id, handler_config)
             
             # Write review gate result marker to document
-            self.lines = handler.write_review_gate_result(review_result, self.lines)
+            self.lines, marker_changed = handler.write_review_gate_result(review_result, self.lines)
             
             # Optionally apply patches
             self.lines, patches_applied = handler.apply_patches_if_configured(
@@ -177,7 +177,7 @@ class WorkflowRunner:
             result = WorkflowResult(
                 target_id=target_id,
                 action_taken="review_gate",
-                changed=True,  # Always changed because we write result marker
+                changed=marker_changed or patches_applied,
                 blocked=not review_result.passed,
                 blocked_reasons=[
                     f"{i.severity}: {i.description}" 

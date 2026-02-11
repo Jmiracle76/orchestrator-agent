@@ -274,7 +274,7 @@ class ReviewGateHandler:
     
     def write_review_gate_result(
         self, result: ReviewResult, lines: List[str]
-    ) -> List[str]:
+    ) -> Tuple[List[str], bool]:
         """
         Write review gate result marker to document.
         
@@ -283,7 +283,7 @@ class ReviewGateHandler:
             lines: Document lines to update
             
         Returns:
-            Updated document lines with result marker
+            Tuple of (updated_lines, changed) where changed indicates if marker was added/updated
         """
         # Count blocker issues and warnings
         blocker_count = sum(1 for issue in result.issues if issue.severity == "blocker")
@@ -307,9 +307,11 @@ class ReviewGateHandler:
         # Skip past metadata and workflow order blocks
         in_comment = False
         for i, line in enumerate(lines):
-            # Check if we're entering a comment block
-            if "<!--" in line and "-->" not in line:
-                in_comment = True
+            # Check if we're entering or exiting a comment block
+            if "<!--" in line:
+                if "-->" not in line:
+                    in_comment = True
+                # else: single-line comment, don't change in_comment state
             # Check if we're exiting a comment block
             if in_comment and "-->" in line:
                 in_comment = False
@@ -325,12 +327,17 @@ class ReviewGateHandler:
         from .config import REVIEW_GATE_RESULT_RE
         new_lines = []
         marker_replaced = False
+        marker_changed = False
         
         for line in lines:
             m = REVIEW_GATE_RESULT_RE.search(line)
             if m and m.group("gate_id") == result.gate_id:
-                # Replace existing marker
-                new_lines.append(marker)
+                # Replace existing marker only if it's different
+                if line.strip() != marker.strip():
+                    new_lines.append(marker)
+                    marker_changed = True
+                else:
+                    new_lines.append(line)
                 marker_replaced = True
             else:
                 new_lines.append(line)
@@ -338,5 +345,6 @@ class ReviewGateHandler:
         if not marker_replaced:
             # Insert new marker
             new_lines = lines[:insert_index] + [marker] + lines[insert_index:]
+            return new_lines, True
         
-        return new_lines
+        return new_lines, marker_changed

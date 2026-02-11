@@ -37,6 +37,11 @@ OPEN_Q_COLUMNS = [
     "Resolution Status",
 ]
 
+# Open question status values
+QUESTION_STATUS_OPEN = "Open"
+QUESTION_STATUS_RESOLVED = "Resolved"
+QUESTION_STATUS_DEFERRED = "Deferred"
+
 # Deprecated: Phase order controls progression through the requirements workflow.
 PHASE_ORDER = [
     "phase_1_intent_scope",
