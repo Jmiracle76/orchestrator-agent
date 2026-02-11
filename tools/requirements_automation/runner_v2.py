@@ -1,15 +1,17 @@
 from __future__ import annotations
 import logging
 import re
-from typing import List, Optional
+from typing import List, Optional, Dict
 from .models import WorkflowResult, SectionState
 from .config import PHASES, is_special_workflow_target, PLACEHOLDER_TOKEN
-from .parsing import find_sections, get_section_span, section_is_locked, section_is_blank, find_subsections_within
-from .open_questions import open_questions_parse, open_questions_resolve
+from .parsing import find_sections, get_section_span, section_is_locked, section_is_blank, find_subsections_within, section_body, section_text
+from .open_questions import open_questions_parse, open_questions_resolve, open_questions_insert
 from .config import TARGET_CANONICAL_MAP
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 from .review_gate_handler import ReviewGateHandler
 from .formatting import format_review_gate_output
+from .editing import replace_block_body_preserving_markers
+from .utils_io import iso_today
 
 
 def _canon_target(t: str) -> str:
@@ -318,9 +320,6 @@ class WorkflowRunner:
         Returns:
             WorkflowResult with execution details
         """
-        from .parsing import section_body, section_text
-        from .editing import replace_block_body_preserving_markers
-        
         changed = False
         blocked_reasons = []
         summaries = []
@@ -381,7 +380,6 @@ class WorkflowRunner:
             )
             
             # Group questions by target (section or subsection)
-            from typing import Dict
             by_target: Dict[str, List] = {}
             for q in answered_questions:
                 tgt = _canon_target(q.section_target)
@@ -504,11 +502,9 @@ class WorkflowRunner:
                     if q_target not in target_ids:
                         q_target = target_id
                     if q_text:
-                        from .utils_io import iso_today
                         new_qs.append((q_text, q_target, iso_today()))
                 
                 if new_qs and not dry_run:
-                    from .open_questions import open_questions_insert
                     try:
                         self.lines, inserted = open_questions_insert(self.lines, new_qs)
                         if inserted:
