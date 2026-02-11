@@ -164,8 +164,8 @@ See the [Handler Registry Guide](../developer/handler-registry-guide.md) for com
 
 **Profile Types**:
 
-1. **Base Policy** (`profiles/base_policy.md`): Always injected, defines core rules
-2. **Task Style Profiles** (`profiles/requirements.md`, etc.): Document-type-specific guidance
+1. **Base Policy** (`tools/profiles/base_policy.md`): Always injected, defines core rules
+2. **Task Style Profiles** (`tools/profiles/requirements.md`, etc.): Document-type-specific guidance
 
 **Composition**:
 
@@ -806,7 +806,7 @@ See the [Handler Registry Guide](../developer/handler-registry-guide.md) for det
 
 1. **Create Profile File**:
    ```bash
-   # profiles/research.md
+   # tools/profiles/research.md
    ```
 
 2. **Write Clear Rules**:
@@ -934,7 +934,7 @@ The following exist in the system but are incomplete or aspirational:
 - `--no-commit`: Skip automatic git commit/push
 - `--log-level LEVEL`: Set logging level (DEBUG, INFO, WARNING, ERROR)
 - `--max-steps N`: Process up to N workflow steps (default: 1)
-- `--handler-config PATH`: Custom handler registry YAML (default: `config/handler_registry.yaml`)
+- `--handler-config PATH`: Custom handler registry YAML (default: `tools/config/handler_registry.yaml`)
 - `--validate`: Validate document completion without processing
 - `--strict`: Enable strict completion checking (includes optional sections)
 - `--validate-structure`: Check document structure without processing

@@ -19,7 +19,7 @@ The handler registry is the central configuration system that maps `(doc_type, s
 
 The handler registry decouples section processing logic from code. Instead of hardcoding behavior in Python functions, we declare it in a YAML configuration file.
 
-**File Location**: `config/handler_registry.yaml`
+**File Location**: `tools/config/handler_registry.yaml`
 
 **Purpose**:
 - Define how each section should be processed
@@ -43,7 +43,7 @@ doc_type:              # e.g., requirements, research, planning
 ```python
 from handler_registry import HandlerRegistry
 
-registry = HandlerRegistry("config/handler_registry.yaml")
+registry = HandlerRegistry("tools/config/handler_registry.yaml")
 config = registry.get_handler("requirements", "problem_statement")
 ```
 
@@ -510,7 +510,7 @@ approval_record
 
 ### Step 3: Configure Handler
 
-Add configuration to `config/handler_registry.yaml`:
+Add configuration to `tools/config/handler_registry.yaml`:
 
 ```yaml
 requirements:
@@ -615,7 +615,7 @@ conclusions
 
 ### Step 2: Add Handler Configurations
 
-Add configurations to `config/handler_registry.yaml`:
+Add configurations to `tools/config/handler_registry.yaml`:
 
 ```yaml
 # ... existing doc types ...
@@ -956,7 +956,7 @@ research:
 
 **Solutions**:
 1. Check `workflow:order` in template includes section
-2. Verify handler exists in `config/handler_registry.yaml`
+2. Verify handler exists in `tools/config/handler_registry.yaml`
 3. Use `--validate` to check completion status
 
 ### Issue: Wrong output format
@@ -1018,7 +1018,7 @@ For more information:
 - [Contributing Guide](contributing.md) - Development workflow
 
 **Next Steps**:
-- Review example configurations in `config/handler_registry.yaml`
+- Review example configurations in `tools/config/handler_registry.yaml`
 - Try adding a new section to an existing document type
 - Experiment with handler modes to understand behavior differences
 - Create a custom LLM profile for a new document type

@@ -101,32 +101,39 @@ For more usage examples and detailed CLI reference, see the [Architecture Overvi
 
 ```
 orchestrator-agent/
-├── config/
-│   └── handler_registry.yaml       # Section handler configurations
+├── tools/
+│   ├── config/
+│   │   └── handler_registry.yaml       # Section handler configurations
+│   ├── profiles/
+│   │   ├── base_policy.md              # Base LLM policy (always injected)
+│   │   ├── requirements.md             # Requirements document LLM profile
+│   │   └── requirements_review.md      # Requirements review LLM profile
+│   ├── agent-profiles/
+│   │   ├── coding-agent.md             # Coding agent profile
+│   │   ├── orchestration-agent.md      # Orchestration agent profile
+│   │   ├── reporting-agent.md          # Reporting agent profile
+│   │   ├── requirements-agent.md       # Requirements agent profile
+│   │   ├── testing-agent.md            # Testing agent profile
+│   │   └── ui-ux-agent.md              # UI/UX agent profile
+│   └── requirements_automation/
+│       ├── cli.py                      # Command-line interface
+│       ├── runner_v2.py                # WorkflowRunner implementation
+│       ├── handler_registry.py         # Handler registry loader
+│       ├── profile_loader.py           # LLM profile loader
+│       └── ...                         # Additional modules
 ├── docs/
 │   ├── architecture/
-│   │   └── overview.md             # Complete architecture documentation
+│   │   └── overview.md                 # Complete architecture documentation
 │   ├── developer/
-│   │   ├── contributing.md         # Development guidelines
+│   │   ├── contributing.md             # Development guidelines
 │   │   ├── handler-registry-guide.md
 │   │   └── llm-profiles-guide.md
 │   ├── templates/
 │   │   └── requirements-template.md
-│   └── requirements.md             # Example requirements document
-├── profiles/
-│   ├── base_policy.md              # Base LLM policy (always injected)
-│   ├── requirements.md             # Requirements document LLM profile
-│   └── requirements_review.md      # Requirements review LLM profile
-├── tools/
-│   └── requirements_automation/
-│       ├── cli.py                  # Command-line interface
-│       ├── runner_v2.py            # WorkflowRunner implementation
-│       ├── handler_registry.py     # Handler registry loader
-│       ├── profile_loader.py       # LLM profile loader
-│       └── ...                     # Additional modules
+│   └── requirements.md                 # Example requirements document
 └── test-scripts/
-    ├── test_integration.py         # Integration tests
-    └── ...                         # Additional tests
+    ├── test_integration.py             # Integration tests
+    └── ...                             # Additional tests
 ```
 
 ## Core Concepts

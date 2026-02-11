@@ -46,7 +46,7 @@ Configurable per review gate:
 ## Configuration
 
 ### Handler Registry Configuration
-Add review gate configuration to `config/handler_registry.yaml`:
+Add review gate configuration to `tools/config/handler_registry.yaml`:
 
 ```yaml
 requirements:
@@ -98,7 +98,7 @@ python3 -m requirements_automation.cli \
   --template docs/templates/requirements-template.md \
   --doc docs/requirements.md \
   --repo-root . \
-  --handler-config config/handler_registry.yaml
+  --handler-config tools/config/handler_registry.yaml
 ```
 
 ### Review Gate Output
@@ -194,7 +194,7 @@ Potential future improvements (out of scope for current implementation):
 - `tools/requirements_automation/parsing.py`: Added helper functions
 - `tools/requirements_automation/runner_v2.py`: Integrated review gate handling
 - `tools/requirements_automation/handler_registry.py`: Added validation_rules support
-- `config/handler_registry.yaml`: Updated with review gate example and validation_rules
+- `tools/config/handler_registry.yaml`: Updated with review gate example and validation_rules
 
 ## Summary
 

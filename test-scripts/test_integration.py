@@ -24,7 +24,7 @@ def test_workflow_runner_with_registry():
     print("=" * 70)
     
     # Load handler registry
-    config_path = repo_root / "config" / "handler_registry.yaml"
+    config_path = repo_root / "tools" / "config" / "handler_registry.yaml"
     print(f"Loading handler registry from: {config_path}")
     registry = HandlerRegistry(config_path)
     print(f"  ✓ Registry loaded")

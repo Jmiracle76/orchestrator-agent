@@ -105,7 +105,7 @@ class HandlerRegistry:
         if not config_path.exists():
             raise HandlerRegistryError(
                 f"Handler registry config file not found: {config_path}\n"
-                f"Please create config/handler_registry.yaml in the repository root."
+                f"Please create tools/config/handler_registry.yaml in the repository root."
             )
         
         try:

@@ -373,7 +373,7 @@ Introduce a registry that maps `(doc_type, section_id)` → handler configuratio
 **Implementation Plan:**
 
 1. **Define Handler Config Schema** (YAML format)
-   - Create `config/handler_registry.yaml`:
+   - Create `tools/config/handler_registry.yaml`:
      ```yaml
      # Handler definitions by doc_type and section_id
      requirements:
@@ -478,7 +478,7 @@ Introduce a registry that maps `(doc_type, section_id)` → handler configuratio
    - Pass `config` to handler functions for behavior customization
 
 6. **CLI Integration** (`cli.py`)
-   - Load registry early: `registry = HandlerRegistry(Path("config/handler_registry.yaml"))`
+   - Load registry early: `registry = HandlerRegistry(Path("tools/config/handler_registry.yaml"))`
    - Validate doc_type is supported: `if not registry.supports_doc_type(doc_type): error`
    - Pass registry to WorkflowRunner: `runner = WorkflowRunner(... , handler_registry=registry)`
 
@@ -496,7 +496,7 @@ Introduce a registry that maps `(doc_type, section_id)` → handler configuratio
 
 **Acceptance Criteria:**
 
-* ✅ `config/handler_registry.yaml` exists with entries for all current requirements sections
+* ✅ `tools/config/handler_registry.yaml` exists with entries for all current requirements sections
 * ✅ `HandlerRegistry` class loads and parses YAML correctly
 * ✅ `HandlerConfig` dataclass defined with all configuration fields
 * ✅ Registry successfully maps `(doc_type="requirements", section_id="assumptions")` → handler config with `dedupe=true`
@@ -526,7 +526,7 @@ Introduce a registry that maps `(doc_type, section_id)` → handler configuratio
 - Integration test: existing requirements.md processes identically to before (via registry)
 
 **Config File Location:**
-- Default: `config/handler_registry.yaml` (relative to repo root)
+- Default: `tools/config/handler_registry.yaml` (relative to repo root)
 - Allow override via `--handler-config <path>` CLI flag (future enhancement)
 
 **Schema Validation:**

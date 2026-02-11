@@ -28,7 +28,7 @@ LLM profiles define how the AI assistant should reason, generate questions, and 
 - **Task-Specific Instructions**: Generated dynamically by code (e.g., "Generate 3-5 questions about...")
 - **Profile Combination**: Base + Task Style + Task Instructions = Full LLM Prompt
 
-**File Location**: `profiles/`
+**File Location**: `tools/profiles/`
 
 **Loading**:
 
@@ -82,7 +82,7 @@ Profiles are markdown files with clear section headers and rules:
 
 ### Profile Types
 
-#### Base Policy (`profiles/base_policy.md`)
+#### Base Policy (`tools/profiles/base_policy.md`)
 
 **Purpose**: Universal rules applied to ALL LLM calls.
 
@@ -166,7 +166,7 @@ Profiles are markdown files with clear section headers and rules:
 
 **Usage**: Automatically injected into every LLM call by `ProfileLoader`.
 
-**File**: `profiles/base_policy.md`
+**File**: `tools/profiles/base_policy.md`
 
 ### `requirements.md`
 
@@ -203,7 +203,7 @@ requirements:
     llm_profile: requirements
 ```
 
-**File**: `profiles/requirements.md`
+**File**: `tools/profiles/requirements.md`
 
 ### `requirements_review.md`
 
@@ -244,7 +244,7 @@ requirements:
     llm_profile: requirements_review
 ```
 
-**File**: `profiles/requirements_review.md`
+**File**: `tools/profiles/requirements_review.md`
 
 ---
 
@@ -255,10 +255,10 @@ Profiles are combined in a specific order to create the full LLM prompt:
 ### Combination Order
 
 ```
-1. Base Policy (profiles/base_policy.md)
+1. Base Policy (tools/profiles/base_policy.md)
    ↓ Always injected first
    
-2. Task Style Profile (e.g., profiles/requirements.md)
+2. Task Style Profile (e.g., tools/profiles/requirements.md)
    ↓ Selected based on handler config llm_profile field
    
 3. Task-Specific Instructions
@@ -426,10 +426,10 @@ Follow these steps to add a new task style profile.
 
 ### Step 2: Create Profile File
 
-Create a new markdown file in `profiles/` directory:
+Create a new markdown file in `tools/profiles/` directory:
 
 ```bash
-touch profiles/research.md
+touch tools/profiles/research.md
 ```
 
 ### Step 3: Write Profile Content
@@ -607,7 +607,7 @@ Don't assume rules work—test with actual documents:
 Treat profiles like code:
 
 ```bash
-git add profiles/research.md
+git add tools/profiles/research.md
 git commit -m "Add research document profile
 
 - Define citation format
@@ -687,8 +687,8 @@ python -m tools.requirements_automation.cli \
 
 Compare two profile versions:
 
-1. Save current profile: `cp profiles/requirements.md profiles/requirements_v1.md`
-2. Modify profile: `vim profiles/requirements.md`
+1. Save current profile: `cp tools/profiles/requirements.md tools/profiles/requirements_v1.md`
+2. Modify profile: `vim tools/profiles/requirements.md`
 3. Test both versions on same document
 4. Compare outputs and choose better version
 5. Document changes: `git commit -m "Improve requirements profile: ..."`
@@ -787,7 +787,7 @@ Add to profile:
 4. Handler config not reloaded
 
 **Solutions**:
-1. Verify file saved: `cat profiles/requirements.md`
+1. Verify file saved: `cat tools/profiles/requirements.md`
 2. Check handler config: `llm_profile: requirements`
 3. Restart CLI process (profiles loaded at startup)
 4. Check handler registry loaded correctly
@@ -825,7 +825,7 @@ LLM profiles guide AI behavior through rules-based prompts:
 
 **Workflow**:
 1. Identify need for new profile
-2. Create markdown file in `profiles/`
+2. Create markdown file in `tools/profiles/`
 3. Write clear, concrete rules
 4. Reference in handler configuration
 5. Test with real documents
@@ -844,7 +844,7 @@ For more information:
 - [Contributing Guide](contributing.md) - Development workflow
 
 **Next Steps**:
-- Review existing profiles in `profiles/` directory
+- Review existing profiles in `tools/profiles/` directory
 - Experiment with profile modifications using `--dry-run`
 - Create a custom profile for a new document type
 - Test profile effectiveness with A/B comparisons
