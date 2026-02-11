@@ -548,7 +548,10 @@ class WorkflowRunner:
                 
                 ctx = section_body(self.lines, span)
                 proposed = self.llm.generate_open_questions(
-                    target_id, ctx, llm_profile=handler_config.llm_profile, prior_sections=prior_sections
+                    target_id,
+                    ctx,
+                    llm_profile=handler_config.llm_profile,
+                    prior_sections=prior_sections,
                 )
                 
                 new_qs = []
