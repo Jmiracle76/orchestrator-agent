@@ -450,7 +450,9 @@ class StructuralValidator:
             pass
 
 
-def report_structural_errors(errors: List[StructuralError], repairs_made: Optional[List[str]] = None) -> str:
+def report_structural_errors(
+    errors: List[StructuralError], repairs_made: Optional[List[str]] = None
+) -> str:
     """
     Format structural errors for human-readable output.
 

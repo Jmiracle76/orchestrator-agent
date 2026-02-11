@@ -74,7 +74,7 @@ def main(argv: List[str] | None = None) -> int:
     )
     if exit_code != 0:
         return exit_code
-    
+
     # At this point, handler_registry cannot be None because load_handler_registry
     # only returns non-zero exit_code when handler_registry is None
     assert handler_registry is not None

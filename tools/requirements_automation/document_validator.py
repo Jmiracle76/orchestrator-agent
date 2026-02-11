@@ -358,7 +358,9 @@ class DocumentValidator:
             lines.append("Blocking Issues:")
             for criterion in blocking_failures:
                 # Find the check for this criterion to get details
-                matching_check: CompletionCheck | None = next((c for c in checks if c.criterion == criterion), None)
+                matching_check: CompletionCheck | None = next(
+                    (c for c in checks if c.criterion == criterion), None
+                )
                 if matching_check:
                     lines.append(f"- {matching_check.details}")
 

@@ -22,7 +22,12 @@ from .runner_state import _canon_target, get_section_state
 
 
 def execute_review_gate(
-    lines: List[str], target_id: str, llm: Any, doc_type: str, handler_config: Any, dry_run: bool = False
+    lines: List[str],
+    target_id: str,
+    llm: Any,
+    doc_type: str,
+    handler_config: Any,
+    dry_run: bool = False,
 ) -> tuple[List[str], WorkflowResult]:
     """
     Execute a review gate handler.

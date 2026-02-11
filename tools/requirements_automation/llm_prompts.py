@@ -27,7 +27,10 @@ def format_prior_sections(prior_sections: dict) -> str:
 
 
 def build_open_questions_prompt(
-    section_id: str, section_context: str, full_profile: str, prior_sections: Optional[dict[str, str]] = None
+    section_id: str,
+    section_context: str,
+    full_profile: str,
+    prior_sections: Optional[dict[str, str]] = None,
 ) -> str:
     """Build prompt for generating open questions.
 
