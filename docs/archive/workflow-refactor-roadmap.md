@@ -1,5 +1,8 @@
 # Workflow Refactor & Integration Loop Roadmap
 
+> **ARCHIVE NOTICE:** This roadmap has been completed. The legacy `runner.py` has been removed as of 2026-02-11. 
+> The modern `runner_v2.py` (WorkflowRunner) is now the sole workflow engine. See current architecture in `/docs/architecture/overview.md`.
+
 This document converts the proposed refactor and architecture changes into a concrete, reviewable set of GitHub Issues. Each issue is intentionally scoped, ordered, and phrased so it can be handed directly to Codex or a human contributor without ambiguity.
 
 ---
