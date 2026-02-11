@@ -31,6 +31,25 @@ class LLMClient:
         self.max_tokens = max_tokens
         self._client = self._make_client()
         self.profile_loader = ProfileLoader()
+    
+    @staticmethod
+    def _format_prior_sections(prior_sections: dict) -> str:
+        """Format prior_sections dict into a Document Context block.
+        
+        Args:
+            prior_sections: Dict mapping section IDs to their content
+            
+        Returns:
+            Formatted markdown string with document context
+        """
+        if not prior_sections:
+            return ""
+        
+        lines = ["## Document Context (completed sections)"]
+        for section_id, content in prior_sections.items():
+            lines.append(f"### {section_id}")
+            lines.append(content.strip())
+        return "\n".join(lines)
 
     @staticmethod
     def _make_client():
@@ -52,13 +71,14 @@ class LLMClient:
         )
         return resp.content[0].text
 
-    def generate_open_questions(self, section_id: str, section_context: str, llm_profile: str = "requirements") -> List[dict]:
+    def generate_open_questions(self, section_id: str, section_context: str, llm_profile: str = "requirements", prior_sections: dict[str, str] = None) -> List[dict]:
         """Ask the LLM to propose clarifying questions for a blank section.
         
         Args:
             section_id: Section identifier
             section_context: Current section content
             llm_profile: Profile name to use (default: "requirements")
+            prior_sections: Optional dict of completed section IDs to their content
             
         Returns:
             List of question dictionaries with fields: question, section_target, rationale
@@ -66,9 +86,17 @@ class LLMClient:
         # Load profile
         full_profile = self.profile_loader.build_full_profile(llm_profile)
         
+        # Build document context if prior sections provided
+        doc_context = ""
+        if prior_sections:
+            doc_context = f"\n\n{self._format_prior_sections(prior_sections)}\n"
+        
+        # Update task instruction based on whether context is present
+        task_instruction = "Given the document context above, generate 2-5 clarifying questions to help complete this section." if prior_sections else "Generate 2-5 clarifying questions to help complete this section."
+        
         prompt = f'''
 {full_profile}
-
+{doc_context}
 ---
 
 ## Task: Generate Clarifying Questions
@@ -78,7 +106,7 @@ Section ID: {section_id}
 Current Section Content:
 """{section_context}"""
 
-Generate 2-5 clarifying questions to help complete this section.
+{task_instruction}
 Output JSON with this exact shape:
 
 {{
@@ -111,7 +139,7 @@ Return JSON only. No prose.
                 cleaned.append({"question": qt, "section_target": st, "rationale": rat})
         return cleaned
 
-    def integrate_answers(self, section_id: str, section_context: str, answered_questions: List[OpenQuestion], llm_profile: str = "requirements", output_format: str = "prose") -> str:
+    def integrate_answers(self, section_id: str, section_context: str, answered_questions: List[OpenQuestion], llm_profile: str = "requirements", output_format: str = "prose", prior_sections: dict[str, str] = None) -> str:
         """Ask the LLM to rewrite a section using the provided Q&A context.
         
         Args:
@@ -120,6 +148,7 @@ Return JSON only. No prose.
             answered_questions: List of OpenQuestion objects with answers
             llm_profile: Profile name to use (default: "requirements")
             output_format: Output format hint ("prose", "bullets", "subsections")
+            prior_sections: Optional dict of completed section IDs to their content
             
         Returns:
             Rewritten section body text
@@ -134,10 +163,18 @@ Return JSON only. No prose.
             "subsections": "Organize content under appropriate subsection headers (###)."
         }.get(output_format, "Write integrated content as prose.")
         
+        # Build document context if prior sections provided
+        doc_context = ""
+        if prior_sections:
+            doc_context = f"\n\n{self._format_prior_sections(prior_sections)}\n"
+        
+        # Update task instruction based on whether context is present
+        task_instruction = "Using the document context and answered questions, rewrite the section incorporating answers." if prior_sections else "Rewrite the section incorporating answers."
+        
         qa = "\n".join(f"- {q.question_id}: {q.question}\n  Answer: {q.answer}" for q in answered_questions)
         prompt = f'''
 {full_profile}
-
+{doc_context}
 ---
 
 ## Task: Integrate Answers into Section
@@ -151,7 +188,7 @@ Current Section Content:
 Answered Questions:
 {qa}
 
-Rewrite the section incorporating answers. Remove placeholder wording.
+{task_instruction} Remove placeholder wording.
 Output only the rewritten section body (no markers, no headers, no lock tags).
 '''
         return self._call(prompt).strip()
