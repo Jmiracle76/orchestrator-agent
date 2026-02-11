@@ -224,7 +224,7 @@ def main(argv: List[str] | None = None) -> int:
     if (changed or doc_created) and not args.dry_run and not args.no_commit:
         # Get current version for commit message
         current_version = get_current_version(lines)
-        
+
         # Use appropriate commit message based on what happened
         if doc_created and not changed:
             commit_msg = f"requirements: initialize from template (v{current_version})"
