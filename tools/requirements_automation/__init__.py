@@ -2,5 +2,7 @@
 
 __all__ = ["main"]
 
-# Re-export the CLI entry point for consumers importing this package.
-from .cli import main
+# Lazy import to avoid double-import warning when running with python -m
+def main(*args, **kwargs):
+    from .cli import main as _main
+    return _main(*args, **kwargs)
