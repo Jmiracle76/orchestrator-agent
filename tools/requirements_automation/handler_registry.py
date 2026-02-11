@@ -92,6 +92,8 @@ class HandlerRegistry:
     # Optional keys in handler config
     OPTIONAL_KEYS = {
         "validation_rules",  # for review_gate mode
+        "questions_table",  # per-section question table name
+        "bootstrap_questions",  # whether to use bootstrap questions from template
     }
 
     def __init__(self, config_path: Path):
@@ -263,6 +265,8 @@ class HandlerRegistry:
             auto_apply_patches=handler_data["auto_apply_patches"],
             scope=handler_data["scope"],
             validation_rules=handler_data.get("validation_rules", []),
+            questions_table=handler_data.get("questions_table"),
+            bootstrap_questions=handler_data.get("bootstrap_questions", False),
         )
 
     def supports_doc_type(self, doc_type: str) -> bool:

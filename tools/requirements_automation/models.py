@@ -87,6 +87,8 @@ class HandlerConfig:
     auto_apply_patches: str  # for review gates: "never", "always", "if_validation_passes"
     scope: str  # for review gates: "all_prior_sections", "entire_document", "sections:X,Y,Z"
     validation_rules: List[str]  # for review gates: list of validation rules to apply
+    questions_table: Optional[str] = None  # per-section question table name
+    bootstrap_questions: bool = False  # whether to use bootstrap questions from template
 
 
 @dataclass(frozen=True)

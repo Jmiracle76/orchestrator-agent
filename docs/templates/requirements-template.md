@@ -68,6 +68,16 @@ approval_record
 <!-- PLACEHOLDER -->
 [Describe the problem your project addresses.]
 
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:problem_statement_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| problem_statement-Q1 | What is the primary pain point this project addresses? | [Date] | | Open |
+| problem_statement-Q2 | Who are the affected users or stakeholders? | [Date] | | Open |
+| problem_statement-Q3 | What are the consequences of not solving this problem? | [Date] | | Open |
+
 <!-- section_lock:problem_statement lock=false -->
 ---
 
@@ -95,6 +105,16 @@ approval_record
 1. [Non-goal 1]
 2. [Non-goal 2]
 
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:goals_objectives_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| goals_objectives-Q1 | What are the measurable success indicators for each goal? | [Date] | | Open |
+| goals_objectives-Q2 | How do these goals align with organizational priorities? | [Date] | | Open |
+| goals_objectives-Q3 | What are the dependencies between primary and secondary goals? | [Date] | | Open |
+
 <!-- section_lock:goals_objectives lock=false -->
 ---
 
@@ -117,6 +137,15 @@ approval_record
 |-----------|----------------|-------|-----------|
 | <!-- PLACEHOLDER --> | - | - | - |
 
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:stakeholders_users_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| stakeholders_users-Q1 | Have all key stakeholder groups been identified? | [Date] | | Open |
+| stakeholders_users-Q2 | What are the communication preferences for each stakeholder? | [Date] | | Open |
+| stakeholders_users-Q3 | Are there any conflicting stakeholder interests? | [Date] | | Open |
 
 <!-- section_lock:stakeholders_users lock=false -->
 ---
@@ -126,6 +155,15 @@ approval_record
 <!-- PLACEHOLDER -->
 1. [Assumption 1] 
 2. [Assumption 2] 
+
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:assumptions_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| assumptions-Q1 | Have all assumptions been validated with stakeholders? | [Date] | | Open |
+| assumptions-Q2 | What is the impact if any of these assumptions are invalid? | [Date] | | Open |
 
 <!-- section_lock:assumptions lock=false -->
 ---
@@ -150,6 +188,15 @@ approval_record
 <!-- PLACEHOLDER -->
 - [Resource constraint 1] 
 - [Resource constraint 2] 
+
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:constraints_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| constraints-Q1 | Are there any workarounds for the identified constraints? | [Date] | | Open |
+| constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | | Open |
 
 <!-- section_lock:constraints lock=false -->
 ---
@@ -280,6 +327,15 @@ approval_record
 <!-- PLACEHOLDER -->
 - [ ] Acceptance criterion 1 
 - [ ] Acceptance criterion 2
+
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:success_criteria_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| success_criteria-Q1 | How will success be measured and validated? | [Date] | | Open |
+| success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | | Open |
 
 <!-- section_lock:success_criteria lock=false -->
 ---

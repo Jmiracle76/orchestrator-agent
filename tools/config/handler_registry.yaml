@@ -38,6 +38,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: current_section
+    questions_table: problem_statement_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   goals_objectives:
     mode: integrate_then_questions
@@ -49,6 +51,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections  # Use prior context to inform questions
+    questions_table: goals_objectives_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   stakeholders_users:
     mode: integrate_then_questions
@@ -60,6 +64,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections  # Use prior context to inform questions
+    questions_table: stakeholders_users_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   success_criteria:
     mode: integrate_then_questions
@@ -71,6 +77,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections  # Use prior context to inform questions
+    questions_table: success_criteria_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   assumptions:
     mode: integrate_then_questions
@@ -83,6 +91,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections  # Use prior context to inform questions
+    questions_table: assumptions_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   constraints:
     mode: integrate_then_questions
@@ -97,6 +107,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections  # Use prior context to inform questions
+    questions_table: constraints_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   requirements:
     mode: integrate_then_questions
