@@ -111,27 +111,31 @@ The initial focus SHALL be controlled document-to-plan-to-execution workflow enf
 ---
 <!-- section:stakeholders_users -->
 ## 4. Stakeholders and Users
-<!-- PLACEHOLDER -->
-<!-- subsection:primary_stakeholders -->
-### Primary Stakeholders
+The system serves five primary stakeholder groups, each with distinct accountability and interests:
 
-<!-- table:primary_stakeholders -->
-| Stakeholder | Role | Interest/Need | Contact |
-|-------------|------|---------------|---------|
-| <!-- PLACEHOLDER --> | - | - | - |
+**Project Sponsor** – Provides strategic direction and funding approval. Accountable for alignment between system capabilities and organizational objectives.
 
-<!-- subsection:end_users -->
-### End Users
+**Product Owner** – Defines workflow requirements and establishes scope boundaries. Responsible for prioritizing features and clarifying functional intent.
 
-<!-- table:end_users -->
-| User Type | Characteristics | Needs | Use Cases |
-|-----------|----------------|-------|-----------|
-| <!-- PLACEHOLDER --> | - | - | - |
+**Lead Developer / Technical Architect** – Ensures safe integration with the repository and existing tooling. Oversees technical design decisions and validates architectural coherence.
 
+**Engineering Team** – Consumes generated execution plans and code updates. Primary beneficiaries of automation and workflow orchestration capabilities.
 
+**Security / Governance Lead** – Ensures repository safety and controlled AI behavior. Responsible for validating guardrails, access boundaries, and change control processes.
+
+**Regulatory and Oversight Stakeholders** – The system SHALL satisfy requirements from Security Governance (AI action boundaries), Change Control / Release Management (reviewable and traceable modifications), and Audit / Compliance Oversight (traceability between requirements, issues, and code changes). Formal regulatory frameworks are not in scope initially, but the design MUST support auditability and controlled change management.
+
+The system supports four distinct end user types, each with specific characteristics, technical capabilities, and workflow needs:
+
+**Requirements Author** – Creates and maintains structured requirements documents using Markdown. Operates at moderate technical skill level and interacts primarily during planning phases. Key workflows include drafting structured requirements documents and responding to agent-generated clarification questions.
+
+**Workflow Operator** – Executes Python invocation scripts and monitors agent runs. Technical user familiar with CLI and automation tools. Executes runs frequently during development cycles. Primary workflows include triggering agent runs, validating section-level looping behavior, and monitoring logs and execution outputs.
+
+**Repository Maintainer** – Reviews and approves AI-generated issues or code changes. Operates at senior technical skill level with ownership of code review and merge approval processes. Ensures scope and quality alignment. Key workflows include reviewing generated GitHub Issues, approving or rejecting scoped changes, and ensuring no unauthorized file modifications occur.
+
+**Agent Maintainer** – Tunes prompts, guardrails, and orchestration logic. Advanced technical user with deep understanding of orchestration logic and prompt engineering. Engages during refinement or failure scenarios. Primary workflows include refining guardrails, adjusting prompts or workflow logic, and diagnosing unexpected behavior.
 <!-- section_lock:stakeholders_users lock=false -->
 ---
-
 <!-- section:assumptions -->
 ## 5. Assumptions
 <!-- PLACEHOLDER -->
@@ -273,11 +277,16 @@ The initial focus SHALL be controlled document-to-plan-to-execution workflow enf
 <!-- table:open_questions -->
 | Question ID | Question | Date | Answer | Section Target | Resolution Status |
 |-------------|----------|------|--------|----------------|-------------------|
-| Q-007 | Who are the primary stakeholders for this system (e.g., project sponsor, product owner, business units, compliance officers)? | 2026-02-11 | Primary stakeholders include: •	Project Sponsor – Accountable for strategic direction and funding approval •	Product Owner – Defines workflow requirements and scope boundaries •	Lead Developer / Technical Architect – Ensures safe integration with the repository and tooling •	Engineering Team – Consumers of generated execution plans and code updates • Security / Governance Lead – Ensures repository safety and controlled AI behavior | stakeholders_users | Open |
-| Q-008 | What are the distinct end user types who will interact with the system (e.g., administrators, operators, customers, analysts)? | 2026-02-11 | What are the distinct end user types who will interact with the system? •	Requirements Author – Creates and maintains structured requirements documents •	Workflow Operator – Executes Python invocation scripts and monitors agent runs •	Repository Maintainer – Reviews and approves AI-generated issues or code changes •	Agent Maintainer – Tunes prompts, guardrails, and orchestration logic | stakeholders_users | Open |
-| Q-009 | What are the key characteristics of each user type (e.g., technical skill level, frequency of use, location, department)? | 2026-02-11 | What are the key characteristics of each user type? •	Requirements Author o	Moderate technical skill o	Works primarily in Markdown o	Interacts during planning phases •	Workflow Operator o	Technical user o	Familiar with CLI and automation tools o	Executes runs frequently during development cycles •	Repository Maintainer o	Senior technical skill o	Owns code review and merge approval o	Ensures scope and quality alignment •	Agent Maintainer o	Advanced technical skill o	Understands orchestration logic and prompt engineering o	Engages during refinement or failure scenarios | stakeholders_users | Open |
-| Q-010 | What are the primary use cases or workflows that each user type needs to accomplish with the system? | 2026-02-11 | •	Requirements Author o	Draft structured requirements documents o	Respond to agent-generated clarification questions •	Workflow Operator o	Trigger agent runs o	Validate section-level looping behavior o	Monitor logs and execution outputs •	Repository Maintainer o	Review generated GitHub Issues o	Approve or reject scoped changes o	Ensure no unauthorized file modifications •	Agent Maintainer o	Refine guardrails o	Adjust prompts or workflow logic o	Diagnose unexpected behavior | stakeholders_users | Open |
-| Q-011 | Are there regulatory, approval, or oversight stakeholders whose requirements must be satisfied (e.g., legal, security, auditors)? | 2026-02-11 | Yes. The system must satisfy: •	Security Governance – Ensure AI actions remain within defined repository boundaries •	Change Control / Release Management – All modifications must be reviewable and traceable •	Audit / Compliance Oversight – Maintain traceability between requirements, issues, and code changes Formal regulatory frameworks are not in scope initially, but the design must support auditability and controlled change management. | stakeholders_users | Open |
+| Q-012 | What quantifiable metrics define project success (e.g., performance benchmarks, user adoption rates, error rates)? | 2026-02-11 |  | success_criteria | Open |
+| Q-013 | What is the minimum viable functionality or scope required to consider this project successful? | 2026-02-11 |  | success_criteria | Open |
+| Q-014 | What specific deliverables or artifacts must be completed and approved before project acceptance? | 2026-02-11 |  | success_criteria | Open |
+| Q-015 | Who are the stakeholders authorized to approve acceptance criteria and what is their approval process? | 2026-02-11 |  | success_criteria | Open |
+| Q-016 | What are the pass/fail thresholds for testing, quality assurance, or validation activities? | 2026-02-11 |  | success_criteria | Open |
+| Q-007 | Who are the primary stakeholders for this system (e.g., project sponsor, product owner, business units, compliance officers)? | 2026-02-11 | Primary stakeholders include: •	Project Sponsor – Accountable for strategic direction and funding approval •	Product Owner – Defines workflow requirements and scope boundaries •	Lead Developer / Technical Architect – Ensures safe integration with the repository and tooling •	Engineering Team – Consumers of generated execution plans and code updates • Security / Governance Lead – Ensures repository safety and controlled AI behavior | stakeholders_users | Resolved |
+| Q-008 | What are the distinct end user types who will interact with the system (e.g., administrators, operators, customers, analysts)? | 2026-02-11 | What are the distinct end user types who will interact with the system? •	Requirements Author – Creates and maintains structured requirements documents •	Workflow Operator – Executes Python invocation scripts and monitors agent runs •	Repository Maintainer – Reviews and approves AI-generated issues or code changes •	Agent Maintainer – Tunes prompts, guardrails, and orchestration logic | stakeholders_users | Resolved |
+| Q-009 | What are the key characteristics of each user type (e.g., technical skill level, frequency of use, location, department)? | 2026-02-11 | What are the key characteristics of each user type? •	Requirements Author o	Moderate technical skill o	Works primarily in Markdown o	Interacts during planning phases •	Workflow Operator o	Technical user o	Familiar with CLI and automation tools o	Executes runs frequently during development cycles •	Repository Maintainer o	Senior technical skill o	Owns code review and merge approval o	Ensures scope and quality alignment •	Agent Maintainer o	Advanced technical skill o	Understands orchestration logic and prompt engineering o	Engages during refinement or failure scenarios | stakeholders_users | Resolved |
+| Q-010 | What are the primary use cases or workflows that each user type needs to accomplish with the system? | 2026-02-11 | •	Requirements Author o	Draft structured requirements documents o	Respond to agent-generated clarification questions •	Workflow Operator o	Trigger agent runs o	Validate section-level looping behavior o	Monitor logs and execution outputs •	Repository Maintainer o	Review generated GitHub Issues o	Approve or reject scoped changes o	Ensure no unauthorized file modifications •	Agent Maintainer o	Refine guardrails o	Adjust prompts or workflow logic o	Diagnose unexpected behavior | stakeholders_users | Resolved |
+| Q-011 | Are there regulatory, approval, or oversight stakeholders whose requirements must be satisfied (e.g., legal, security, auditors)? | 2026-02-11 | Yes. The system must satisfy: •	Security Governance – Ensure AI actions remain within defined repository boundaries •	Change Control / Release Management – All modifications must be reviewable and traceable •	Audit / Compliance Oversight – Maintain traceability between requirements, issues, and code changes Formal regulatory frameworks are not in scope initially, but the design must support auditability and controlled change management. | stakeholders_users | Resolved |
 | Q-002 | What is the primary business or technical problem this project solves? | 2026-02-11 | The project solves the lack of structured, deterministic translation from approved requirements into bounded execution plans and controlled AI-driven code changes. It addresses the absence of enforceable workflow controls that prevent scope drift, planning inconsistency, and unintended repository mutations during AI-assisted development. | goals_objectives | Resolved |
 | Q-003 | What measurable outcomes define success for this project? | 2026-02-11 | Success is defined by: •	100% structured parsing of requirements documents into section-scoped tasks •	Deterministic issue generation aligned to documented scope •	Zero unauthorized file modifications outside defined boundaries •	Reduction in manual replanning cycles •	Traceable linkage between requirements, issues, and code changes •	Predictable agent behavior across iterative runs | goals_objectives | Resolved |
 | Q-004 | Are there any related features, use cases, or scope areas that are explicitly out of scope? | 2026-02-11 | Out of scope for initial delivery: •	Full autonomous code generation without human gating •	Business-level strategy automation •	Non-markdown document ingestion •	Natural language freeform repo edits without scope validation •	Multi-repository orchestration The initial focus is controlled document-to-plan-to-execution workflow enforcement. | goals_objectives | Resolved |
