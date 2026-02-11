@@ -39,13 +39,13 @@ def main(argv: List[str] | None = None) -> int:
     repo_root = Path(args.repo_root).resolve()
     template_path = Path(args.template).resolve()
     doc_path = Path(args.doc).resolve()
-    
+
     # Load handler registry
     if args.handler_config:
         handler_config_path = Path(args.handler_config).resolve()
     else:
         handler_config_path = repo_root / "config" / "handler_registry.yaml"
-    
+
     try:
         handler_registry = HandlerRegistry(handler_config_path)
         logging.info("Loaded handler registry from: %s", handler_config_path)
@@ -62,7 +62,7 @@ def main(argv: List[str] | None = None) -> int:
 
     # Track whether we created a new document from template
     doc_created = False
-    
+
     # If the requirements doc does not exist, seed it from the template.
     if not doc_path.exists():
         if not template_path.exists():
@@ -75,7 +75,7 @@ def main(argv: List[str] | None = None) -> int:
 
     # Load document into memory and construct the LLM client.
     lines = split_lines(read_text(doc_path))
-    
+
     # Handle --validate-structure flag: check structure without processing
     if args.validate_structure:
         validator = StructuralValidator(lines)
@@ -86,7 +86,7 @@ def main(argv: List[str] | None = None) -> int:
         else:
             print("✅ Document structure valid")
             return 0
-    
+
     # Fail fast if structure is corrupted
     validator = StructuralValidator(lines)
     errors = validator.validate_all()
@@ -95,7 +95,7 @@ def main(argv: List[str] | None = None) -> int:
         for error in errors:
             print(f"  - {error}")
         return 2
-    
+
     metadata = extract_metadata(lines)
     raw_doc_type = (metadata.get("doc_type") or "").strip()
     doc_type = raw_doc_type.lower() if raw_doc_type else DEFAULT_DOC_TYPE
@@ -105,7 +105,7 @@ def main(argv: List[str] | None = None) -> int:
         supported = ", ".join(SUPPORTED_DOC_TYPES)
         logging.error("Unsupported doc_type '%s'. Supported types: %s", doc_type, supported)
         return 2
-    
+
     # Validate doc_type is supported by handler registry
     # Note: supports_doc_type() returns True if doc_type exists OR if _default exists,
     # so we just log a warning if the specific doc_type isn't found but _default is available
@@ -126,7 +126,7 @@ def main(argv: List[str] | None = None) -> int:
                 supported
             )
             return 2
-    
+
     # Decide which phase is next and execute it.
     try:
         workflow_order = extract_workflow_order(lines)
@@ -149,15 +149,15 @@ def main(argv: List[str] | None = None) -> int:
     if args.validate:
         validator = DocumentValidator(lines, workflow_order, handler_registry, doc_type)
         status = validator.validate_completion(strict=args.strict)
-        
+
         # Print human-readable summary
         print(status.summary)
         print()
-        
+
         # Print machine-readable JSON
         print("JSON Output:")
         print(json.dumps(asdict(status), indent=2))
-        
+
         return 0 if status.complete else 1
 
     # Create LLM client only if we're not in validate mode
@@ -165,7 +165,7 @@ def main(argv: List[str] | None = None) -> int:
 
     # Create WorkflowRunner and execute workflow
     runner = WorkflowRunner(lines, llm, doc_type, workflow_order, handler_registry=handler_registry)
-    
+
     if args.max_steps > 1:
         # Batch execution mode
         results = runner.run_until_blocked(args.dry_run, max_steps=args.max_steps)
@@ -173,14 +173,14 @@ def main(argv: List[str] | None = None) -> int:
         last_result = results[-1] if results else None
         if not last_result:
             return 0
-        
+
         # Update lines from runner (may have been modified)
         lines = runner.lines
         changed = any(r.changed for r in results)
         blocked = last_result.blocked
         blocked_reasons = last_result.blocked_reasons
         target_id = last_result.target_id
-        
+
         # Log summary of all steps
         for i, result in enumerate(results):
             logging.info("Step %d: target=%s action=%s changed=%s", 
@@ -188,7 +188,7 @@ def main(argv: List[str] | None = None) -> int:
     else:
         # Single-step execution mode (default)
         result = runner.run_once(args.dry_run)
-        
+
         # Update lines from runner (may have been modified)
         lines = runner.lines
         changed = result.changed
