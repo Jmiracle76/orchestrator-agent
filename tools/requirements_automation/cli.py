@@ -76,12 +76,24 @@ def main(argv: List[str] | None = None) -> int:
         return 2
     
     # Validate doc_type is supported by handler registry
-    if not handler_registry.supports_doc_type(doc_type):
-        supported = ", ".join([k for k in handler_registry.config.keys() if k != "_default"])
-        logging.error("doc_type '%s' not found in handler registry. Available types: %s", doc_type, supported)
+    # Note: supports_doc_type() returns True if doc_type exists OR if _default exists,
+    # so we just log a warning if the specific doc_type isn't found but _default is available
+    if doc_type not in handler_registry.config:
         if "_default" in handler_registry.config:
-            logging.warning("Falling back to default handler configuration")
+            logging.warning(
+                "doc_type '%s' not explicitly configured in handler registry, "
+                "will use default handler configuration",
+                doc_type
+            )
         else:
+            # No specific config and no default - this is an error
+            supported = ", ".join([k for k in handler_registry.config.keys()])
+            logging.error(
+                "doc_type '%s' not found in handler registry and no _default exists. "
+                "Available types: %s",
+                doc_type,
+                supported
+            )
             return 2
     
     llm = LLMClient()

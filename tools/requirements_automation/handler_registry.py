@@ -216,36 +216,23 @@ class HandlerRegistry:
         handler_data = doc_config.get(section_id)
         
         if handler_data is None:
-            # Try to use default section config within this doc_type
-            # In _default, we have a nested structure: _default -> requirements -> config
-            if doc_type == "_default" and isinstance(doc_config, dict):
-                # For _default, try to get the first doc_type's config
-                first_doc_type = next(iter(doc_config.keys()), None)
-                if first_doc_type:
-                    handler_data = doc_config[first_doc_type]
-                else:
-                    raise HandlerRegistryError(
-                        f"Section '{section_id}' not found in default config"
-                    )
-            else:
-                # Try using the config for the first section as default
-                # Or raise an error - let's be strict and use a generic default
-                logging.warning(
-                    f"Section '{section_id}' not found in doc_type '{doc_type}', "
-                    f"using generic default handler"
-                )
-                # Create a generic default config
-                handler_data = {
-                    "mode": "integrate_then_questions",
-                    "output_format": "prose",
-                    "subsections": False,
-                    "dedupe": False,
-                    "preserve_headers": [],
-                    "sanitize_remove": [],
-                    "llm_profile": doc_type if doc_type != "_default" else "requirements",
-                    "auto_apply_patches": False,
-                    "scope": "current_section",
-                }
+            # Section not found in this doc_type, use generic default
+            logging.warning(
+                f"Section '{section_id}' not found in doc_type '{doc_type}', "
+                f"using generic default handler"
+            )
+            # Create a generic default config
+            handler_data = {
+                "mode": "integrate_then_questions",
+                "output_format": "prose",
+                "subsections": False,
+                "dedupe": False,
+                "preserve_headers": [],
+                "sanitize_remove": [],
+                "llm_profile": "requirements",  # Default to requirements profile
+                "auto_apply_patches": False,
+                "scope": "current_section",
+            }
         
         # Create HandlerConfig object
         return HandlerConfig(

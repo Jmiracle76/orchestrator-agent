@@ -157,23 +157,25 @@ class WorkflowRunner:
                     e,
                 )
         
-        # If we have a handler config, use it to dispatch
-        if handler_config:
-            # For now, we still use the old phase processors but log the handler config
-            # Future Issue 5 will implement unified handlers that use the full config
-            if handler_config.mode == "review_gate":
-                # Review gates not yet implemented (Issue 7)
-                logging.info("Review gate '%s' not yet implemented", target_id)
-                return WorkflowResult(
-                    target_id=target_id,
-                    action_taken="skip_special",
-                    changed=False,
-                    blocked=True,
-                    blocked_reasons=[f"Review gate '{target_id}' not implemented"],
-                    summaries=[f"Skipped review gate: {target_id}"],
-                    questions_generated=0,
-                    questions_resolved=0,
-                )
+        # Check if this is a review gate (special handling)
+        if handler_config and handler_config.mode == "review_gate":
+            # Review gates not yet implemented (Issue 7)
+            logging.info("Review gate '%s' configured but not yet implemented", target_id)
+            return WorkflowResult(
+                target_id=target_id,
+                action_taken="skip_special",
+                changed=False,
+                blocked=True,
+                blocked_reasons=[f"Review gate '{target_id}' not implemented"],
+                summaries=[f"Skipped review gate: {target_id}"],
+                questions_generated=0,
+                questions_resolved=0,
+            )
+        
+        # For all other modes (integrate_then_questions, questions_then_integrate),
+        # fall through to phase-based logic below. This is temporary until Issue 5
+        # implements unified handlers that use the full handler config.
+        # Currently, the handler config is loaded and logged but not used for dispatch.
         
         # Map section to phase for backward compatibility
         phase_name = None
