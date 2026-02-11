@@ -155,3 +155,65 @@ Rewrite the section incorporating answers. Remove placeholder wording.
 Output only the rewritten section body (no markers, no headers, no lock tags).
 '''
         return self._call(prompt).strip()
+
+    def perform_review(self, gate_id: str, doc_type: str, section_contents: dict, 
+                      llm_profile: str, validation_rules: List[str]) -> dict:
+        """Ask the LLM to review multiple sections and return structured feedback.
+        
+        Args:
+            gate_id: Review gate identifier
+            doc_type: Document type (e.g., "requirements")
+            section_contents: Dict mapping section IDs to their content
+            llm_profile: Profile name to use for review
+            validation_rules: List of validation rules to apply
+            
+        Returns:
+            Dict with review results including pass/fail, issues, patches, and summary
+        """
+        # Load review profile
+        full_profile = self.profile_loader.build_full_profile(llm_profile)
+        
+        # Build sections text
+        sections_text = "\n\n".join([
+            f"## Section: {sid}\n{content}"
+            for sid, content in section_contents.items()
+        ])
+        
+        prompt = f'''
+{full_profile}
+
+---
+
+## Task: Review Document Sections
+
+Gate ID: {gate_id}
+Document Type: {doc_type}
+Validation Rules: {', '.join(validation_rules)}
+
+Sections to Review:
+{sections_text}
+
+Analyze the sections for:
+- Completeness (missing critical content?)
+- Consistency (contradictions between sections?)
+- Clarity (ambiguous or untestable requirements?)
+- Feasibility (impossible constraints?)
+
+Output JSON with format:
+{{
+  "pass": boolean,
+  "issues": [
+    {{"severity": "blocker|warning", "section": "section_id", "description": "...", "suggestion": "..."}}
+  ],
+  "patches": [
+    {{"section": "section_id", "suggestion": "...", "rationale": "..."}}
+  ],
+  "summary": "Brief overall assessment"
+}}
+
+Return JSON only. No prose.
+'''
+        
+        raw = self._call(prompt).strip()
+        payload = extract_json_object(raw)
+        return json.loads(payload)

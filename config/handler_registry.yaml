@@ -36,7 +36,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   goals_objectives:
@@ -47,7 +47,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   stakeholders_users:
@@ -58,7 +58,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   success_criteria:
@@ -69,7 +69,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   assumptions:
@@ -81,7 +81,7 @@ requirements:
     sanitize_remove:
       - "constraint classification headers"
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   constraints:
@@ -95,7 +95,7 @@ requirements:
       - "### Resource Constraints"
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   requirements:
@@ -106,7 +106,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   interfaces_integrations:
@@ -117,7 +117,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   data_considerations:
@@ -128,7 +128,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   risks_open_issues:
@@ -139,7 +139,7 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
     
   approval_record:
@@ -150,10 +150,10 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section
   
-  # Review gate example (for future Issue 7 implementation)
+  # Review gate example (for Issue 7 implementation)
   review_gate:coherence_check:
     mode: review_gate
     output_format: prose
@@ -162,8 +162,12 @@ requirements:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements_review
-    auto_apply_patches: false  # configurable per gate
+    auto_apply_patches: never  # configurable: "never", "always", "if_validation_passes"
     scope: all_prior_sections  # review all sections before this gate
+    validation_rules:
+      - no_contradictions
+      - no_missing_critical_sections
+      - consistent_terminology
 
 # Default handler for unknown sections
 _default:
@@ -175,5 +179,5 @@ _default:
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
-    auto_apply_patches: false
+    auto_apply_patches: never
     scope: current_section

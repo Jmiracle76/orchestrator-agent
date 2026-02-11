@@ -213,3 +213,75 @@ def get_subsection_span(subs: List[SubsectionSpan], subsection_id: str) -> Optio
         if s.subsection_id == subsection_id:
             return s
     return None
+
+def extract_all_section_ids(lines: List[str]) -> List[str]:
+    """Extract all section IDs from document (excluding review gates)."""
+    spans = find_sections(lines)
+    return [sp.section_id for sp in spans]
+
+def section_exists(section_id: str, lines: List[str]) -> bool:
+    """Check if a section exists in the document."""
+    spans = find_sections(lines)
+    return get_section_span(spans, section_id) is not None
+
+def contains_markers(text: str) -> bool:
+    """Check if text contains structure markers or HTML comments."""
+    markers = [
+        SECTION_MARKER_RE,
+        SECTION_LOCK_RE,
+        TABLE_MARKER_RE,
+        SUBSECTION_MARKER_RE,
+        META_MARKER_RE,
+    ]
+    for marker_re in markers:
+        if marker_re.search(text):
+            return True
+    # Also check for any HTML comments (which would be structural markers)
+    if "<!--" in text and "-->" in text:
+        return True
+    return False
+
+def apply_patch(section_id: str, suggestion: str, lines: List[str]) -> List[str]:
+    """Apply a patch to a section, replacing its body content."""
+    spans = find_sections(lines)
+    span = get_section_span(spans, section_id)
+    
+    if not span:
+        raise ValueError(f"Section '{section_id}' not found")
+    
+    # Build new content preserving markers and headers
+    new_lines = []
+    in_section = False
+    body_started = False
+    
+    for i, line in enumerate(lines):
+        if i == span.start_line:
+            # Add section marker
+            new_lines.append(line)
+            in_section = True
+            continue
+        
+        if in_section and i < span.end_line:
+            # Skip old body content, but preserve lock markers and headers
+            if SECTION_LOCK_RE.search(line):
+                new_lines.append(line)
+            elif line.lstrip().startswith("##"):
+                new_lines.append(line)
+            elif not body_started:
+                # Insert new content after headers/markers
+                for suggestion_line in suggestion.split('\n'):
+                    new_lines.append(suggestion_line)
+                body_started = True
+        elif i == span.end_line:
+            # Reached end of section
+            if not body_started:
+                # No headers found, insert content now
+                for suggestion_line in suggestion.split('\n'):
+                    new_lines.append(suggestion_line)
+            in_section = False
+            body_started = False
+            new_lines.append(line)
+        else:
+            new_lines.append(line)
+    
+    return new_lines

@@ -67,5 +67,32 @@ class HandlerConfig:
     preserve_headers: List[str]  # headers to preserve during rewrite
     sanitize_remove: List[str]  # patterns to remove from LLM output
     llm_profile: str  # profile name (references profiles/ directory)
-    auto_apply_patches: bool  # for review gates only
-    scope: str  # for review gates: "all_prior_sections", "current_section"
+    auto_apply_patches: str  # for review gates: "never", "always", "if_validation_passes"
+    scope: str  # for review gates: "all_prior_sections", "entire_document", "sections:X,Y,Z"
+    validation_rules: List[str]  # for review gates: list of validation rules to apply
+
+@dataclass(frozen=True)
+class ReviewIssue:
+    """Single issue found during review gate execution."""
+    severity: str  # "blocker", "warning"
+    section: str   # section ID where issue found
+    description: str
+    suggestion: Optional[str]  # optional fix suggestion
+
+@dataclass(frozen=True)
+class ReviewPatch:
+    """Suggested patch to fix an issue found during review."""
+    section: str       # section ID to patch
+    suggestion: str    # proposed replacement content
+    rationale: str     # why this patch is needed
+    validated: bool    # passed structural validation?
+
+@dataclass(frozen=True)
+class ReviewResult:
+    """Result from executing a review gate."""
+    gate_id: str
+    passed: bool       # true if no blocking issues
+    issues: List[ReviewIssue]
+    patches: List[ReviewPatch]
+    scope_sections: List[str]  # sections actually reviewed
+    summary: str       # human-readable summary

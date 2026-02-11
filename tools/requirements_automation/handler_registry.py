@@ -58,7 +58,18 @@ class HandlerRegistry:
     VALID_SCOPES = {
         "current_section",    # Review only current section
         "all_prior_sections", # Review all sections before this gate
+        "entire_document",    # Review all sections in document
     }
+    
+    @staticmethod
+    def _is_valid_scope(scope: str) -> bool:
+        """Check if scope value is valid (handles dynamic scope formats)."""
+        if scope in HandlerRegistry.VALID_SCOPES:
+            return True
+        # Support "sections:X,Y,Z" format
+        if scope.startswith("sections:"):
+            return True
+        return False
     
     # Required keys in handler config
     REQUIRED_KEYS = {
@@ -71,6 +82,11 @@ class HandlerRegistry:
         "llm_profile",
         "auto_apply_patches",
         "scope",
+    }
+    
+    # Optional keys in handler config
+    OPTIONAL_KEYS = {
+        "validation_rules",  # for review_gate mode
     }
     
     def __init__(self, config_path: Path):
@@ -175,11 +191,11 @@ class HandlerRegistry:
                 
                 # Validate scope
                 scope = handler_config.get("scope")
-                if scope not in self.VALID_SCOPES:
+                if not self._is_valid_scope(scope):
                     raise HandlerRegistryError(
                         f"Invalid scope '{scope}' for section '{section_id}' "
                         f"in doc_type '{doc_type}'. "
-                        f"Valid scopes: {', '.join(sorted(self.VALID_SCOPES))}"
+                        f"Valid scopes: {', '.join(sorted(self.VALID_SCOPES))} or 'sections:X,Y,Z'"
                     )
     
     def get_handler_config(self, doc_type: str, section_id: str) -> HandlerConfig:
@@ -230,8 +246,9 @@ class HandlerRegistry:
                 "preserve_headers": [],
                 "sanitize_remove": [],
                 "llm_profile": "requirements",  # Default to requirements profile
-                "auto_apply_patches": False,
+                "auto_apply_patches": "never",
                 "scope": "current_section",
+                "validation_rules": [],
             }
         
         # Create HandlerConfig object
@@ -246,6 +263,7 @@ class HandlerRegistry:
             llm_profile=handler_data["llm_profile"],
             auto_apply_patches=handler_data["auto_apply_patches"],
             scope=handler_data["scope"],
+            validation_rules=handler_data.get("validation_rules", []),
         )
     
     def supports_doc_type(self, doc_type: str) -> bool:
