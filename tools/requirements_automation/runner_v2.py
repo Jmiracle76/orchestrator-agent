@@ -3,7 +3,7 @@ import logging
 import re
 from typing import List, Optional, Dict
 from .models import WorkflowResult, SectionState
-from .config import PHASES, is_special_workflow_target, PLACEHOLDER_TOKEN
+from .config import PHASES, is_special_workflow_target, PLACEHOLDER_TOKEN, REVIEW_GATE_RESULT_RE
 from .parsing import find_sections, get_section_span, section_is_locked, section_is_blank, find_subsections_within, section_body, section_text
 from .open_questions import open_questions_parse, open_questions_resolve, open_questions_insert
 from .config import TARGET_CANONICAL_MAP
@@ -577,9 +577,25 @@ class WorkflowRunner:
                             self.doc_type, target_id
                         )
                         if handler_config.mode == "review_gate":
+                            # Fix 2: Check if review gate already passed
+                            gate_already_passed = False
+                            for line in self.lines:
+                                m = REVIEW_GATE_RESULT_RE.search(line)
+                                if m and m.group("gate_id") == target_id and m.group("status") == "passed":
+                                    gate_already_passed = True
+                                    logging.info("Review gate '%s' already passed, skipping", target_id)
+                                    break
+                            
+                            if gate_already_passed:
+                                # Skip this gate and continue to next workflow target
+                                continue
+                            
                             # Execute review gate
                             handler = ReviewGateHandler(self.llm, self.lines, self.doc_type)
                             review_result = handler.execute_review(target_id, handler_config)
+                            
+                            # Fix 1: Write review gate result marker to document
+                            self.lines, marker_changed = handler.write_review_gate_result(review_result, self.lines)
                             
                             # Optionally apply patches
                             self.lines, patches_applied = handler.apply_patches_if_configured(
@@ -590,7 +606,7 @@ class WorkflowRunner:
                             result = WorkflowResult(
                                 target_id=target_id,
                                 action_taken="review_gate",
-                                changed=patches_applied,
+                                changed=marker_changed or patches_applied,
                                 blocked=not review_result.passed,
                                 blocked_reasons=[
                                     f"{i.severity}: {i.description}" 
