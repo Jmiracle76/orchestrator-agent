@@ -237,8 +237,18 @@ class WorkflowRunner:
                     questions_resolved=0,
                 )
 
+            # Get handler config for this section (to determine question table)
+            handler_config = None
+            if self.handler_registry:
+                try:
+                    handler_config = self.handler_registry.get_handler_config(
+                        self.doc_type, target_id
+                    )
+                except Exception as e:
+                    logging.debug("Could not get handler config for '%s': %s", target_id, e)
+
             # Get section state
-            state = get_section_state(self.lines, target_id)
+            state = get_section_state(self.lines, target_id, handler_config)
 
             # Skip if section doesn't exist (shouldn't happen after validation)
             if not state.exists:
