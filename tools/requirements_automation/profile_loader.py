@@ -37,14 +37,14 @@ class ProfileLoader:
         Initialize the profile loader.
         
         Args:
-            profiles_dir: Path to profiles directory. Defaults to 'profiles'
+            profiles_dir: Path to profiles directory. Defaults to 'tools/profiles'
                          relative to repository root.
         """
         if profiles_dir is None:
-            # Default to profiles/ in repository root
+            # Default to tools/profiles/ in repository root
             # Assume this module is in tools/requirements_automation/
             repo_root = Path(__file__).parent.parent.parent
-            profiles_dir = repo_root / "profiles"
+            profiles_dir = repo_root / "tools" / "profiles"
         
         self.profiles_dir = Path(profiles_dir)
         self._cache: Dict[str, str] = {}
@@ -53,7 +53,7 @@ class ProfileLoader:
         if not self.profiles_dir.exists():
             raise ProfileLoaderError(
                 f"Profiles directory not found: {self.profiles_dir}\n"
-                f"Please create profiles/ directory in the repository root."
+                f"Please create tools/profiles/ directory in the repository root."
             )
         
         # Validate base_policy.md exists (critical dependency)
@@ -61,7 +61,7 @@ class ProfileLoader:
         if not base_policy_path.exists():
             raise ProfileLoaderError(
                 f"Base policy file not found: {base_policy_path}\n"
-                f"Please create profiles/base_policy.md (required for all LLM calls)."
+                f"Please create tools/profiles/base_policy.md (required for all LLM calls)."
             )
     
     def load_profile(self, profile_name: str) -> str:

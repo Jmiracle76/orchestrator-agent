@@ -25,7 +25,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--no-commit", action="store_true")
     parser.add_argument("--log-level", default="INFO")
     parser.add_argument("--max-steps", type=int, default=1, help="Max workflow steps to execute (default: 1)")
-    parser.add_argument("--handler-config", help="Path to handler registry YAML (default: config/handler_registry.yaml)")
+    parser.add_argument("--handler-config", help="Path to handler registry YAML (default: tools/config/handler_registry.yaml)")
     parser.add_argument("--validate", action="store_true", help="Validate document completion without processing")
     parser.add_argument("--strict", action="store_true", help="Enable strict completion checking (includes optional criteria)")
     parser.add_argument("--validate-structure", action="store_true", help="Check document structure without processing")
@@ -44,7 +44,7 @@ def main(argv: List[str] | None = None) -> int:
     if args.handler_config:
         handler_config_path = Path(args.handler_config).resolve()
     else:
-        handler_config_path = repo_root / "config" / "handler_registry.yaml"
+        handler_config_path = repo_root / "tools" / "config" / "handler_registry.yaml"
 
     try:
         handler_registry = HandlerRegistry(handler_config_path)

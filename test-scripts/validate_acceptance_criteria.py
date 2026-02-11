@@ -25,9 +25,9 @@ def validate_acceptance_criteria():
     
     results = []
     
-    # ✅ config/handler_registry.yaml exists with entries for all current requirements sections
-    print("\n✅ AC1: config/handler_registry.yaml exists with all requirements sections")
-    config_path = repo_root / "config" / "handler_registry.yaml"
+    # ✅ tools/config/handler_registry.yaml exists with entries for all current requirements sections
+    print("\n✅ AC1: tools/config/handler_registry.yaml exists with all requirements sections")
+    config_path = repo_root / "tools" / "config" / "handler_registry.yaml"
     if not config_path.exists():
         print("  ✗ FAILED: handler_registry.yaml not found")
         results.append(False)

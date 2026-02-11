@@ -6,7 +6,7 @@ This implementation introduces a Section Handler Registry system that maps `(doc
 ## Files Created/Modified
 
 ### New Files
-1. **config/handler_registry.yaml** - YAML configuration file defining handlers for all requirements document sections
+1. **tools/config/handler_registry.yaml** - YAML configuration file defining handlers for all requirements document sections
 2. **tools/requirements_automation/handler_registry.py** - HandlerRegistry class for loading and managing configurations
 3. **test-archive/test_handler_registry.py** - Unit tests for HandlerRegistry (archived)
 4. **test-scripts/test_integration.py** - Integration tests for WorkflowRunner with registry

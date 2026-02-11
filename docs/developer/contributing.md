@@ -95,39 +95,43 @@ Should display CLI help without errors.
 
 ```
 orchestrator-agent/
-├── config/
-│   └── handler_registry.yaml       # Section handler configurations
+├── tools/
+│   ├── config/
+│   │   └── handler_registry.yaml       # Section handler configurations
+│   ├── profiles/
+│   │   ├── base_policy.md              # Base LLM policy (always injected)
+│   │   ├── requirements.md             # Requirements LLM profile
+│   │   └── requirements_review.md      # Requirements review LLM profile
+│   ├── agent-profiles/
+│   │   ├── coding-agent.md             # Coding agent profile
+│   │   ├── orchestration-agent.md      # Orchestration agent profile
+│   │   └── ...                         # Other agent profiles
+│   └── requirements_automation/
+│       ├── cli.py                      # CLI entry point
+│       ├── runner_v2.py                # WorkflowRunner (main orchestration)
+│       ├── handler_registry.py         # Handler registry loader
+│       ├── profile_loader.py           # LLM profile loader
+│       ├── llm.py                      # LLM client (OpenAI wrapper)
+│       ├── parsing.py                  # Document parsing
+│       ├── models.py                   # Data models
+│       ├── config.py                   # Configuration constants
+│       ├── document_validator.py       # Completion validation
+│       ├── structural_validator.py     # Structure validation
+│       ├── editing.py                  # Document editing utilities
+│       ├── sanitize.py                 # Output sanitization
+│       ├── formatting.py               # Output formatting
+│       ├── utils_io.py                 # File I/O utilities
+│       ├── git_utils.py                # Git integration
+│       └── phases/                     # Legacy phase-based code (deprecated)
 ├── docs/
 │   ├── architecture/
-│   │   └── overview.md             # Architecture documentation
+│   │   └── overview.md                 # Architecture documentation
 │   ├── developer/
-│   │   ├── contributing.md         # This file
+│   │   ├── contributing.md             # This file
 │   │   ├── handler-registry-guide.md   # Handler configuration guide
 │   │   └── llm-profiles-guide.md       # LLM profiles guide
-│   └── templates/                  # Document templates
+│   └── templates/                      # Document templates
 │       └── requirements-template.md
-├── profiles/
-│   ├── base_policy.md              # Base LLM policy (always injected)
-│   ├── requirements.md             # Requirements LLM profile
-│   └── requirements_review.md      # Requirements review LLM profile
-├── tools/
-│   └── requirements_automation/
-│       ├── cli.py                  # CLI entry point
-│       ├── runner_v2.py            # WorkflowRunner (main orchestration)
-│       ├── handler_registry.py     # Handler registry loader
-│       ├── profile_loader.py       # LLM profile loader
-│       ├── llm.py                  # LLM client (OpenAI wrapper)
-│       ├── parsing.py              # Document parsing
-│       ├── models.py               # Data models
-│       ├── config.py               # Configuration constants
-│       ├── document_validator.py   # Completion validation
-│       ├── structural_validator.py # Structure validation
-│       ├── editing.py              # Document editing utilities
-│       ├── sanitize.py             # Output sanitization
-│       ├── formatting.py           # Output formatting
-│       ├── utils_io.py             # File I/O utilities
-│       ├── git_utils.py            # Git integration
-│       └── phases/                 # Legacy phase-based code (deprecated)
 ├── test-scripts/
 │   ├── test_integration.py         # Integration tests
 │   ├── test_e2e_prior_context.py   # End-to-end tests
@@ -254,7 +258,7 @@ def test_workflow_runner_with_handler_registry():
     """Test WorkflowRunner using HandlerRegistry."""
     lines = load_test_document()
     llm = LLMClient()
-    registry = HandlerRegistry("config/handler_registry.yaml")
+    registry = HandlerRegistry("tools/config/handler_registry.yaml")
     
     runner = WorkflowRunner(lines, llm, "requirements", workflow_order, registry)
     result = runner.run_once(dry_run=True)
@@ -484,7 +488,7 @@ See [Handler Registry Guide](handler-registry-guide.md#adding-a-new-section-type
 
 1. Add section marker to template
 2. Add to workflow order
-3. Configure handler in `config/handler_registry.yaml`
+3. Configure handler in `tools/config/handler_registry.yaml`
 4. Test
 
 ### Adding a New Document Type
@@ -494,8 +498,8 @@ See [Handler Registry Guide](handler-registry-guide.md#adding-a-new-doc-type) fo
 **Quick Steps**:
 
 1. Create template with `doc_type` metadata
-2. Add handler configurations to `config/handler_registry.yaml`
-3. Create LLM profile in `profiles/`
+2. Add handler configurations to `tools/config/handler_registry.yaml`
+3. Create LLM profile in `tools/profiles/`
 4. Update `SUPPORTED_DOC_TYPES` in `config.py`
 5. Test
 
@@ -505,7 +509,7 @@ See [LLM Profiles Guide](llm-profiles-guide.md#adding-new-profiles) for step-by-
 
 **Quick Steps**:
 
-1. Create markdown file in `profiles/`
+1. Create markdown file in `tools/profiles/`
 2. Write clear, concrete rules
 3. Reference in handler configuration
 4. Test with real documents
@@ -602,12 +606,12 @@ See [LLM Profiles Guide](llm-profiles-guide.md#adding-new-profiles) for step-by-
 
 5. **Review Handler Config**:
    ```bash
-   cat config/handler_registry.yaml
+   cat tools/config/handler_registry.yaml
    ```
 
 6. **Check LLM Profile**:
    ```bash
-   cat profiles/requirements.md
+   cat tools/profiles/requirements.md
    ```
 
 ---
