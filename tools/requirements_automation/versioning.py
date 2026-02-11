@@ -111,7 +111,7 @@ def _extract_current_version(lines: List[str]) -> str:
     """
     # Look for <!-- meta:version --> marker
     meta_version_re = re.compile(r"<!--\s*meta:version\s*-->")
-    version_value_re = re.compile(r"-\s*\*\*Version\*\*:\s*(\d+\.\d+)")
+    version_value_re = re.compile(r"-\s*\*\*Version:\*\*\s*(\d+\.\d+)")
     
     for i, line in enumerate(lines):
         if meta_version_re.search(line):
@@ -177,7 +177,7 @@ def _update_meta_version(lines: List[str], new_version: str) -> List[str]:
         Updated lines with new version
     """
     meta_version_re = re.compile(r"<!--\s*meta:version\s*-->")
-    version_value_re = re.compile(r"(-\s*\*\*Version\*\*:\s*)(\d+\.\d+)")
+    version_value_re = re.compile(r"(-\s*\*\*Version:\*\*\s*)(\d+\.\d+)")
     
     result_lines = lines[:]
     
