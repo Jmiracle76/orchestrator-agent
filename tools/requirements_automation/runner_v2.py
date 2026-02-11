@@ -305,6 +305,56 @@ class WorkflowRunner:
             questions_resolved=resolved_count,
         )
 
+    def _gather_prior_sections(self, target_id: str) -> dict[str, str]:
+        """
+        Gather completed prior section content before the target section.
+        
+        Iterates through workflow_order up to (but not including) target_id,
+        skips review gates, checks if each section is complete (no placeholder,
+        no open questions), and extracts the section body.
+        
+        Args:
+            target_id: Section ID to gather prior sections for
+            
+        Returns:
+            Dict mapping section_id → body content for all completed prior sections
+        """
+        prior_sections = {}
+        
+        # Find the index of target_id in workflow_order
+        try:
+            target_index = self.workflow_order.index(target_id)
+        except ValueError:
+            # Target not in workflow order, return empty dict
+            return prior_sections
+        
+        # Iterate through sections before target_id
+        for section_id in self.workflow_order[:target_index]:
+            # Skip review gates
+            if is_special_workflow_target(section_id):
+                continue
+            
+            # Check if section is complete
+            state = self._get_section_state(section_id)
+            
+            # Section must exist, not be blank, have no placeholder, and no open questions
+            if not state.exists:
+                continue
+            if state.has_placeholder or state.has_open_questions:
+                continue
+            
+            # Extract section body
+            spans = find_sections(self.lines)
+            span = get_section_span(spans, section_id)
+            
+            if span:
+                body = section_body(self.lines, span)
+                # Only include non-empty sections
+                if body.strip():
+                    prior_sections[section_id] = body
+        
+        return prior_sections
+
     def _execute_unified_handler(
         self, target_id: str, state: SectionState, handler_config, dry_run: bool
     ) -> WorkflowResult:
@@ -328,6 +378,9 @@ class WorkflowRunner:
         summaries = []
         questions_generated = 0
         questions_resolved = 0
+        
+        # Gather prior completed sections for context
+        prior_sections = self._gather_prior_sections(target_id)
         
         # Get current section span
         spans = find_sections(self.lines)
@@ -418,6 +471,7 @@ class WorkflowRunner:
                     qs,
                     llm_profile=handler_config.llm_profile,
                     output_format=handler_config.output_format,
+                    prior_sections=prior_sections,
                 )
                 
                 if new_body.strip() and new_body.strip() != context.strip():
@@ -492,7 +546,7 @@ class WorkflowRunner:
                 
                 ctx = section_body(self.lines, span)
                 proposed = self.llm.generate_open_questions(
-                    target_id, ctx, llm_profile=handler_config.llm_profile
+                    target_id, ctx, llm_profile=handler_config.llm_profile, prior_sections=prior_sections
                 )
                 
                 new_qs = []
