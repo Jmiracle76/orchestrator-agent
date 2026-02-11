@@ -839,7 +839,7 @@ LLM profiles guide AI behavior through rules-based prompts:
 - Version control everything
 
 For more information:
-- [Architecture Guide](architecture.md) - Core concepts and design
+- [Architecture Guide](../architecture/overview.md) - Core concepts and design
 - [Handler Registry Guide](handler-registry-guide.md) - Configuration details
 - [Contributing Guide](contributing.md) - Development workflow
 
