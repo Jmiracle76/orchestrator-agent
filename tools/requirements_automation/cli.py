@@ -4,15 +4,18 @@ from pathlib import Path
 from dataclasses import asdict
 from typing import List
 from .models import RunResult
-from .config import DEFAULT_DOC_TYPE, SUPPORTED_DOC_TYPES, is_special_workflow_target
-from .parsing import extract_metadata, extract_workflow_order, find_sections
+from .parsing import extract_metadata
 from .utils_io import read_text, write_text, split_lines, join_lines, backup_file_outside_repo
-from .git_utils import is_working_tree_clean, git_status_porcelain, commit_and_push
+from .git_utils import commit_and_push
 from .llm import LLMClient
 from .runner_v2 import WorkflowRunner
-from .handler_registry import HandlerRegistry, HandlerRegistryError
 from .document_validator import DocumentValidator
 from .structural_validator import StructuralValidator, report_structural_errors
+from .cli_validators import (
+    validate_paths, validate_working_tree, validate_doc_type,
+    validate_handler_registry_support, validate_workflow_order
+)
+from .cli_config import load_handler_registry
 
 def main(argv: List[str] | None = None) -> int:
     """Run the requirements automation workflow for a single phase pass."""
@@ -40,32 +43,29 @@ def main(argv: List[str] | None = None) -> int:
     doc_path = Path(args.doc).resolve()
 
     # Load handler registry
-    if args.handler_config:
-        handler_config_path = Path(args.handler_config).resolve()
-    else:
-        handler_config_path = repo_root / "tools" / "config" / "handler_registry.yaml"
-
-    try:
-        handler_registry = HandlerRegistry(handler_config_path)
-        logging.info("Loaded handler registry from: %s", handler_config_path)
-    except HandlerRegistryError as e:
-        print(f"ERROR: {e}")
-        return 2
+    handler_registry, exit_code = load_handler_registry(
+        Path(args.handler_config) if args.handler_config else None,
+        repo_root
+    )
+    if exit_code != 0:
+        return exit_code
 
     # Avoid committing unrelated changes unless explicitly overridden.
     # Skip this check for --validate and --validate-structure modes since we're not committing anything
-    if not args.validate and not args.validate_structure and not args.no_commit and not is_working_tree_clean(repo_root):
-        print("ERROR: Working tree has uncommitted changes.\n")
-        print(git_status_porcelain(repo_root))
-        return 2
+    if not args.validate and not args.validate_structure and not args.no_commit:
+        is_valid, error_msg = validate_working_tree(repo_root, skip_check=False)
+        if not is_valid:
+            print(error_msg)
+            return 2
 
     # Track whether we created a new document from template
     doc_created = False
 
     # If the requirements doc does not exist, seed it from the template.
     if not doc_path.exists():
-        if not template_path.exists():
-            print(f"ERROR: Template missing: {template_path}")
+        is_valid, error_msg = validate_paths(template_path, doc_path, repo_root)
+        if not is_valid:
+            print(error_msg)
             return 2
         logging.info("Doc missing; creating from template: %s -> %s", template_path, doc_path)
         doc_path.parent.mkdir(parents=True, exist_ok=True)
@@ -108,52 +108,21 @@ def main(argv: List[str] | None = None) -> int:
         return 2
 
     metadata = extract_metadata(lines)
-    raw_doc_type = (metadata.get("doc_type") or "").strip()
-    doc_type = raw_doc_type.lower() if raw_doc_type else DEFAULT_DOC_TYPE
-    if not raw_doc_type:
-        logging.warning("No doc_type metadata found; defaulting to %s", DEFAULT_DOC_TYPE)
-    if doc_type not in SUPPORTED_DOC_TYPES:
-        supported = ", ".join(SUPPORTED_DOC_TYPES)
-        logging.error("Unsupported doc_type '%s'. Supported types: %s", doc_type, supported)
+    doc_type, error_msg = validate_doc_type(lines)
+    if error_msg:
+        logging.error(error_msg)
         return 2
 
     # Validate doc_type is supported by handler registry
-    # Note: supports_doc_type() returns True if doc_type exists OR if _default exists,
-    # so we just log a warning if the specific doc_type isn't found but _default is available
-    if doc_type not in handler_registry.config:
-        if "_default" in handler_registry.config:
-            logging.warning(
-                "doc_type '%s' not explicitly configured in handler registry, "
-                "will use default handler configuration",
-                doc_type
-            )
-        else:
-            # No specific config and no default - this is an error
-            supported = ", ".join([k for k in handler_registry.config.keys()])
-            logging.error(
-                "doc_type '%s' not found in handler registry and no _default exists. "
-                "Available types: %s",
-                doc_type,
-                supported
-            )
-            return 2
-
-    # Decide which phase is next and execute it.
-    try:
-        workflow_order = extract_workflow_order(lines)
-    except ValueError as e:
-        logging.error("Workflow order parse failed: %s", e)
+    is_valid, error_msg = validate_handler_registry_support(doc_type, handler_registry)
+    if not is_valid:
+        logging.error(error_msg)
         return 2
 
-    available_section_ids = {sp.section_id for sp in find_sections(lines)}
-    invalid_targets = [
-        target for target in workflow_order
-        if not is_special_workflow_target(target) and target not in available_section_ids
-    ]
-    if invalid_targets:
-        valid = ", ".join(sorted(available_section_ids))
-        invalid = ", ".join(invalid_targets)
-        logging.error("Workflow order references unknown section IDs (%s). Valid section IDs: %s", invalid, valid)
+    # Decide which phase is next and execute it.
+    workflow_order, error_msg = validate_workflow_order(lines)
+    if error_msg:
+        logging.error(error_msg)
         return 2
 
     # Handle --validate flag: check completion without processing
