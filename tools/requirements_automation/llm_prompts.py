@@ -60,10 +60,10 @@ def build_open_questions_prompt(
     # Update task instruction based on whether context is present
     task_instruction = (
         """Generate 2-5 clarifying questions that:
-1. Fill gaps in the current section
-2. Build on information from prior sections
-3. Do NOT repeat questions already answered in prior sections
-4. Help establish clear, testable requirements"""
+- Fill gaps in the current section
+- Build on information from prior sections
+- Do NOT repeat questions already answered in prior sections
+- Help establish clear, testable requirements"""
         if prior_sections
         else "Generate 2-5 clarifying questions to help complete this section."
     )
