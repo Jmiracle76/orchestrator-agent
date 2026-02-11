@@ -55,7 +55,8 @@ def _get_section_questions_with_fallback(
             return qs, True
         except ValueError:
             logging.debug(
-                f"Section questions table not found for '{target_id}', falling back to global"
+                "Section questions table not found for '%s', falling back to global",
+                target_id,
             )
 
     # Fall back to global questions
@@ -73,7 +74,7 @@ def _get_section_questions_with_fallback(
             return targeted_questions, False
         return [], False
     except Exception as e:
-        logging.warning(f"Failed to parse global questions: {e}")
+        logging.warning("Failed to parse global questions: %s", e)
         return [], False
 
 

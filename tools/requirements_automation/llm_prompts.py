@@ -24,14 +24,14 @@ def format_prior_sections(prior_sections: dict) -> str:
     lines.append("Use the following completed sections as context when formulating new questions.")
     lines.append("Avoid asking questions that have already been answered in these sections.")
     lines.append("")
-    
+
     for section_id, content in prior_sections.items():
         # Format section ID as readable title
-        title = section_id.replace('_', ' ').title()
+        title = section_id.replace("_", " ").title()
         lines.append(f"### {title}")
         lines.append(content.strip())
         lines.append("")
-    
+
     return "\n".join(lines)
 
 

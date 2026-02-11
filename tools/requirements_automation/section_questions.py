@@ -55,7 +55,7 @@ def parse_section_questions(
 
     if len(rows) < 2:
         raise ValueError(
-            f"Section questions table for '{section_id}' malformed " f"(missing header/separator)."
+            f"Section questions table for '{section_id}' malformed (missing header/separator)."
         )
 
     # Expected header: Question ID | Question | Date | Answer | Status

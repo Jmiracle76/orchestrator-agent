@@ -8,7 +8,7 @@ import logging
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # Ensure we can import from the tools package
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -203,7 +203,7 @@ def migrate_document(doc_path: Path, backup: bool = True) -> int:
         return 1
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     """Run the migration tool."""
     parser = argparse.ArgumentParser(
         description="Migrate requirements document from global to per-section question tables"
