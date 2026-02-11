@@ -20,6 +20,32 @@ def _canon_target(t: str) -> str:
     return TARGET_CANONICAL_MAP.get(t0, t0)
 
 
+def _get_replacement_end_boundary(lines: List[str], section_span, subsections: List) -> int:
+    """
+    Calculate the effective end boundary for section body replacement.
+    
+    If the section contains an 'open_questions' subsection, returns the line
+    where that subsection starts to prevent overwriting it. Otherwise, returns
+    the original section end boundary.
+    
+    Args:
+        lines: Document content as list of strings
+        section_span: SectionSpan object for the section
+        subsections: List of SubsectionSpan objects within the section
+        
+    Returns:
+        Line number to use as end boundary for replacement
+    """
+    # Check if there's an open_questions subsection
+    for sub in subsections:
+        if sub.subsection_id == "open_questions":
+            # Return the start line of the open_questions subsection as the boundary
+            return sub.start_line
+    
+    # No open_questions subsection found, use the full section span
+    return section_span.end_line
+
+
 class WorkflowRunner:
     """
     Single, reusable workflow runner that replaces phase-specific branching logic.
@@ -453,7 +479,10 @@ class WorkflowRunner:
             for tgt, qs in by_target.items():
                 # Get the span for this target (section or subsection)
                 if tgt == target_id:
-                    target_start, target_end = span.start_line, span.end_line
+                    target_start = span.start_line
+                    # Check if section contains open_questions subsection
+                    # If it does, stop replacement before that subsection
+                    target_end = _get_replacement_end_boundary(self.lines, span, subs)
                 else:
                     # Find subsection span
                     subspan = None
@@ -549,11 +578,16 @@ class WorkflowRunner:
                 
                 if draft.strip() and draft.strip() != ctx.strip():
                     if not dry_run:
+                        # Re-calculate subsections in case they were updated during integration
+                        subs = find_subsections_within(self.lines, span)
+                        # Calculate effective end boundary to preserve open_questions subsection
+                        draft_end = _get_replacement_end_boundary(self.lines, span, subs)
+                        
                         # Write the draft to the section body
                         self.lines = replace_block_body_preserving_markers(
                             self.lines,
                             span.start_line,
-                            span.end_line,
+                            draft_end,
                             section_id=target_id,
                             new_body=draft,
                         )
