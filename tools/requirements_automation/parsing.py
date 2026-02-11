@@ -243,12 +243,40 @@ def contains_markers(text: str) -> bool:
     return False
 
 def apply_patch(section_id: str, suggestion: str, lines: List[str]) -> List[str]:
-    """Apply a patch to a section, replacing its body content."""
+    """
+    Apply a patch to a section, replacing its body content.
+    
+    Validates document structure before applying patch and ensures the suggestion
+    doesn't contain forbidden structure markers.
+    
+    Args:
+        section_id: ID of section to patch
+        suggestion: New body content
+        lines: Document content as list of strings
+        
+    Returns:
+        Updated document lines
+        
+    Raises:
+        ValueError: If section not found or suggestion contains markers
+        StructuralError: If patch would corrupt structure
+    """
+    from .structural_validator import StructuralValidator
+    from .validation_errors import InvalidSpanError, StructuralError
+    
+    # Validate current structure
+    validator_before = StructuralValidator(lines)
+    validator_before.validate_or_raise()
+    
     spans = find_sections(lines)
     span = get_section_span(spans, section_id)
     
     if not span:
-        raise ValueError(f"Section '{section_id}' not found")
+        raise InvalidSpanError(section_id, "Cannot apply patch - section not found")
+    
+    # Validate suggestion doesn't contain structure markers
+    if contains_markers(suggestion):
+        raise ValueError(f"Patch suggestion contains forbidden structure markers")
     
     # Build new content preserving markers and headers
     new_lines = []
@@ -284,6 +312,14 @@ def apply_patch(section_id: str, suggestion: str, lines: List[str]) -> List[str]
             new_lines.append(line)
         else:
             new_lines.append(line)
+    
+    # Validate structure after patch
+    validator_after = StructuralValidator(new_lines)
+    errors_after = validator_after.validate_all()
+    if errors_after:
+        raise StructuralError(
+            f"Patch to '{section_id}' would corrupt structure: {errors_after[0]}"
+        )
     
     return new_lines
 
