@@ -170,6 +170,9 @@ class WorkflowRunner:
             # Write review gate result marker to document
             self.lines, marker_changed = handler.write_review_gate_result(review_result, self.lines)
             
+            # Update handler's lines with the marker before applying patches
+            handler.lines = self.lines
+            
             # Optionally apply patches
             self.lines, patches_applied = handler.apply_patches_if_configured(
                 review_result, handler_config
@@ -596,6 +599,9 @@ class WorkflowRunner:
                             
                             # Fix 1: Write review gate result marker to document
                             self.lines, marker_changed = handler.write_review_gate_result(review_result, self.lines)
+                            
+                            # Update handler's lines with the marker before applying patches
+                            handler.lines = self.lines
                             
                             # Optionally apply patches
                             self.lines, patches_applied = handler.apply_patches_if_configured(
