@@ -80,6 +80,8 @@ class StructuralValidator:
                 section_id = match.group("id")
                 
                 # Check well-formed (section IDs should be lowercase alphanumeric with underscores)
+                # Note: SECTION_MARKER_RE already enforces [a-z0-9_]+, but we validate here
+                # for defense in depth in case the regex is changed to be more permissive.
                 if not re.fullmatch(r"[a-z0-9_]+", section_id):
                     self.errors.append(MalformedMarkerError(
                         i + 1, line, f"Invalid section ID format: {section_id}"
@@ -129,6 +131,8 @@ class StructuralValidator:
                 table_id = match.group("id")
                 
                 # Check well-formed (table IDs should be lowercase alphanumeric with underscores)
+                # Note: TABLE_MARKER_RE already enforces [a-z0-9_]+, but we validate here
+                # for defense in depth in case the regex is changed to be more permissive.
                 if not re.fullmatch(r"[a-z0-9_]+", table_id):
                     self.errors.append(MalformedMarkerError(
                         i + 1, line, f"Invalid table ID format: {table_id}"
@@ -142,6 +146,8 @@ class StructuralValidator:
                 subsection_id = match.group("id")
                 
                 # Check well-formed (subsection IDs should be lowercase alphanumeric with underscores)
+                # Note: SUBSECTION_MARKER_RE already enforces [a-z0-9_]+, but we validate here
+                # for defense in depth in case the regex is changed to be more permissive.
                 if not re.fullmatch(r"[a-z0-9_]+", subsection_id):
                     self.errors.append(MalformedMarkerError(
                         i + 1, line, f"Invalid subsection ID format: {subsection_id}"

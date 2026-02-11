@@ -32,7 +32,10 @@ def replace_block_body_preserving_markers(lines: List[str], start: int, end: int
     
     # Validate span is sensible
     if start >= end:
-        raise InvalidSpanError(section_id, f"Invalid span: start={start} >= end={end}")
+        if start == end:
+            raise InvalidSpanError(section_id, f"Empty span: start={start} equals end={end}")
+        else:
+            raise InvalidSpanError(section_id, f"Invalid span: start={start} is greater than end={end}")
     
     if start < 0 or end > len(lines):
         raise InvalidSpanError(section_id, f"Span out of bounds: start={start}, end={end}, len={len(lines)}")
