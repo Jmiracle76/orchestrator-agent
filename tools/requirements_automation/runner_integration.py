@@ -110,7 +110,11 @@ def _use_section_questions(handler_config: Any) -> bool:
     Returns:
         True if section uses per-section questions, False for global
     """
-    return hasattr(handler_config, "questions_table") and handler_config.questions_table is not None
+    return (
+        handler_config is not None
+        and hasattr(handler_config, "questions_table")
+        and handler_config.questions_table is not None
+    )
 
 
 def _get_section_questions(
@@ -124,7 +128,9 @@ def _get_section_questions(
         handler_config: Handler configuration
 
     Returns:
-        Tuple of (questions_list, is_section_specific)
+        Tuple of (questions_list, found_section_questions)
+        - questions_list: List of questions from section-specific table, or empty list
+        - found_section_questions: True if section questions table was found and parsed, False otherwise
     """
     if _use_section_questions(handler_config):
         try:
@@ -135,10 +141,9 @@ def _get_section_questions(
                 "Section questions table not found for '%s'",
                 target_id,
             )
-            return [], True
+            return [], False
 
     # If handler doesn't specify section questions, return empty list
-    # (no global fallback)
     return [], False
 
 

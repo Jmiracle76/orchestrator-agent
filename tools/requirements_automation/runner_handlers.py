@@ -14,6 +14,7 @@ from .parsing import find_sections, get_section_span, section_is_blank
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 from .review_gate_handler import ReviewGateHandler
 from .runner_integration import (
+    _use_section_questions,
     draft_section_content,
     generate_questions_for_section,
     integrate_answered_questions,
@@ -184,8 +185,8 @@ def execute_unified_handler(
             try:
                 from .section_questions import parse_section_questions
 
-                # Try to get section-specific questions
-                if handler_config and hasattr(handler_config, "questions_table") and handler_config.questions_table:
+                # Try to get section-specific questions if configured
+                if _use_section_questions(handler_config):
                     try:
                         qs, _ = parse_section_questions(lines, target_id)
                         open_unanswered = [

@@ -5,7 +5,6 @@ from typing import List, Tuple
 from .config import PHASES, TARGET_CANONICAL_MAP
 from .parsing import (
     find_sections,
-    find_subsections_within,
     get_section_span,
     section_is_blank,
     section_is_locked,
