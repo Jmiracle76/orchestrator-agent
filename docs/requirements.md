@@ -102,10 +102,10 @@ Without addressing this usability barrier, the project risks limited adoption. T
 
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 |  | Open |
-| goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 |  | Open |
-| goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 |  | Open |
-| goals_objectives-Q11 | What browser versions and types MUST be supported (e.g., Chrome 100+, Firefox 95+, Safari 15+)? | 2026-02-12 |  | Open |
+| goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 | There are no performance objectives at this time. This is a proof-of-concept system to start. | Open |
+| goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 | A single concurrent user is all that is required for initial release. | Open |
+| goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 | All existing CLI functionality should be targeted for initial release and may be scaled back in future revisions. | Open |
+| goals_objectives-Q11 | What browser versions and types MUST be supported (e.g., Chrome 100+, Firefox 95+, Safari 15+)? | 2026-02-12 | Current versions of Chrome and Edge are required. Broad support of current modern browsers is preferred.  | Open |
 | goals_objectives-Q4 | What is the maximum acceptable time for a new user to complete their first requirements document using the web interface? | 2026-02-12 | There is no maximum acceptable time frame to complete a requirements document. | Resolved |
 | goals_objectives-Q5 | What specific UI/UX patterns or frameworks are considered 'modern' for this project's target user base? | 2026-02-12 | The current Codex ui/ux pattern could serve as the inspiration for this project. | Resolved |
 | goals_objectives-Q6 | Should the web interface support offline or local-only operation, or does it require network connectivity to the VM? | 2026-02-12 | The web interface should be accessible from the local network. It does not need public internet access capability. | Resolved |
