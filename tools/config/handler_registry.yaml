@@ -114,13 +114,15 @@ requirements:
   requirements:
     mode: integrate_then_questions
     output_format: prose
-    subsections: false
+    subsections: true  # supports functional_requirements, non_functional_requirements subsections with table content
     dedupe: false
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections
+    questions_table: requirements_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   interfaces_integrations:
     mode: integrate_then_questions

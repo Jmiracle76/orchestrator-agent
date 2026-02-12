@@ -32,6 +32,8 @@ TABLE_SUBSECTIONS = {
     "external_systems",
     "data_exchange",
     "risks",
+    "functional_requirements",
+    "non_functional_requirements",
 }
 
 

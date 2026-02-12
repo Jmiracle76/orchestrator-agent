@@ -213,38 +213,18 @@ approval_record
 <!-- subsection:functional_requirements -->
 ### Functional Requirements
 
-<!-- subsection:fr_template -->
-### FR-001: [Requirement Name] 
-
-<!-- requirement:fr-001 -->
-<!-- PLACEHOLDER -->
-**Description:** [Description] 
-**Priority:** [High | Medium | Low]  
-**Source:** [Stakeholder or document reference] 
-
-<!-- acceptance_criteria:fr-001 -->
-**Acceptance Criteria:**
-<!-- PLACEHOLDER -->
-- [ ] Criterion 1 
-- [ ] Criterion 2 
+<!-- table:functional_requirements -->
+| Req ID | Description | Priority | Source | Acceptance Criteria |
+|--------|-------------|----------|--------|---------------------|
+| <!-- PLACEHOLDER --> | - | - | - | - |
 
 <!-- subsection:non_functional_requirements -->
 ### Non-Functional Requirements
 
-<!-- subsection:nfr_template -->
-### NFR-001: [Category] - [Requirement Name] 
-
-<!-- requirement:nfr-001 -->
-<!-- PLACEHOLDER -->
-**Description:** [Description]  
-**Priority:** [High | Medium | Low]  
-**Measurement Criteria:** [How measured] 
-
-<!-- acceptance_criteria:nfr-001 -->
-**Acceptance Criteria:**
-<!-- PLACEHOLDER -->
-- [ ] Criterion 1 
-- [ ] Criterion 2 
+<!-- table:non_functional_requirements -->
+| Req ID | Category | Description | Priority | Measurement Criteria | Acceptance Criteria |
+|--------|----------|-------------|----------|---------------------|---------------------|
+| <!-- PLACEHOLDER --> | - | - | - | - | - | 
 
 <!-- subsection:questions_issues -->
 ### Questions & Issues
