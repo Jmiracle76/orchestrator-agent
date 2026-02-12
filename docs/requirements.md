@@ -83,29 +83,6 @@ Without addressing this usability barrier, the project risks limited adoption. T
 
 <!-- section:goals_objectives -->
 ## 3. Goals and Objectives
-- Develop a lightweight, modern web interface for the orchestrator-agent project that eliminates SSH/CLI dependencies and reduces user friction when creating and iterating on requirements documents
-
-- Create a web-based interface that replaces the current SSH/CLI workflow for document creation and iteration
-- Reduce the technical barrier to entry for end users unfamiliar with command-line interfaces
-- Support all existing CLI functionality in the initial release
-- Maintain compatibility with the existing Python-based orchestrator running on a locally hosted VM
-- Deploy the web interface as a separate service on the same VM as the orchestrator code
-
-- Establish an extensible architecture that accommodates future feature additions without significant refactoring
-- Provide a responsive UI/UX inspired by the Codex interface pattern that supports desktop, mobile, and tablet form factors
-- Maintain session state across browser refreshes
-- Provide local network accessibility without requiring public internet access capability
-- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
-- Encourage user engagement and adoption through modern interface design
-
-- Multi-user concurrent access and authentication systems
-- Real-time collaboration features where multiple users can view or simultaneously edit the same document
-- Multi-project or multi-repository management capabilities
-- Cloud-hosted or distributed deployment models
-- Migration away from the Python-based orchestrator backend
-- Time-bound completion requirements for document creation workflows
-- Performance optimization beyond proof-of-concept needs
-- Compliance with accessibility standards such as WCAG 2.1 or Section 508
 <!-- subsection:objective_statement -->
 ### Objective Statement
 Deliver a lightweight, modern web interface that replaces the current SSH/CLI workflow for the orchestrator-agent project, reducing user friction and enabling broader adoption.
@@ -143,7 +120,6 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q16 | [WARNING] Content appears duplicated: bullet list at top repeats identical content from primary_goals, secondary_goals, and non_goals subsections | 2026-02-12 |  | Open |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
 | goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
@@ -167,32 +143,21 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 ## 4. Stakeholders and Users
 The orchestrator-agent web interface project serves a focused stakeholder and user base aligned with its proof-of-concept scope and single-user deployment model.
 
-| Stakeholder | Role | Interest/Need | Contact |
-|-------------|------|---------------|---------|
-| Product Owner | End User, Primary Customer | Direct consumer of the web interface; requires streamlined workflow for requirements document creation and iteration without SSH/CLI dependencies | - |
-
-| User Type | Characteristics | Needs | Use Cases |
-|-----------|----------------|-------|-----------|
-| Product Owner | Single user with advanced technical proficiency in web applications; local VM access; may provide inaccurate data or malformed input to web interface | Web-based interface to create and iterate on requirements documents; reduced technical barrier compared to SSH/CLI workflow; access to all current CLI functionality | Creating new requirements documents, modifying existing documents, accessing all existing CLI functionality through browser interface |
-
-The Product Owner serves as both the primary stakeholder and sole end user for the initial release. This user possesses advanced technical proficiency with web applications and requires access to all existing CLI functionality through a browser-based interface that eliminates the need for SSH access and command-line proficiency. The web interface SHALL accommodate potential user errors including inaccurate data entry and malformed input without compromising system stability.
-
-The system SHALL operate as a single-user appliance accessible to whoever connects via the local network. A single-role permission model is sufficient for the initial release, with no multi-user authentication, session management, or role-based access controls required. Future enhancements MAY introduce multiple user accounts and expanded role models. No secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers have been identified for the initial release.
 <!-- subsection:primary_stakeholders -->
 ### Primary Stakeholders
-
+<!-- PLACEHOLDER -->
 <!-- table:primary_stakeholders -->
 | Stakeholder | Role | Interest/Need | Contact |
 |-------------|------|---------------|---------|
-| 0.4 | 2026-02-12 | requirements-automation | Stakeholders Users completed |
+| <!-- PLACEHOLDER --> |  |  |  |
 
 <!-- subsection:end_users -->
 ### End Users
-
+<!-- PLACEHOLDER -->
 <!-- table:end_users -->
 | User Type | Characteristics | Needs | Use Cases |
 |-----------|----------------|-------|-----------|
-| 0.5 | 2026-02-12 | requirements-automation | Assumptions completed |
+| <!-- PLACEHOLDER --> |  |  |  |
 
 <!-- subsection:questions_issues -->
 ### Questions & Issues
@@ -200,8 +165,6 @@ The system SHALL operate as a single-user appliance accessible to whoever connec
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q7 | [BLOCKER] Primary stakeholders table contains corrupted data: version number '0.4', timestamp '2026-02-12', and project name 'requirements-automation' instead of stakeholder information | 2026-02-12 |  | Open |
-| stakeholders_users-Q8 | [BLOCKER] End users table contains corrupted data: version number '0.5', timestamp '2026-02-12', and project name 'requirements-automation' instead of user type information | 2026-02-12 |  | Open |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
 | stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
 | stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Resolved |
@@ -227,7 +190,7 @@ The system SHALL operate as a single-user appliance accessible to whoever connec
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q3 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no specific UI/UX patterns are defined as requirements in the document beyond 'Codex interface pattern' inspiration | 2026-02-12 |  | Open |
+| assumptions-Q3 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no specific UI/UX patterns are defined as requirements in the document beyond 'Codex interface pattern' inspiration | 2026-02-12 | UI/UX patterns are defined as being similara to and inspired by Codex ui/ux. | Open |
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Resolved |
 | assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Resolved |
 
@@ -251,13 +214,13 @@ The system SHALL operate as a single-user appliance accessible to whoever connec
 - The initial release operates as a proof-of-concept system without performance optimization requirements
 <!-- subsection:technical_constraints -->
 ### Technical Constraints
-| 0.6 | 2026-02-12 | requirements-automation | Constraints completed |
+<!-- PLACEHOLDER -->
 - [Technical constraint 1] 
 - [Technical constraint 2] 
 
 <!-- subsection:operational_constraints -->
 ### Operational Constraints
-| 0.7 | 2026-02-12 | requirements-automation | Coherence Check completed |
+<!-- PLACEHOLDER -->
 - [Operational constraint 1] 
 - [Operational constraint 2] 
 
@@ -273,11 +236,8 @@ The system SHALL operate as a single-user appliance accessible to whoever connec
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q3 | [BLOCKER] Technical constraints subsection contains corrupted data: version number '0.6', timestamp '2026-02-12', and completion message instead of constraints list | 2026-02-12 |  | Open |
-| constraints-Q4 | [BLOCKER] Operational constraints subsection contains corrupted data: version number '0.7', timestamp '2026-02-12', and completion message instead of constraints list | 2026-02-12 |  | Open |
-| constraints-Q5 | [BLOCKER] Resource constraints subsection contains only placeholder text | 2026-02-12 |  | Open |
-| constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
-| constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
+| constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Open |
+| constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Open |
 
 <!-- section_lock:constraints lock=false -->
 ---
