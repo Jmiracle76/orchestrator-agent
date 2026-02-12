@@ -220,7 +220,7 @@ def test_duplicate_prevention():
     print("DUPLICATE PREVENTION TEST")
     print("=" * 70)
     print()
-    
+
     lines = [
         '<!-- meta:version -->',
         '- **Version:** 0.1',
@@ -232,20 +232,51 @@ def test_duplicate_prevention():
         '| 0.1 | 2026-02-12 | requirements-automation | Initial version |',
         '',
     ]
-    
+
     # Try to add same version again
     print("Attempting to add duplicate version 0.1...")
     lines = update_document_version(lines, "0.1", "Duplicate attempt")
-    
+
     # Count occurrences of version 0.1
     content = "\n".join(lines)
     count = content.count("| 0.1 |")
-    
+
     if count == 1:
         print(f"  ✅ Version 0.1 appears only once (duplicate prevented)")
-        return True
     else:
         print(f"  ❌ Version 0.1 appears {count} times (duplicates not prevented)")
+        return False
+
+    # Test with extra spacing
+    print("Testing duplicate prevention with extra spacing...")
+    lines2 = [
+        '<!-- meta:version -->',
+        '- **Version:** 0.1',
+        '',
+        '<!-- subsection:version_history -->',
+        '### Version History',
+        '| Version | Date | Author | Changes |',
+        '|---------|------|--------|---------|',
+        '|  0.1  | 2026-02-12 | requirements-automation | Initial version |',  # Extra spaces
+        '',
+    ]
+
+    lines2 = update_document_version(lines2, "0.1", "Duplicate with spacing")
+    content2 = "\n".join(lines2)
+
+    # Count lines that have 0.1 as version (allowing for different spacing)
+    version_count = 0
+    for line in lines2:
+        if line.strip().startswith("|"):
+            cells = [cell.strip() for cell in line.split("|")]
+            if len(cells) > 1 and cells[1] == "0.1":
+                version_count += 1
+
+    if version_count == 1:
+        print(f"  ✅ Version 0.1 with extra spacing appears only once (duplicate prevented)")
+        return True
+    else:
+        print(f"  ❌ Version 0.1 with spacing appears {version_count} times (duplicates not prevented)")
         return False
 
 
