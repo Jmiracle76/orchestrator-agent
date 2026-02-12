@@ -231,9 +231,9 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 
 ### Technical Requirements
 <!-- subsection:technical_requirements -->
-| Question ID | Question | Date | Answer | Status |
-|-------------|----------|------|--------|--------|
-| <!-- PLACEHOLDER --> | - | - | - | - 
+| Req ID | Description | Priority | Source | Acceptance Criteria |
+|--------|-------------|----------|--------|---------------------|
+| <!-- PLACEHOLDER --> | - | - | - | - |
 
 <!-- subsection:functional_requirements -->
 ### Functional Requirements
