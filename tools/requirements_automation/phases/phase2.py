@@ -21,7 +21,17 @@ from ..utils_io import iso_today
 def process_phase_2(
     lines: List[str], llm: Any, dry_run: bool, target_section: str | None = None
 ) -> Tuple[List[str], bool, List[str], bool, List[str]]:
-    """Fill assumptions/constraints or generate questions for missing content."""
+    """Fill assumptions/constraints or generate questions for missing content.
+    
+    DEPRECATED: This legacy phase processor uses the global open_questions table.
+    New code should use the unified handler with per-section question tables configured
+    in handler_registry.yaml. This function remains for backward compatibility with
+    sections that don't have handler configurations.
+    """
+    logging.warning(
+        "Using deprecated phase-based handler for phase_2. "
+        "Consider migrating to unified handler with per-section question tables."
+    )
     changed = False
     blocked: List[str] = []
     needs_human = False

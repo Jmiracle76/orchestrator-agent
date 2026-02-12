@@ -229,6 +229,10 @@ def execute_phase_based_handler(
 ) -> tuple[List[str], WorkflowResult]:
     """
     Execute phase-based handler for backward compatibility.
+    
+    DEPRECATED: This function uses the legacy phase processors that rely on the
+    global open_questions table. New sections should be configured in handler_registry.yaml
+    to use the unified handler with per-section question tables.
 
     Args:
         lines: Document content as list of strings
@@ -239,6 +243,11 @@ def execute_phase_based_handler(
     Returns:
         Tuple of (updated_lines, WorkflowResult)
     """
+    logging.warning(
+        "Using deprecated phase-based handler for section '%s'. "
+        "Consider adding handler configuration in handler_registry.yaml.",
+        target_id
+    )
     # Map section to phase for backward compatibility
     phase_name = None
     for phase, sections in PHASES.items():
