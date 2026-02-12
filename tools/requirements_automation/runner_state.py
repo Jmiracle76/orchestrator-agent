@@ -90,7 +90,7 @@ def get_section_state(
     is_blank = section_is_blank(lines, span)
 
     # Check for placeholder token in preamble only (ignoring subsections)
-    has_placeholder_flag = has_placeholder(span, lines)
+    section_has_placeholder = has_placeholder(span, lines)
 
     # Determine if using section-specific questions
     use_section_qs = (
@@ -156,7 +156,7 @@ def get_section_state(
         exists=True,
         locked=locked,
         is_blank=is_blank,
-        has_placeholder=has_placeholder_flag,
+        has_placeholder=section_has_placeholder,
         has_open_questions=has_open_questions,
         has_answered_questions=has_answered_questions,
     )

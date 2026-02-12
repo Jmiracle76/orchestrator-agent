@@ -182,10 +182,12 @@ def section_is_locked(lines: List[str], span: SectionSpan) -> bool:
 
 def section_is_blank(lines: List[str], span: SectionSpan) -> bool:
     """
-    Return True if the section preamble contains the placeholder token.
+    Return True if the section preamble is blank (contains the placeholder token).
     
-    Only checks the main section body (preamble) before any subsections.
-    Subsection placeholders are ignored for section-level blank detection.
+    A section is considered 'blank' when its main body (preamble) contains the 
+    placeholder token, indicating it needs human input. Only checks the preamble
+    before any subsections; subsection placeholders are ignored for section-level 
+    blank detection.
     """
     return PLACEHOLDER_TOKEN in section_preamble_text(lines, span)
 
