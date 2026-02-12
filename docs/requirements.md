@@ -123,9 +123,9 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q17 | [WARNING] Open question goals_objectives-Q16 flags lack of CLI functionality enumeration, directly impacting ability to implement 'Support all existing CLI functionality' goal. | 2026-02-12 |  | Open |
-| goals_objectives-Q18 | [WARNING] Primary goal 'Deploy the web interface as a separate service on the same VM' contradicts constraint that describes it as operating on 'existing locally hosted VM infrastructure' without specifying whether this VM has capacity for additional services. | 2026-02-12 |  | Open |
-| goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' lacks specificity - no enumeration of what CLI functionality exists | 2026-02-12 |  | Open |
+| goals_objectives-Q17 | [WARNING] Open question goals_objectives-Q16 flags lack of CLI functionality enumeration, directly impacting ability to implement 'Support all existing CLI functionality' goal. | 2026-02-12 | Support all existing CLI functionality” for initial Web UI release SHALL mean feature parity with the current Requirements Automation CLI (tools/requirements_automation/cli.py), including: configuring inputs equivalent to required CLI args (--repo-root, --template, --doc); supporting the same operational modes and options (--dry-run, --no-commit, --log-level, --max-steps, --handler-config, --validate, --strict, --validate-structure); and exposing outcome states equivalent to CLI exit codes (success/blocked/error) along with the associated log/output information. | Open |
+| goals_objectives-Q18 | [WARNING] Primary goal 'Deploy the web interface as a separate service on the same VM' contradicts constraint that describes it as operating on 'existing locally hosted VM infrastructure' without specifying whether this VM has capacity for additional services. | 2026-02-12 | There is no contradiction intended. The web interface SHALL be deployed as an additional service on the existing locally hosted VM where the current Python CLI/automation runs today. “Separate service” means a separately managed web process (and, if applicable, its supporting services) running alongside the existing CLI workflow on the same host, not a separate VM. The existing VM has sufficient available CPU/RAM/storage to host this additional service for the initial release (single-user, low-traffic usage), and no new VM procurement is required. If capacity constraints are encountered during implementation, the fallback plan is to adjust resource allocation and/or move the web service to a separate host in a later phase. | Open |
+| goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' lacks specificity - no enumeration of what CLI functionality exists | 2026-02-12 | Support all existing CLI functionality” for initial Web UI release SHALL mean feature parity with the current Requirements Automation CLI (tools/requirements_automation/cli.py), including: configuring inputs equivalent to required CLI args (--repo-root, --template, --doc); supporting the same operational modes and options (--dry-run, --no-commit, --log-level, --max-steps, --handler-config, --validate, --strict, --validate-structure); and exposing outcome states equivalent to CLI exit codes (success/blocked/error) along with the associated log/output information. | Open |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
 | goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
@@ -177,20 +177,16 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- section:assumptions -->
 ## 5. Assumptions
 1. The web interface SHALL be hosted on the same local VM that runs the existing Python-based orchestrator
-2. The web interface SHALL maintain compatibility with the existing Python codebase without requiring migration or replacement of the orchestrator backend
-3. The web interface architecture SHALL support future enhancements and feature additions without significant refactoring
-4. The local network infrastructure SHALL provide sufficient connectivity for browser-based access to the VM-hosted web interface
-5. Users SHALL have network access to the VM from their client devices without requiring public internet connectivity
-6. The existing Python orchestrator functionality SHALL remain stable and accessible for integration with the web interface
-7. Modern browser environments (current versions of Chrome and Edge) SHALL provide sufficient capabilities to support a responsive UI/UX design inspired by the Codex interface pattern
+2. The web interface architecture SHALL support future enhancements and feature additions without significant refactoring
+3. The local network infrastructure SHALL provide sufficient connectivity for browser-based access to the VM-hosted web interface
+4. Users SHALL have network access to the VM from their client devices without requiring public internet connectivity
+6. Modern browser environments (current versions of Chrome and Edge) SHALL provide sufficient capabilities to support a responsive UI/UX design inspired by the Codex interface pattern
 <!-- subsection:questions_issues -->
 ### Questions & Issues
 
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q4 | [WARNING] Open question assumptions-Q3 references assumptions-Q2 answer 'Unknown at this time' for conditions that must remain true. Assumption 6 states 'existing Python orchestrator functionality SHALL remain stable' but no verification mechanism defined. | 2026-02-12 |  | Open |
-| assumptions-Q3 | [WARNING] Assumption 2 references 'assumptions-Q2' answer 'Unknown at this time' for conditions that must remain true, indicating incomplete analysis | 2026-02-12 |  | Open |
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Resolved |
 | assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Resolved |
 
@@ -202,8 +198,6 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- subsection:technical_constraints -->
 ### Technical Constraints
 - The web application SHALL run on a local Linux VM
-- The web application SHALL maintain compatibility with and support the existing Python codebase
-- The web interface SHALL integrate with the existing Python-based orchestrator without requiring backend migration or replacement
 - The web interface SHALL be deployed as a separate service on the same VM as the orchestrator code
 - The web interface SHALL support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
 
@@ -225,8 +219,6 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q4 | [WARNING] Open question constraints-Q3 identifies constraint priority ranking as 'Unknown at this time', creating ambiguity for trade-off decisions during implementation. | 2026-02-12 |  | Open |
-| constraints-Q3 | [WARNING] Constraint priority ranking is 'Unknown at this time' (constraints-Q2), creating ambiguity for trade-off decisions during implementation | 2026-02-12 |  | Open |
 | constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
 
