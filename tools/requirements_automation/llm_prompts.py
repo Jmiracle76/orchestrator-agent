@@ -35,6 +35,53 @@ def format_prior_sections(prior_sections: dict) -> str:
     return "\n".join(lines)
 
 
+def _build_format_guidance(output_format: str) -> str:
+    """Build base format guidance string from output_format.
+    
+    Args:
+        output_format: Output format hint ("prose", "bullets", "subsections")
+        
+    Returns:
+        Format guidance string
+    """
+    format_guidance_map = {
+        "prose": "Write content as flowing prose paragraphs.",
+        "bullets": "Write content as a bullet list (dash-prefixed, one item per line).",
+        "subsections": "Organize content under appropriate subsection headers (###).",
+    }
+    return format_guidance_map.get(output_format, "Write content as prose.")
+
+
+def _build_subsection_guidance(subsection_structure: Optional[List[dict]]) -> str:
+    """Build subsection structure guidance for LLM prompts.
+    
+    Args:
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
+        
+    Returns:
+        Subsection guidance string, or empty string if no subsections
+    """
+    if not subsection_structure:
+        return ""
+    
+    guidance = "\n\n**Subsection Structure:**\n"
+    guidance += "This section has the following subsections. Output content using subsection delimiters:\n"
+    for sub in subsection_structure:
+        sub_id = sub.get("id", "")
+        sub_type = sub.get("type", "prose")
+        # Convert subsection_id to readable header
+        readable_header = sub_id.replace("_", " ").title()
+        guidance += f"\n### {readable_header}\n"
+        if sub_type == "table":
+            guidance += "Output: Markdown table rows only (no header, just data rows with pipe delimiters).\n"
+        elif sub_type == "bullets":
+            guidance += "Output: Bullet list items (dash-prefixed).\n"
+        else:
+            guidance += "Output: Prose or list as appropriate.\n"
+    
+    return guidance
+
+
 def build_open_questions_prompt(
     section_id: str,
     section_context: str,
@@ -135,29 +182,10 @@ def build_integrate_answers_prompt(
         Formatted prompt string
     """
     # Build format guidance
-    format_guidance_map = {
-        "prose": "Write integrated content as flowing prose paragraphs.",
-        "bullets": "Write integrated content as a bullet list (dash-prefixed, one item per line).",
-        "subsections": "Organize content under appropriate subsection headers (###).",
-    }
-    format_guidance = format_guidance_map.get(output_format, "Write integrated content as prose.")
-
+    format_guidance = _build_format_guidance(output_format)
+    
     # Build subsection-specific guidance if provided
-    if subsection_structure:
-        format_guidance += "\n\n**Subsection Structure:**\n"
-        format_guidance += "This section has the following subsections. Output content using subsection delimiters:\n"
-        for sub in subsection_structure:
-            sub_id = sub.get("id", "")
-            sub_type = sub.get("type", "prose")
-            # Convert subsection_id to readable header
-            readable_header = sub_id.replace("_", " ").title()
-            format_guidance += f"\n### {readable_header}\n"
-            if sub_type == "table":
-                format_guidance += f"Output: Markdown table rows only (no header, just data rows with pipe delimiters).\n"
-            elif sub_type == "bullets":
-                format_guidance += f"Output: Bullet list items (dash-prefixed).\n"
-            else:
-                format_guidance += f"Output: Prose or list as appropriate.\n"
+    format_guidance += _build_subsection_guidance(subsection_structure)
 
     # Build document context if prior sections provided
     doc_context = ""
@@ -218,29 +246,10 @@ def build_draft_section_prompt(
         Formatted prompt string
     """
     # Build format guidance
-    format_guidance_map = {
-        "prose": "Write content as flowing prose paragraphs.",
-        "bullets": "Write content as a bullet list (dash-prefixed, one item per line).",
-        "subsections": "Organize content under appropriate subsection headers (###).",
-    }
-    format_guidance = format_guidance_map.get(output_format, "Write content as prose.")
-
+    format_guidance = _build_format_guidance(output_format)
+    
     # Build subsection-specific guidance if provided
-    if subsection_structure:
-        format_guidance += "\n\n**Subsection Structure:**\n"
-        format_guidance += "This section has the following subsections. Output content using subsection delimiters:\n"
-        for sub in subsection_structure:
-            sub_id = sub.get("id", "")
-            sub_type = sub.get("type", "prose")
-            # Convert subsection_id to readable header
-            readable_header = sub_id.replace("_", " ").title()
-            format_guidance += f"\n### {readable_header}\n"
-            if sub_type == "table":
-                format_guidance += f"Output: Markdown table rows only (no header, just data rows with pipe delimiters).\n"
-            elif sub_type == "bullets":
-                format_guidance += f"Output: Bullet list items (dash-prefixed).\n"
-            else:
-                format_guidance += f"Output: Prose or list as appropriate.\n"
+    format_guidance += _build_subsection_guidance(subsection_structure)
 
     # Build document context - this is required for drafting
     doc_context = ""
