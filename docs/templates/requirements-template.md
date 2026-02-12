@@ -241,6 +241,13 @@ approval_record
 - [ ] Criterion 1 
 - [ ] Criterion 2 
 
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:requirements_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+
 <!-- section_lock:requirements lock=false -->
 ---
 
@@ -265,6 +272,13 @@ approval_record
 |-------------------|-----------|--------|-----------|
 | <!-- PLACEHOLDER --> | - | - | - |
 
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:interfaces_integrations_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+
 <!-- section_lock:interfaces_integrations lock=false -->
 ---
 
@@ -288,6 +302,13 @@ approval_record
 <!-- PLACEHOLDER -->
 - [Retention policy 1] 
 - [Retention policy 2] 
+
+<!-- subsection:questions_issues -->
+### Questions & Issues
+
+<!-- table:data_considerations_questions -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
 
 <!-- section_lock:data_considerations lock=false -->
 ---
