@@ -525,8 +525,9 @@ def check_section_table_for_open_blockers(lines: List[str], section_id: str) -> 
     """
     Check if a section's question table has any "Open" status rows that are blockers.
     
-    This function only counts questions prefixed with [BLOCKER] that have "Open" status.
-    Questions prefixed with [WARNING] or without prefixes are not counted.
+    This function only counts questions prefixed with [BLOCKER] or unprefixed questions
+    (for backward compatibility) that have "Open" status. Questions prefixed with 
+    [WARNING] are not counted as blockers.
     
     Args:
         lines: Document content as list of strings
@@ -567,7 +568,7 @@ def check_section_table_for_open_blockers(lines: List[str], section_id: str) -> 
             status = cells[-1].strip()
             
             # Only count as blocker if:
-            # 1. Status is "Open"
+            # 1. Status is "Open" (case-insensitive)
             # 2. Question text starts with [BLOCKER] OR has no severity prefix
             #    (backward compatibility: unprefixed questions are treated as blockers)
             if status.lower() == "open":
