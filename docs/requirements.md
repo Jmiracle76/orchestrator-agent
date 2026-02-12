@@ -227,22 +227,14 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 
 <!-- section:requirements -->
 ## 7.  Requirements
-| Req ID | Description | Priority | Source | Acceptance Criteria |
-|--------|-------------|----------|--------|---------------------|
-| FR-001 | The system SHALL provide a web-based user interface accessible via standard web browsers | High | Problem Statement | Users can access the interface without SSH or VM login |
-| FR-002 | The system SHALL allow users to initiate requirements document drafting through the web interface | High | Problem Statement | Users can start a new requirements document without CLI commands |
-| FR-003 | The system SHALL integrate with the existing orchestrator-agent CLI backend | High | Problem Statement | Web interface successfully invokes orchestrator-agent functionality |
-| FR-004 | The system SHALL maintain feature parity with critical CLI workflows for requirements document creation | Medium | Problem Statement | Users can complete requirements drafting tasks previously done via CLI |
+<!-- PLACEHOLDER -->
 
-| Req ID | Category | Description | Priority | Measurement Criteria | Acceptance Criteria |
-|--------|----------|-------------|----------|---------------------|---------------------|
-| NFR-001 | Usability | The web interface SHALL provide a modern UI/UX that reduces the learning curve compared to CLI interaction | High | User onboarding time, task completion time | New users complete first requirements document without external documentation |
-| NFR-002 | Usability | The system SHALL eliminate the need for users to memorize CLI command sequences | High | Number of commands users must remember | Zero CLI commands required for standard workflows |
-| NFR-003 | Accessibility | The system SHALL be lightweight and minimize resource requirements | Medium | Page load time, memory footprint | Interface loads within acceptable timeframe on standard hardware |
-| NFR-004 | Adoption | The system SHALL lower barriers to entry for new users | High | New user adoption rate, user engagement metrics | Measurable increase in user engagement compared to CLI-only interface |
-
+### Technical Requirements
+<!-- subsection:technical_requirements -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| <!-- PLACEHOLDER --> | - | - | - | - 
+
 <!-- subsection:functional_requirements -->
 ### Functional Requirements
 
