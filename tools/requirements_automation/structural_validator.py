@@ -174,7 +174,7 @@ class StructuralValidator:
     def _validate_open_questions_table(self) -> None:
         """
         Validate open questions table (DEPRECATED).
-        
+
         The global open_questions table has been retired in favor of per-section question tables.
         This validation method is kept for backward compatibility but will be removed in a future version.
         Per-section tables are validated through their respective section handlers.
@@ -189,23 +189,23 @@ class StructuralValidator:
         if not self.template_lines:
             return
 
-        # Extract all section, subsection, and table markers from template
-        template_sections = set()
-        template_subsections = set()
-        template_tables = set()
+        # Extract all section, subsection, and table markers from template with line numbers
+        template_sections = {}  # {section_id: line_num}
+        template_subsections = {}  # {subsection_id: line_num}
+        template_tables = {}  # {table_id: line_num}
 
-        for line in self.template_lines:
+        for i, line in enumerate(self.template_lines):
             section_match = SECTION_MARKER_RE.search(line)
             if section_match:
-                template_sections.add(section_match.group("id"))
+                template_sections[section_match.group("id")] = i
 
             subsection_match = SUBSECTION_MARKER_RE.search(line)
             if subsection_match:
-                template_subsections.add(subsection_match.group("id"))
+                template_subsections[subsection_match.group("id")] = i
 
             table_match = TABLE_MARKER_RE.search(line)
             if table_match:
-                template_tables.add(table_match.group("id"))
+                template_tables[table_match.group("id")] = i
 
         # Extract all markers from document
         doc_sections = set()
@@ -226,40 +226,254 @@ class StructuralValidator:
                 doc_tables.add(table_match.group("id"))
 
         # Find missing markers
-        missing_sections = template_sections - doc_sections
-        missing_subsections = template_subsections - doc_subsections
-        missing_tables = template_tables - doc_tables
+        missing_sections = set(template_sections.keys()) - doc_sections
+        missing_subsections = set(template_subsections.keys()) - doc_subsections
+        missing_tables = set(template_tables.keys()) - doc_tables
 
-        # Report missing markers as errors with actionable guidance
+        # Attempt auto-repair for missing markers
+        # Repair missing sections
         for section_id in missing_sections:
-            self.errors.append(
-                MalformedMarkerError(
-                    0,
-                    "",
-                    f"Missing section from template: <!-- section:{section_id} -->. "
-                    f"Add this section marker and its content to match the template structure.",
+            if self._try_repair_missing_section(section_id, template_sections[section_id]):
+                self.repairs_made.append(f"section:{section_id}")
+            else:
+                self.errors.append(
+                    MalformedMarkerError(
+                        0,
+                        "",
+                        f"Missing section from template: <!-- section:{section_id} -->. "
+                        f"Add this section marker and its content to match the template structure.",
+                    )
                 )
-            )
 
+        # Repair missing subsections
         for subsection_id in missing_subsections:
-            self.errors.append(
-                MalformedMarkerError(
-                    0,
-                    "",
-                    f"Missing subsection from template: <!-- subsection:{subsection_id} -->. "
-                    f"Add this subsection marker within its parent section to match the template structure.",
+            if self._try_repair_missing_subsection(
+                subsection_id, template_subsections[subsection_id]
+            ):
+                self.repairs_made.append(f"subsection:{subsection_id}")
+            else:
+                self.errors.append(
+                    MalformedMarkerError(
+                        0,
+                        "",
+                        f"Missing subsection from template: <!-- subsection:{subsection_id} -->. "
+                        f"Add this subsection marker within its parent section to match the template structure.",
+                    )
                 )
-            )
 
+        # Repair missing tables
         for table_id in missing_tables:
-            self.errors.append(
-                MalformedMarkerError(
-                    0,
-                    "",
-                    f"Missing table from template: <!-- table:{table_id} -->. "
-                    f"Add this table marker and its header within the appropriate section to match the template structure.",
+            if self._try_repair_missing_table(table_id, template_tables[table_id]):
+                self.repairs_made.append(f"table:{table_id}")
+            else:
+                self.errors.append(
+                    MalformedMarkerError(
+                        0,
+                        "",
+                        f"Missing table from template: <!-- table:{table_id} -->. "
+                        f"Add this table marker and its header within the appropriate section to match the template structure.",
+                    )
                 )
-            )
+
+    def _try_repair_missing_section(self, section_id: str, template_line_num: int) -> bool:
+        """
+        Attempt to repair a missing section by extracting it from template and inserting it.
+
+        Args:
+            section_id: The ID of the missing section
+            template_line_num: Line number in template where section marker appears
+
+        Returns:
+            True if repair was successful, False otherwise
+        """
+        if not self.template_lines:
+            return False
+
+        # Extract the section block from template (from marker to section_lock or next section)
+        section_start = template_line_num
+        section_end = len(self.template_lines)
+
+        # Find the end of the section (section_lock marker or next section marker)
+        for i in range(section_start + 1, len(self.template_lines)):
+            line = self.template_lines[i]
+            if SECTION_LOCK_RE.search(line) and section_id in line:
+                section_end = i + 1
+                break
+            if SECTION_MARKER_RE.search(line):
+                section_end = i
+                break
+
+        # Extract section content
+        section_content = self.template_lines[section_start:section_end]
+
+        # Find insertion point in document (at the end, before last section_lock if present)
+        insert_index = len(self.lines)
+
+        # Insert before the last few lines if they look like trailing content
+        if insert_index > 0 and self.lines[-1].strip() == "":
+            insert_index = len(self.lines) - 1
+
+        # Add separator if needed (format: blank line, separator, blank line)
+        # This matches the standard section separator pattern used throughout the template
+        if insert_index > 0 and self.lines[insert_index - 1].strip() != "---":
+            section_content = ["", "---", ""] + section_content
+
+        # Insert the section
+        self.lines[insert_index:insert_index] = section_content
+
+        return True
+
+    def _try_repair_missing_subsection(self, subsection_id: str, template_line_num: int) -> bool:
+        """
+        Attempt to repair a missing subsection by extracting it from template and inserting it.
+
+        Args:
+            subsection_id: The ID of the missing subsection
+            template_line_num: Line number in template where subsection marker appears
+
+        Returns:
+            True if repair was successful, False otherwise
+        """
+        if not self.template_lines:
+            return False
+
+        # Extract the subsection block from template
+        subsection_start = template_line_num
+        subsection_end = len(self.template_lines)
+
+        # Find the end of the subsection (next subsection, table, or section_lock)
+        for i in range(subsection_start + 1, len(self.template_lines)):
+            line = self.template_lines[i]
+            if (
+                SUBSECTION_MARKER_RE.search(line)
+                or TABLE_MARKER_RE.search(line)
+                or SECTION_LOCK_RE.search(line)
+                or SECTION_MARKER_RE.search(line)
+            ):
+                subsection_end = i
+                break
+
+        # Extract subsection content
+        subsection_content = self.template_lines[subsection_start:subsection_end]
+
+        # Find the parent section in template to determine which section to insert into
+        parent_section_id = None
+        for i in range(subsection_start - 1, -1, -1):
+            section_match = SECTION_MARKER_RE.search(self.template_lines[i])
+            if section_match:
+                parent_section_id = section_match.group("id")
+                break
+
+        if not parent_section_id:
+            return False
+
+        # Find parent section in document
+        parent_section_line = None
+        for i, line in enumerate(self.lines):
+            if f"<!-- section:{parent_section_id} -->" in line:
+                parent_section_line = i
+                break
+
+        if parent_section_line is None:
+            return False
+
+        # Find insertion point (before section_lock of parent section)
+        insert_index = parent_section_line + 1
+        for i in range(parent_section_line + 1, len(self.lines)):
+            line = self.lines[i]
+            if f"section_lock:{parent_section_id}" in line:
+                insert_index = i
+                break
+            if SECTION_MARKER_RE.search(line):
+                insert_index = i
+                break
+
+        # Add blank line before if needed
+        if insert_index > 0 and self.lines[insert_index - 1].strip() != "":
+            subsection_content = [""] + subsection_content
+
+        # Insert the subsection
+        self.lines[insert_index:insert_index] = subsection_content
+
+        return True
+
+    def _try_repair_missing_table(self, table_id: str, template_line_num: int) -> bool:
+        """
+        Attempt to repair a missing table by extracting it from template and inserting it.
+
+        Args:
+            table_id: The ID of the missing table
+            template_line_num: Line number in template where table marker appears
+
+        Returns:
+            True if repair was successful, False otherwise
+        """
+        if not self.template_lines:
+            return False
+
+        # Extract the table block from template (marker + header + separator)
+        table_start = template_line_num
+        table_end = template_line_num + 1
+
+        # Include the table header and separator rows
+        for i in range(table_start + 1, min(table_start + 4, len(self.template_lines))):
+            line = self.template_lines[i]
+            if line.strip().startswith("|"):
+                table_end = i + 1
+            else:
+                break
+
+        # Extract table content
+        table_content = self.template_lines[table_start:table_end]
+
+        # Find the parent section or subsection in template
+        parent_id = None
+        parent_type = None
+        for i in range(table_start - 1, -1, -1):
+            subsection_match = SUBSECTION_MARKER_RE.search(self.template_lines[i])
+            if subsection_match:
+                parent_id = subsection_match.group("id")
+                parent_type = "subsection"
+                break
+            section_match = SECTION_MARKER_RE.search(self.template_lines[i])
+            if section_match:
+                parent_id = section_match.group("id")
+                parent_type = "section"
+                break
+
+        if not parent_id:
+            return False
+
+        # Find parent in document
+        parent_line = None
+        for i, line in enumerate(self.lines):
+            if f"<!-- {parent_type}:{parent_id} -->" in line:
+                parent_line = i
+                break
+
+        if parent_line is None:
+            return False
+
+        # Find insertion point (after parent marker, or before next subsection/section_lock)
+        insert_index = parent_line + 1
+        for i in range(parent_line + 1, len(self.lines)):
+            line = self.lines[i]
+            if (
+                SUBSECTION_MARKER_RE.search(line)
+                or SECTION_LOCK_RE.search(line)
+                or SECTION_MARKER_RE.search(line)
+            ):
+                insert_index = i
+                break
+
+        # Add blank line before if needed
+        if insert_index > 0 and self.lines[insert_index - 1].strip() != "":
+            table_content = [""] + table_content
+
+        # Insert the table
+        self.lines[insert_index:insert_index] = table_content
+
+        return True
 
     def _validate_metadata_markers(self) -> None:
         """Check: metadata markers are well-formed."""
