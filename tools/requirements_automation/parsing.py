@@ -504,8 +504,8 @@ def check_risks_table_for_non_low_risks(lines: List[str]) -> Tuple[bool, List[st
             probability = cells[2].strip() if len(cells) > 2 else ""
             impact = cells[3].strip() if len(cells) > 3 else ""
             
-            # Skip placeholder rows
-            if description in ("", "-", "<!-- PLACEHOLDER -->"):
+            # Skip placeholder rows - check for empty, dash, or any placeholder-like content
+            if not description or description == "-" or "placeholder" in description.lower():
                 continue
             
             # Check if both probability and impact are "Low" (case-insensitive)
@@ -597,30 +597,25 @@ def update_approval_record_table(
     for i in range(start, end):
         line = new_lines[i]
         
-        # Look for specific fields and update them
-        if "| Current Status |" in line or "| Status |" in line:
-            # Update status
-            new_lines[i] = re.sub(
-                r"\|\s*[^|]+\s*\|$",
-                f"| {status} |",
-                line,
-                count=1
-            )
-        elif "| Recommended By |" in line or "| Reviewer |" in line:
-            # Update reviewer
-            new_lines[i] = re.sub(
-                r"\|\s*[^|]+\s*\|$",
-                f"| {reviewer} |",
-                line,
-                count=1
-            )
-        elif "| Recommendation Date |" in line or "| Review Date |" in line:
-            # Update date
-            new_lines[i] = re.sub(
-                r"\|\s*[^|]+\s*\|$",
-                f"| {today} |",
-                line,
-                count=1
-            )
+        # Parse table row: | Field | Value |
+        if not line.strip().startswith("|"):
+            continue
+            
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        
+        field = cells[0].strip()
+        
+        # Update specific fields
+        if field in ("Current Status", "Status"):
+            cells[1] = status
+            new_lines[i] = "| " + " | ".join(cells) + " |"
+        elif field in ("Recommended By", "Reviewer"):
+            cells[1] = reviewer
+            new_lines[i] = "| " + " | ".join(cells) + " |"
+        elif field in ("Recommendation Date", "Review Date"):
+            cells[1] = today
+            new_lines[i] = "| " + " | ".join(cells) + " |"
     
     return new_lines
