@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from .config import PLACEHOLDER_TOKEN, SECTION_LOCK_RE
+from .config import PLACEHOLDER_TOKEN, SECTION_LOCK_RE, SUBSECTION_MARKER_RE
 from .sanitize import sanitize_llm_body
 from .structural_validator import StructuralValidator
 from .utils_io import split_lines
@@ -13,7 +13,11 @@ def replace_block_body_preserving_markers(
     lines: List[str], start: int, end: int, *, section_id: str, new_body: str
 ) -> List[str]:
     """
-    Replace a section body while preserving markers, headings, and locks.
+    Replace a section body while preserving markers, headings, locks, and subsections.
+
+    If the section contains subsections (<!-- subsection:* -->), only the preamble
+    content before the first subsection is replaced. All subsection markers, their
+    headers, and their content (including tables) are preserved intact.
 
     Validates document structure before and after the replacement to prevent corruption.
 
@@ -62,9 +66,28 @@ def replace_block_body_preserving_markers(
             heading_line = ln
             break
 
-    # Keep the last lock marker and trailing divider if present.
-    lock_lines = [ln for ln in block_lines if SECTION_LOCK_RE.search(ln)]
-    keep_divider = "---" in block_lines[-3:]
+    # Find the first subsection marker within the replacement range
+    # If found, we only replace content up to that marker (the "preamble")
+    # and preserve all subsections intact
+    first_subsection_line = None
+    subsection_content = []
+    for i, ln in enumerate(block_lines):
+        if SUBSECTION_MARKER_RE.search(ln):
+            first_subsection_line = i
+            # Preserve all content from the first subsection onward
+            subsection_content = block_lines[i:]
+            break
+
+    # If there are subsections, determine what to preserve from the block
+    if first_subsection_line is not None:
+        # Use only the preamble (content before first subsection) for lock/divider detection
+        preamble = block_lines[:first_subsection_line]
+        lock_lines = [ln for ln in preamble if SECTION_LOCK_RE.search(ln)]
+        keep_divider = False  # Don't add divider if subsections exist (they have their own)
+    else:
+        # No subsections, use the original logic
+        lock_lines = [ln for ln in block_lines if SECTION_LOCK_RE.search(ln)]
+        keep_divider = "---" in block_lines[-3:]
 
     new_block: List[str] = [marker_line]
     if heading_line:
@@ -81,6 +104,10 @@ def replace_block_body_preserving_markers(
         new_block.append(lock_lines[-1])
     if keep_divider:
         new_block.append("---")
+
+    # If subsections exist, append them after the new body content
+    if subsection_content:
+        new_block.extend(subsection_content)
 
     new_lines = lines[:start] + new_block + lines[end:]
 
