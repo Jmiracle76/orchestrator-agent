@@ -88,20 +88,23 @@ Without addressing this usability barrier, the project risks limited adoption. T
 - Reduce the technical barrier to entry for end users unfamiliar with command-line interfaces
 - Support all existing CLI functionality in the initial release
 - Maintain compatibility with the existing Python-based orchestrator running on a locally hosted VM
-- Implement a deployment architecture that supports seamless upgrades for future features and bug fixes
-- Provide local network accessibility without requiring public internet access capability
-- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
+- Deploy the web interface as a separate service on the same VM as the orchestrator code
 
 - Establish an extensible architecture that accommodates future feature additions without significant refactoring
 - Provide a responsive UI/UX inspired by the Codex interface pattern that supports desktop, mobile, and tablet form factors
+- Maintain session state across browser refreshes
+- Provide local network accessibility without requiring public internet access capability
+- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
 - Encourage user engagement and adoption through modern interface design
 
 - Multi-user concurrent access and authentication systems
+- Real-time collaboration features where multiple users can view or simultaneously edit the same document
 - Multi-project or multi-repository management capabilities
 - Cloud-hosted or distributed deployment models
 - Migration away from the Python-based orchestrator backend
 - Time-bound completion requirements for document creation workflows
 - Performance optimization beyond proof-of-concept needs
+- Compliance with accessibility standards such as WCAG 2.1 or Section 508
 <!-- subsection:objective_statement -->
 ### Objective Statement
 | 0.2 | 2026-02-12 | requirements-automation | Goals Objectives completed |
@@ -132,10 +135,14 @@ Without addressing this usability barrier, the project risks limited adoption. T
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Open |
-| goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Open |
-| goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Open |
-| goals_objectives-Q15 | What accessibility standards (WCAG 2.1, Section 508) MUST the web interface meet? | 2026-02-12 | No accessibility standards are required at this stage. | Open |
+| goals_objectives-Q16 | What specific CLI functionality currently exists in the orchestrator-agent project that MUST be replicated in the web interface? | 2026-02-12 |  | Open |
+| goals_objectives-Q17 | What constitutes 'significant refactoring' that the extensible architecture should avoid when accommodating future features? | 2026-02-12 |  | Open |
+| goals_objectives-Q18 | SHALL the web interface require authentication or authorization for the single concurrent user, or is access control out of scope? | 2026-02-12 |  | Open |
+| goals_objectives-Q19 | What backward compatibility requirements exist for documents created via CLI versus the web interface? | 2026-02-12 |  | Open |
+| goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
+| goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
+| goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
+| goals_objectives-Q15 | What accessibility standards (WCAG 2.1, Section 508) MUST the web interface meet? | 2026-02-12 | No accessibility standards are required at this stage. | Resolved |
 | goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 | There are no performance objectives at this time. This is a proof-of-concept system to start. | Resolved |
 | goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 | A single concurrent user is all that is required for initial release. | Resolved |
 | goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 | All existing CLI functionality should be targeted for initial release and may be scaled back in future revisions. | Resolved |
