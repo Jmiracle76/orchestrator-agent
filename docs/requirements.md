@@ -17,7 +17,7 @@ review_gate:final_review
 approval_record
 -->
 
-<!-- review_gate_result:review_gate:coherence_check status=failed issues=1 warnings=5 -->
+<!-- review_gate_result:review_gate:coherence_check status=failed issues=2 warnings=5 -->
 # Requirements Document
 
 <!-- meta:project_name -->
@@ -143,6 +143,8 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| goals_objectives-Q17 | [BLOCKER] Primary goal 'Support all existing CLI functionality in the initial release' contradicts Q10 answer stating functionality 'may be scaled back in future revisions' and conflicts with proof-of-concept scope mentioned throughout document. | 2026-02-12 |  | Open |
+| goals_objectives-Q18 | [WARNING] Goals section contains duplicate content - objectives are listed in both main section body and organized subsections (objective_statement, primary_goals, secondary_goals, non_goals). | 2026-02-12 |  | Open |
 | goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' conflicts with success criterion and Q10 answer that states this 'may be scaled back in future revisions' | 2026-02-12 | Acknowledged. This is a proof of concept design and will evolve. | Resolved |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
@@ -180,6 +182,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| stakeholders_users-Q8 | [WARNING] User characteristic 'single-user deployment with exclusive system access' describes a system constraint rather than a user characteristic. | 2026-02-12 |  | Open |
 | stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 | This is acceptable for this proof of concept design. | Resolved |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
 | stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
@@ -199,14 +202,15 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 4. The local network infrastructure SHALL provide sufficient connectivity for browser-based access to the VM-hosted web interface
 5. Users SHALL have network access to the VM from their client devices without requiring public internet connectivity
 6. The existing Python orchestrator functionality SHALL remain stable and accessible for integration with the web interface
-7. Modern browser environments (current versions of Chrome and Edge) SHALL provide sufficient capabilities to support UI/UX patterns similar to and inspired by the Codex interface
+7. Modern browser environments (current versions of Chrome and Edge) SHALL provide sufficient capabilities to support a responsive UI/UX design inspired by the Codex interface pattern
 <!-- subsection:questions_issues -->
 ### Questions & Issues
 
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q4 | [WARNING] Assumption 7 references 'required UI/UX patterns' when no specific UI/UX patterns are formally defined as requirements, only 'inspired by Codex interface pattern' | 2026-02-12 | TBD | Open |
+| assumptions-Q5 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no formal UI/UX requirements are defined beyond 'inspired by Codex interface pattern' guidance. | 2026-02-12 |  | Open |
+| assumptions-Q4 | [WARNING] Assumption 7 references 'required UI/UX patterns' when no specific UI/UX patterns are formally defined as requirements, only 'inspired by Codex interface pattern' | 2026-02-12 | TBD | Resolved |
 | assumptions-Q3 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no specific UI/UX patterns are defined as requirements in the document beyond 'Codex interface pattern' inspiration | 2026-02-12 | UI/UX patterns are defined as being similara to and inspired by Codex ui/ux. | Resolved |
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Resolved |
 | assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Resolved |
@@ -221,10 +225,10 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 - The web interface SHALL integrate with the existing Python-based orchestrator without requiring backend migration or replacement
 - The web interface SHALL be deployed as a separate service on the same VM as the orchestrator code
 - The web interface SHALL support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
-- The web interface SHALL function within local network infrastructure without requiring public internet access capability
 
 - The web interface SHALL operate as a single-user system for the initial release
 - The web interface SHALL be accessible only via local network connectivity to the VM
+- The web interface SHALL function within local network infrastructure without requiring public internet access capability
 - The web interface SHALL accommodate user input errors including inaccurate data and malformed input without compromising system stability
 
 - The web interface deployment SHALL utilize the existing locally hosted VM infrastructure
@@ -253,8 +257,9 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q3 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content that has not been populated with actual constraints | 2026-02-12 | The constraints listed in the main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Open |
-| constraints-Q4 | [WARNING] Constraints section has duplicate content - constraints are listed both in main section body and in placeholder subsections structure | 2026-02-12 | constraints listed in main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Open |
+| constraints-Q5 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content. Constraints are listed in main section body but not organized into required subsections. | 2026-02-12 |  | Open |
+| constraints-Q3 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content that has not been populated with actual constraints | 2026-02-12 | The constraints listed in the main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Resolved |
+| constraints-Q4 | [WARNING] Constraints section has duplicate content - constraints are listed both in main section body and in placeholder subsections structure | 2026-02-12 | constraints listed in main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Resolved |
 | constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
 
@@ -390,6 +395,8 @@ Success criteria will be fully defined after functional requirements are drafted
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| success_criteria-Q4 | [WARNING] Success criterion 'All existing CLI functionality is accessible through the web interface' conflicts with the acknowledged flexibility in goals_objectives-Q16 that functionality may be scaled back. | 2026-02-12 |  | Open |
+| success_criteria-Q5 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining validation rules, error handling behavior, or expected system responses. | 2026-02-12 |  | Open |
 | success_criteria-Q3 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining expected behavior or validation rules | 2026-02-12 | success criteria will be fully defined after functional requirements are drafted. | Resolved |
 | success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Resolved |
 | success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | Unit test scripts must validate acceptance criteria have been met across all requirements and the product owner will approve test results. | Resolved |
