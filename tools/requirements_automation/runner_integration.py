@@ -22,6 +22,7 @@ from .section_questions import (
     resolve_section_questions_batch,
     section_has_answered_questions,
 )
+from .table_routing import route_table_content_to_subsections
 from .utils_io import iso_today
 
 
@@ -270,12 +271,28 @@ def integrate_answered_questions(
 
         if new_body.strip() and new_body.strip() != context.strip():
             if not dry_run:
+                # Route table content only when integrating into main section, not subsections
+                if tgt == target_id:
+                    # Route table content to subsections if applicable
+                    # This extracts table rows from new_body and inserts them into table subsections
+                    lines, preamble_content = route_table_content_to_subsections(
+                        lines,
+                        span,
+                        new_body,
+                        subsection_structure,
+                    )
+                else:
+                    # Integrating into a subsection - use content as-is
+                    preamble_content = new_body
+                
+                # Write the non-table content (preamble) to the section body
+                # Table content has already been inserted into subsections above (if applicable)
                 lines = replace_block_body_preserving_markers(
                     lines,
                     target_start,
                     target_end,
                     section_id=tgt,
-                    new_body=new_body,
+                    new_body=preamble_content,
                 )
                 # Update spans after modification
                 spans = find_sections(lines)
@@ -375,13 +392,23 @@ def draft_section_content(
                 subs = find_subsections_within(lines, span)
                 draft_end = _get_replacement_end_boundary(lines, span, subs)
 
-                # Write the draft to the section body
+                # Route table content to subsections if applicable
+                # This extracts table rows from draft and inserts them into table subsections
+                lines, preamble_content = route_table_content_to_subsections(
+                    lines,
+                    span,
+                    draft,
+                    subsection_structure,
+                )
+
+                # Write the non-table content (preamble) to the section body
+                # Table content has already been inserted into subsections above
                 lines = replace_block_body_preserving_markers(
                     lines,
                     span.start_line,
                     draft_end,
                     section_id=target_id,
-                    new_body=draft,
+                    new_body=preamble_content,
                 )
 
             summaries.append(f"Drafted initial content for {target_id} using prior section context")
