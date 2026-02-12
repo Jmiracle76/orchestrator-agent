@@ -154,7 +154,7 @@ requirements:
     auto_apply_patches: never
     scope: all_prior_sections
     questions_table: identified_risks_questions  # Per-section question table
-    bootstrap_questions: false  # No bootstrap questions for risks
+    bootstrap_questions: false  # Risks section doesn't pre-populate questions from template
     
   approval_record:
     mode: integrate_then_questions
