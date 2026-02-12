@@ -86,6 +86,11 @@ approval_record
 
 <!-- PLACEHOLDER -->
 
+<!-- subsection:objective_statement -->
+### Objective Statement
+<!-- PLACEHOLDER -->
+[Clear, concise statement of the project objective]
+
 <!-- subsection:primary_goals -->
 ### Primary Goals
 <!-- PLACEHOLDER -->
