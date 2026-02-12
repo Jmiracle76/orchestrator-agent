@@ -362,7 +362,6 @@ The web interface integrates with the existing Python-based orchestrator through
 
 <!-- subsection:data_retention -->
 ### Data Retention
-<!-- PLACEHOLDER -->
 - Generated documents retained in repository per existing Git version control.
 - Execution logs retained only for session duration unless explicitly exported.
 - No separate database storage introduced in proof-of-concept release.
