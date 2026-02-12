@@ -113,10 +113,10 @@ def _use_section_questions(handler_config: Any) -> bool:
     return hasattr(handler_config, "questions_table") and handler_config.questions_table is not None
 
 
-def _get_section_questions_with_fallback(
+def _get_section_questions(
     lines: List[str], target_id: str, handler_config: Any
 ) -> tuple[List[Any], bool]:
-    """Get questions for a section, trying section-specific first then global.
+    """Get questions for a section using per-section table.
 
     Args:
         lines: Document content
@@ -132,27 +132,14 @@ def _get_section_questions_with_fallback(
             return qs, True
         except ValueError:
             logging.debug(
-                "Section questions table not found for '%s', falling back to global",
+                "Section questions table not found for '%s'",
                 target_id,
             )
+            return [], True
 
-    # Fall back to global questions
-    try:
-        open_qs, _, _ = open_questions_parse(lines)
-        # Include subsections when checking questions
-        spans = find_sections(lines)
-        span = get_section_span(spans, target_id)
-        if span:
-            subs = find_subsections_within(lines, span)
-            target_ids = {target_id} | {s.subsection_id for s in subs}
-            targeted_questions = [
-                q for q in open_qs if _canon_target(q.section_target) in target_ids
-            ]
-            return targeted_questions, False
-        return [], False
-    except Exception as e:
-        logging.warning("Failed to parse global questions: %s", e)
-        return [], False
+    # If handler doesn't specify section questions, return empty list
+    # (no global fallback)
+    return [], False
 
 
 def integrate_answered_questions(
@@ -197,21 +184,14 @@ def integrate_answered_questions(
             all_questions, _ = parse_section_questions(lines, target_id)
             targeted_questions = all_questions
         except Exception as e:
-            logging.warning("Failed to parse section questions for '%s': %s", target_id, e)
+            logging.debug("Failed to parse section questions for '%s': %s", target_id, e)
             targeted_questions = []
     else:
-        # Use global questions
-        try:
-            open_qs, _, _ = open_questions_parse(lines)
-        except Exception as e:
-            logging.warning("Failed to parse open questions: %s", e)
-            open_qs = []
-
-        # Include subsections when checking questions
-        subs = find_subsections_within(lines, span)
-        target_ids = {target_id} | {s.subsection_id for s in subs}
-
-        targeted_questions = [q for q in open_qs if _canon_target(q.section_target) in target_ids]
+        # No section-specific questions configured, return without processing
+        logging.debug(
+            "No section-specific questions table configured for '%s'", target_id
+        )
+        targeted_questions = []
 
     # Find questions with answers (status "Open"/"Deferred" with non-empty answers)
     answered_questions = [
@@ -456,27 +436,11 @@ def generate_questions_for_section(
                 and q.answer.strip() in ("", "-", "Pending")
             ]
         except Exception as e:
-            logging.warning("Failed to parse section questions for '%s': %s", target_id, e)
+            logging.debug("Failed to parse section questions for '%s': %s", target_id, e)
             open_unanswered = []
     else:
-        # Check global table
-        subs = find_subsections_within(lines, span)
-        target_ids = {target_id} | {s.subsection_id for s in subs}
-
-        try:
-            open_qs, _, _ = open_questions_parse(lines)
-            targeted_questions = [
-                q for q in open_qs if _canon_target(q.section_target) in target_ids
-            ]
-            open_unanswered = [
-                q
-                for q in targeted_questions
-                if q.status.strip() in ("Open", "Deferred")
-                and q.answer.strip() in ("", "-", "Pending")
-            ]
-        except Exception as e:
-            logging.warning("Failed to parse open questions: %s", e)
-            open_unanswered = []
+        # No section-specific questions configured, no open questions
+        open_unanswered = []
 
     if open_unanswered:
         # Section has open questions - don't generate new ones
@@ -509,27 +473,17 @@ def generate_questions_for_section(
             if q_text:
                 new_qs.append((q_text, iso_today()))
     else:
-        # For global table, preserve section_target field
-        subs = find_subsections_within(lines, span)
-        target_ids = {target_id} | {s.subsection_id for s in subs}
-
-        for item in proposed:
-            q_text = (item.get("question") or "").strip()
-            q_target = _canon_target((item.get("section_target") or target_id).strip())
-            # Validate that target is this section or a subsection
-            if q_target not in target_ids:
-                q_target = target_id
-            if q_text:
-                new_qs.append((q_text, q_target, iso_today()))
+        # No section-specific table configured, cannot insert questions
+        logging.debug(
+            "No section-specific questions table configured for '%s', cannot insert questions",
+            target_id,
+        )
+        return lines, False, 0, []
 
     if new_qs and not dry_run:
         try:
-            if use_section_qs:
-                # Insert into section-specific table
-                lines, inserted = insert_section_questions_batch(lines, target_id, new_qs)
-            else:
-                # Insert into global table
-                lines, inserted = open_questions_insert(lines, new_qs)
+            # Insert into section-specific table
+            lines, inserted = insert_section_questions_batch(lines, target_id, new_qs)
 
             if inserted:
                 summaries.append(f"Generated {inserted} open questions for {target_id}")
