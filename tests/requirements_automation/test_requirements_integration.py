@@ -18,6 +18,28 @@ from requirements_automation.parsing import find_sections, get_section_span
 from requirements_automation.utils_io import split_lines
 
 
+def _extract_section_between_markers(doc: str, start_marker: str, end_marker: str) -> str:
+    """Extract content between two markers in a document.
+    
+    Args:
+        doc: Full document text
+        start_marker: Starting marker (e.g., "<!-- subsection:functional_requirements -->")
+        end_marker: Ending marker (e.g., "<!-- subsection:non_functional_requirements -->")
+        
+    Returns:
+        Content between the two markers
+    """
+    start_idx = doc.find(start_marker)
+    end_idx = doc.find(end_marker)
+    
+    if start_idx == -1:
+        return ""
+    if end_idx == -1:
+        return doc[start_idx:]
+    
+    return doc[start_idx:end_idx]
+
+
 def test_full_requirements_section_draft():
     """Test full flow of drafting requirements section with table routing."""
     print("\nTest: Full Requirements Section Draft with Table Routing")
@@ -132,11 +154,17 @@ The system requirements are categorized into functional and non-functional requi
     
     # Verify placeholders are gone or replaced
     print("  Checking placeholders...")
-    # Count placeholder occurrences
-    placeholder_count = result_doc.count("<!-- PLACEHOLDER -->")
     # There might still be placeholders in the questions table, but not in the requirements tables
-    functional_section = result_doc[result_doc.find("<!-- subsection:functional_requirements -->"):result_doc.find("<!-- subsection:non_functional_requirements -->")]
-    non_functional_section = result_doc[result_doc.find("<!-- subsection:non_functional_requirements -->"):result_doc.find("<!-- subsection:questions_issues -->")]
+    functional_section = _extract_section_between_markers(
+        result_doc, 
+        "<!-- subsection:functional_requirements -->", 
+        "<!-- subsection:non_functional_requirements -->"
+    )
+    non_functional_section = _extract_section_between_markers(
+        result_doc,
+        "<!-- subsection:non_functional_requirements -->",
+        "<!-- subsection:questions_issues -->"
+    )
     
     # Check that functional requirements section has real data
     assert "REQ-F001" in functional_section, "Functional requirements section should have real data"

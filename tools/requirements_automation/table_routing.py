@@ -14,6 +14,11 @@ from .models import SectionSpan, SubsectionSpan
 from .config import SUBSECTION_MARKER_RE, TABLE_MARKER_RE, PLACEHOLDER_TOKEN
 
 
+# Constants for table row detection heuristics
+MIN_HEADER_CELL_LENGTH = 3  # Minimum length for cells that look like headers
+SUBSECTION_HEADER_PREFIX = "###"  # Markdown subsection header marker
+
+
 def _extract_markdown_table_rows(text: str) -> List[str]:
     """Extract markdown table data rows from text.
     
@@ -46,7 +51,7 @@ def _extract_markdown_table_rows(text: str) -> List[str]:
         # Filter out empty cells from split
         cells = [c for c in cells if c]
         # Skip if all cells are very short or look like headers
-        if cells and all(len(c) < 3 or c.isupper() or c.istitle() for c in cells):
+        if cells and all(len(c) < MIN_HEADER_CELL_LENGTH or c.isupper() or c.istitle() for c in cells):
             # But allow if it looks like actual data (has ID pattern, numbers, etc)
             if not any(re.search(r'\d+', c) for c in cells):
                 continue
@@ -93,9 +98,9 @@ def _identify_table_content_by_subsection(
         stripped = line.strip()
         
         # Check if this is a subsection header
-        if stripped.startswith('###'):
+        if stripped.startswith(SUBSECTION_HEADER_PREFIX):
             # Extract subsection name and convert to id format
-            header_text = stripped[3:].strip()
+            header_text = stripped[len(SUBSECTION_HEADER_PREFIX):].strip()
             # Convert "Functional Requirements" -> "functional_requirements"
             subsection_id = header_text.lower().replace(' ', '_')
             
@@ -141,7 +146,7 @@ def _extract_non_table_content(llm_output: str) -> str:
             continue
         
         # Skip subsection headers (###)
-        if stripped.startswith('###'):
+        if stripped.startswith(SUBSECTION_HEADER_PREFIX):
             continue
         
         # Skip table rows
