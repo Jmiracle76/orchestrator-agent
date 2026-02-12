@@ -17,7 +17,7 @@ review_gate:final_review
 approval_record
 -->
 
-<!-- review_gate_result:review_gate:coherence_check status=failed issues=2 warnings=5 -->
+<!-- review_gate_result:review_gate:coherence_check status=failed issues=3 warnings=5 -->
 # Requirements Document
 
 <!-- meta:project_name -->
@@ -143,6 +143,8 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| goals_objectives-Q19 | [BLOCKER] Duplicate content structure: objectives are listed in both main section body and organized subsections (objective_statement, primary_goals, secondary_goals, non_goals). This violates single-source-of-truth principle and creates maintenance burden. | 2026-02-12 |  | Open |
+| goals_objectives-Q20 | [BLOCKER] Unresolved contradiction regarding CLI functionality scope. Primary goal states 'Support all existing CLI functionality in the initial release' but Q10 answer and success criteria acknowledge this 'may be scaled back in future revisions'. Q17 marked this as BLOCKER and claims 'contradiction removed' but the conflicting primary goal text remains unchanged. | 2026-02-12 |  | Open |
 | goals_objectives-Q17 | [BLOCKER] Primary goal 'Support all existing CLI functionality in the initial release' contradicts Q10 answer stating functionality 'may be scaled back in future revisions' and conflicts with proof-of-concept scope mentioned throughout document. | 2026-02-12 | contradiction removed. | Resolved |
 | goals_objectives-Q18 | [WARNING] Goals section contains duplicate content - objectives are listed in both main section body and organized subsections (objective_statement, primary_goals, secondary_goals, non_goals). | 2026-02-12 | acknowledged. This will be resolved in future enhancements. | Resolved |
 | goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' conflicts with success criterion and Q10 answer that states this 'may be scaled back in future revisions' | 2026-02-12 | Acknowledged. This is a proof of concept design and will evolve. | Resolved |
@@ -182,6 +184,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| stakeholders_users-Q9 | [WARNING] User characteristic 'single-user deployment with exclusive system access' describes a system constraint rather than a user characteristic. Question stakeholders_users-Q8 flags this as WARNING. This belongs in constraints section, not user characteristics. | 2026-02-12 |  | Open |
 | stakeholders_users-Q8 | [WARNING] User characteristic 'single-user deployment with exclusive system access' describes a system constraint rather than a user characteristic. | 2026-02-12 |  | Resolved |
 | stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 | This is acceptable for this proof of concept design. | Resolved |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
@@ -209,6 +212,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| assumptions-Q6 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no formal UI/UX requirements are defined beyond 'inspired by Codex interface pattern' guidance. Questions assumptions-Q3, assumptions-Q4, and assumptions-Q5 flag this ambiguity. The term 'required UI/UX patterns' implies mandatory specifications that do not exist. | 2026-02-12 |  | Open |
 | assumptions-Q5 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no formal UI/UX requirements are defined beyond 'inspired by Codex interface pattern' guidance. | 2026-02-12 |  | Resolved |
 | assumptions-Q4 | [WARNING] Assumption 7 references 'required UI/UX patterns' when no specific UI/UX patterns are formally defined as requirements, only 'inspired by Codex interface pattern' | 2026-02-12 | TBD | Resolved |
 | assumptions-Q3 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no specific UI/UX patterns are defined as requirements in the document beyond 'Codex interface pattern' inspiration | 2026-02-12 | UI/UX patterns are defined as being similara to and inspired by Codex ui/ux. | Resolved |
@@ -246,6 +250,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| constraints-Q6 | [BLOCKER] Duplicate content structure: constraints are listed in main section body and subsection placeholders exist (technical_constraints, operational_constraints, resource_constraints) but are not populated. Question constraints-Q3 and constraints-Q4 identify this as a blocker requiring reorganization. | 2026-02-12 |  | Open |
 | constraints-Q5 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content. Constraints are listed in main section body but not organized into required subsections. | 2026-02-12 |  | Resolved |
 | constraints-Q3 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content that has not been populated with actual constraints | 2026-02-12 | The constraints listed in the main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Resolved |
 | constraints-Q4 | [WARNING] Constraints section has duplicate content - constraints are listed both in main section body and in placeholder subsections structure | 2026-02-12 | constraints listed in main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Resolved |
@@ -384,6 +389,9 @@ Success criteria will be fully defined after functional requirements are drafted
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| success_criteria-Q6 | [WARNING] Success criterion 'All existing CLI functionality is accessible through the web interface' conflicts with acknowledged flexibility in goals_objectives-Q16 and Q17 that functionality may be scaled back for proof-of-concept. Question success_criteria-Q4 flags this as unresolved. | 2026-02-12 |  | Open |
+| success_criteria-Q7 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement. Questions success_criteria-Q3 and success_criteria-Q5 flag this gap. While Q3 answer states 'success criteria will be fully defined after functional requirements are drafted', this criterion is currently untestable. | 2026-02-12 |  | Open |
+| success_criteria-Q8 | [WARNING] Section contains both itemized success criteria list and placeholder text 'Success criteria will be fully defined after functional requirements are drafted'. This creates ambiguity about whether listed criteria are final or provisional. | 2026-02-12 |  | Open |
 | success_criteria-Q4 | [WARNING] Success criterion 'All existing CLI functionality is accessible through the web interface' conflicts with the acknowledged flexibility in goals_objectives-Q16 that functionality may be scaled back. | 2026-02-12 |  | Resolved |
 | success_criteria-Q5 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining validation rules, error handling behavior, or expected system responses. | 2026-02-12 |  | Resolved |
 | success_criteria-Q3 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining expected behavior or validation rules | 2026-02-12 | success criteria will be fully defined after functional requirements are drafted. | Resolved |
