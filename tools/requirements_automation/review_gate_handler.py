@@ -9,7 +9,9 @@ and quality without mutating documents directly. They return structured results
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from dataclasses import replace
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 from .llm import LLMClient
@@ -24,6 +26,7 @@ from .parsing import (
     section_body,
     section_exists,
 )
+from .section_questions import insert_section_questions_batch
 
 
 class ReviewGateHandler:
@@ -355,3 +358,58 @@ class ReviewGateHandler:
             return new_lines, True
 
         return new_lines, marker_changed
+
+    def insert_issues_into_section_tables(
+        self, result: ReviewResult, lines: List[str]
+    ) -> Tuple[List[str], int]:
+        """
+        Insert review issues/warnings into section-specific question tables.
+
+        Args:
+            result: ReviewResult containing issues to insert
+            lines: Document lines to update
+
+        Returns:
+            Tuple of (updated_lines, total_questions_inserted)
+        """
+        if not result.issues:
+            return lines, 0
+
+        # Group issues by section
+        issues_by_section: Dict[str, List[ReviewIssue]] = defaultdict(list)
+        for issue in result.issues:
+            issues_by_section[issue.section].append(issue)
+
+        # Get today's date for question insertion
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        total_inserted = 0
+        updated_lines = lines
+
+        # Insert issues into each section's question table
+        for section_id, section_issues in issues_by_section.items():
+            # Build list of questions to insert
+            questions = []
+            for issue in section_issues:
+                # Format the issue description with severity prefix
+                question_text = f"[{issue.severity.upper()}] {issue.description}"
+                questions.append((question_text, today))
+
+            # Try to insert into section's question table
+            try:
+                updated_lines, inserted = insert_section_questions_batch(
+                    updated_lines, section_id, questions
+                )
+                total_inserted += inserted
+                if inserted > 0:
+                    logging.info(
+                        f"Inserted {inserted} review issue(s) into {section_id}_questions table"
+                    )
+            except ValueError as e:
+                # Section doesn't have a questions table - log warning but continue
+                logging.warning(
+                    f"Could not insert review issues for section '{section_id}': {e}"
+                )
+                continue
+
+        return updated_lines, total_inserted

@@ -53,6 +53,12 @@ def execute_review_gate(
     # Sync handler state with updated document lines (now includes result marker)
     handler.lines = lines
 
+    # Insert issues/warnings into section-specific question tables
+    lines, questions_inserted = handler.insert_issues_into_section_tables(review_result, lines)
+
+    # Sync handler state again after inserting questions
+    handler.lines = lines
+
     # Optionally apply patches
     lines, patches_applied = handler.apply_patches_if_configured(review_result, handler_config)
 
@@ -60,7 +66,7 @@ def execute_review_gate(
     result = WorkflowResult(
         target_id=target_id,
         action_taken="review_gate",
-        changed=marker_changed or patches_applied,
+        changed=marker_changed or patches_applied or questions_inserted > 0,
         blocked=not review_result.passed,
         blocked_reasons=[
             f"{i.severity}: {i.description}"
@@ -69,7 +75,7 @@ def execute_review_gate(
         ],
         summaries=[review_result.summary]
         + [f"{i.severity}: {i.description}" for i in review_result.issues],
-        questions_generated=0,
+        questions_generated=questions_inserted,
         questions_resolved=0,
     )
 
