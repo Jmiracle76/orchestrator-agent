@@ -83,6 +83,29 @@ Without addressing this usability barrier, the project risks limited adoption. T
 
 <!-- section:goals_objectives -->
 ## 3. Goals and Objectives
+- Deliver a lightweight, modern web interface that replaces the current SSH/CLI workflow for the orchestrator-agent project, reducing user friction and enabling broader adoption
+
+- Create a web-based interface that replaces the current SSH/CLI workflow for document creation and iteration
+- Reduce the technical barrier to entry for end users unfamiliar with command-line interfaces
+- Maintain compatibility with the existing Python-based orchestrator running on a locally hosted VM
+- Deploy the web interface as a separate service on the same VM as the orchestrator code
+- Establish a proof-of-concept design that demonstrates core functionality and validates the approach for future evolution
+
+- Establish an extensible architecture that accommodates future feature additions without significant refactoring
+- Provide a responsive UI/UX inspired by the Codex interface pattern that supports desktop, mobile, and tablet form factors
+- Maintain session state across browser refreshes
+- Provide local network accessibility without requiring public internet access capability
+- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
+- Encourage user engagement and adoption through modern interface design
+
+- Multi-user concurrent access and authentication systems
+- Real-time collaboration features where multiple users can view or simultaneously edit the same document
+- Multi-project or multi-repository management capabilities
+- Cloud-hosted or distributed deployment models
+- Migration away from the Python-based orchestrator backend
+- Time-bound completion requirements for document creation workflows
+- Performance optimization beyond proof-of-concept needs
+- Compliance with accessibility standards such as WCAG 2.1 or Section 508
 <!-- subsection:objective_statement -->
 ### Objective Statement
 Deliver a lightweight, modern web interface that replaces the current SSH/CLI workflow for the orchestrator-agent project, reducing user friction and enabling broader adoption.
@@ -120,7 +143,7 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' conflicts with success criterion and Q10 answer that states this 'may be scaled back in future revisions' | 2026-02-12 | Acknowledged. This is a proof of concept design and will evolve. | Open |
+| goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' conflicts with success criterion and Q10 answer that states this 'may be scaled back in future revisions' | 2026-02-12 | Acknowledged. This is a proof of concept design and will evolve. | Resolved |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
 | goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
@@ -150,15 +173,14 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 
 | User Type | Characteristics | Needs | Use Cases |
 |-----------|----------------|-------|-----------|
-| Technical User | Advanced proficiency with technical interfaces; operates as single-user with exclusive system access | Web-based alternative to SSH/CLI workflow that supports all existing CLI functionality for requirements document creation and iteration | Creating new requirements documents; iterating on existing documents; managing document workflows without command-line interface |
-
+| Technical User | Advanced proficiency with technical interfaces; single-user deployment with exclusive system access | Web-based alternative to SSH/CLI workflow that supports all existing CLI functionality for requirements document creation and iteration | Creating new requirements documents; iterating on existing documents; managing document workflows without command-line interface |
 <!-- subsection:questions_issues -->
 ### Questions & Issues
 
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 | This is acceptable for this proof of concept design. | Open |
+| stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 | This is acceptable for this proof of concept design. | Resolved |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
 | stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
 | stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Resolved |
