@@ -14,8 +14,7 @@ from .models import SectionSpan, SubsectionSpan
 from .config import SUBSECTION_MARKER_RE, TABLE_MARKER_RE, PLACEHOLDER_TOKEN
 
 
-# Constants for table row detection heuristics
-MIN_HEADER_CELL_LENGTH = 3  # Minimum length for cells that look like headers
+# Constants for markdown parsing
 SUBSECTION_HEADER_PREFIX = "###"  # Markdown subsection header marker
 
 
@@ -45,17 +44,9 @@ def _extract_markdown_table_rows(text: str) -> List[str]:
         # Skip separator rows (e.g., |---|---|)
         if re.match(r'^\s*\|[\s\-:|]+\|\s*$', stripped):
             continue
-        # Skip header-like rows (rows that are all caps or title case with few values)
-        # This is a heuristic - actual headers typically have column names
-        cells = [c.strip() for c in stripped.split('|')]
-        # Filter out empty cells from split
-        cells = [c for c in cells if c]
-        # Skip if all cells are very short or look like headers
-        if cells and all(len(c) < MIN_HEADER_CELL_LENGTH or c.isupper() or c.istitle() for c in cells):
-            # But allow if it looks like actual data (has ID pattern, numbers, etc)
-            if not any(re.search(r'\d+', c) for c in cells):
-                continue
         
+        # All other pipe-delimited lines are considered table rows
+        # The separator row check above is sufficient to filter out headers in most cases
         rows.append(stripped)
     
     return rows
@@ -101,8 +92,11 @@ def _identify_table_content_by_subsection(
         if stripped.startswith(SUBSECTION_HEADER_PREFIX):
             # Extract subsection name and convert to id format
             header_text = stripped[len(SUBSECTION_HEADER_PREFIX):].strip()
-            # Convert "Functional Requirements" -> "functional_requirements"
-            subsection_id = header_text.lower().replace(' ', '_')
+            # Normalize to subsection ID format: lowercase, spaces to underscores, remove special chars
+            # Examples: "Functional Requirements" -> "functional_requirements"
+            #           "Questions & Issues" -> "questions_issues"
+            #           "Non-Functional  Requirements" -> "non_functional_requirements"
+            subsection_id = re.sub(r'[^a-z0-9]+', '_', header_text.lower()).strip('_')
             
             # Check if this matches a table subsection we know about
             if subsection_id in table_subsections:

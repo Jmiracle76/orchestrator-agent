@@ -272,7 +272,12 @@ def integrate_answered_questions(
         if new_body.strip() and new_body.strip() != context.strip():
             if not dry_run:
                 # Only route table content if integrating into the main section (not a subsection)
-                # Subsections are content-specific and shouldn't be routing table content
+                # tgt: the target identifier (section or subsection) that questions were asked about
+                # target_id: the main section identifier we're processing
+                # When tgt == target_id, we're integrating answers into the main section,
+                # so we need to route table content to appropriate table subsections.
+                # When tgt != target_id, we're integrating into a specific subsection,
+                # and should use the content as-is without routing.
                 if tgt == target_id:
                     # Route table content to subsections if applicable
                     # This extracts table rows from new_body and inserts them into table subsections
