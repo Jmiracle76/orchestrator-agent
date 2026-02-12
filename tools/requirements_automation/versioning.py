@@ -141,28 +141,63 @@ def _update_version_history_table(lines: List[str], new_version: str, changes: s
     # Find the Version History subsection
     subsection_marker_re = re.compile(r"<!--\s*subsection:version_history\s*-->")
     placeholder_re = re.compile(r"<!--\s*PLACEHOLDER\s*-->")
+    # Patterns that mark the end of a subsection
+    section_end_re = re.compile(r"<!--\s*(section|subsection|section_lock):")
+    separator_re = re.compile(r"^---\s*$")
 
     result_lines = lines[:]
     marker_idx = None
-    placeholder_idx = None
+    subsection_end_idx = None
 
+    # Find the version history subsection marker
     for i, line in enumerate(result_lines):
         if subsection_marker_re.search(line):
             marker_idx = i
-        elif marker_idx is not None and placeholder_re.search(line):
-            placeholder_idx = i
             break
 
-    if placeholder_idx is None:
-        # Can't find version history table, return unchanged
+    if marker_idx is None:
+        # Can't find version history subsection, return unchanged
         return result_lines
+
+    # Find the end of the version history subsection
+    for i in range(marker_idx + 1, len(result_lines)):
+        if section_end_re.search(result_lines[i]) or separator_re.search(result_lines[i]):
+            subsection_end_idx = i
+            break
+    
+    if subsection_end_idx is None:
+        subsection_end_idx = len(result_lines)
 
     # Create new version entry
     today = iso_today()
     new_entry = f"| {new_version} | {today} | {AUTOMATION_ACTOR} | {changes} |"
 
-    # Replace placeholder line with new entry
-    result_lines[placeholder_idx] = new_entry
+    # Check if this version already exists in the version history table
+    for i in range(marker_idx, subsection_end_idx):
+        if result_lines[i].strip().startswith("|") and f"| {new_version} |" in result_lines[i]:
+            # Version already exists, skip insertion
+            return result_lines
+
+    # Look for placeholder within the version history subsection
+    placeholder_idx = None
+    for i in range(marker_idx, subsection_end_idx):
+        if placeholder_re.search(result_lines[i]):
+            placeholder_idx = i
+            break
+
+    if placeholder_idx is not None:
+        # Replace placeholder with new entry
+        result_lines[placeholder_idx] = new_entry
+    else:
+        # No placeholder found, append after last table row
+        last_table_row_idx = None
+        for i in range(marker_idx, subsection_end_idx):
+            if result_lines[i].strip().startswith("|"):
+                last_table_row_idx = i
+        
+        if last_table_row_idx is not None:
+            # Insert new entry after the last table row
+            result_lines.insert(last_table_row_idx + 1, new_entry)
 
     return result_lines
 
