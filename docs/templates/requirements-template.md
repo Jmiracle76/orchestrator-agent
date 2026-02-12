@@ -75,8 +75,7 @@ approval_record
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
 | problem_statement-Q1 | What is the primary pain point this project addresses? | [Date] | | Open |
-| problem_statement-Q2 | Who are the affected users or stakeholders? | [Date] | | Open |
-| problem_statement-Q3 | What are the consequences of not solving this problem? | [Date] | | Open |
+| problem_statement-Q2 | What are the consequences of not solving this problem? | [Date] | | Open |
 
 <!-- section_lock:problem_statement lock=false -->
 ---
@@ -117,8 +116,8 @@ approval_record
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
 | goals_objectives-Q1 | What are the measurable success indicators for each goal? | [Date] | | Open |
-| goals_objectives-Q2 | How do these goals align with organizational priorities? | [Date] | | Open |
-| goals_objectives-Q3 | What are the dependencies between primary and secondary goals? | [Date] | | Open |
+| goals_objectives-Q2 | What constraints must this solution respect? | [Date] | | Open |
+| goals_objectives-Q3 | What is explicitly out of scope for this project? | [Date] | | Open |
 
 <!-- section_lock:goals_objectives lock=false -->
 ---
@@ -148,9 +147,8 @@ approval_record
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q1 | Have all key stakeholder groups been identified? | [Date] | | Open |
-| stakeholders_users-Q2 | What are the communication preferences for each stakeholder? | [Date] | | Open |
-| stakeholders_users-Q3 | Are there any conflicting stakeholder interests? | [Date] | | Open |
+| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | | Open |
+| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | | Open |
 
 <!-- section_lock:stakeholders_users lock=false -->
 ---
@@ -167,8 +165,8 @@ approval_record
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q1 | Have all assumptions been validated with stakeholders? | [Date] | | Open |
-| assumptions-Q2 | What is the impact if any of these assumptions are invalid? | [Date] | | Open |
+| assumptions-Q1 | What technical assumptions exist for this project? | [Date] | | Open |
+| assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | | Open |
 
 <!-- section_lock:assumptions lock=false -->
 ---
@@ -200,7 +198,7 @@ approval_record
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q1 | Are there any workarounds for the identified constraints? | [Date] | | Open |
+| constraints-Q1 | What technical constraints exist for this project? | [Date] | | Open |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | | Open |
 
 <!-- section_lock:constraints lock=false -->
