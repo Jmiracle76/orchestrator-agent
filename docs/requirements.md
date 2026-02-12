@@ -363,15 +363,11 @@ Success criteria will be fully defined after functional requirements are drafted
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| success_criteria-Q7 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement. Questions success_criteria-Q3 and success_criteria-Q5 flag this gap. While Q3 answer states 'success criteria will be fully defined after functional requirements are drafted', this criterion is currently untestable. | 2026-02-12 |  | Open |
-| success_criteria-Q8 | [WARNING] Section contains both itemized success criteria list and placeholder text 'Success criteria will be fully defined after functional requirements are drafted'. This creates ambiguity about whether listed criteria are final or provisional. | 2026-02-12 |  | Open |
-| success_criteria-Q4 | [WARNING] Success criterion 'All existing CLI functionality is accessible through the web interface' conflicts with the acknowledged flexibility in goals_objectives-Q16 that functionality may be scaled back. | 2026-02-12 |  | Resolved |
-| success_criteria-Q5 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining validation rules, error handling behavior, or expected system responses. | 2026-02-12 |  | Resolved |
 | success_criteria-Q3 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining expected behavior or validation rules | 2026-02-12 | success criteria will be fully defined after functional requirements are drafted. | Resolved |
 | success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Resolved |
 | success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | Unit test scripts must validate acceptance criteria have been met across all requirements and the product owner will approve test results. | Resolved |
 
-<!-- section_lock:success_criteria lock=false -->
+<!-- section_lock:success_criteria lock=true -->
 ---
 
 <!-- section:out_of_scope -->
