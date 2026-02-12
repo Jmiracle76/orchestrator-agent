@@ -181,8 +181,13 @@ def section_is_locked(lines: List[str], span: SectionSpan) -> bool:
 
 
 def section_is_blank(lines: List[str], span: SectionSpan) -> bool:
-    """Return True if the placeholder token exists in the section."""
-    return PLACEHOLDER_TOKEN in section_text(lines, span)
+    """
+    Return True if the section preamble contains the placeholder token.
+    
+    Only checks the main section body (preamble) before any subsections.
+    Subsection placeholders are ignored for section-level blank detection.
+    """
+    return PLACEHOLDER_TOKEN in section_preamble_text(lines, span)
 
 
 def find_table_block(lines: List[str], table_id: str) -> Optional[Tuple[int, int]]:
@@ -231,6 +236,44 @@ def get_subsection_span(subs: List[SubsectionSpan], subsection_id: str) -> Optio
         if s.subsection_id == subsection_id:
             return s
     return None
+
+
+def get_section_preamble_end_line(lines: List[str], span: SectionSpan) -> int:
+    """
+    Get the line number where the section preamble ends.
+    
+    The preamble is the main body content before any subsections.
+    Returns the line number of the first subsection, or span.end_line if no subsections exist.
+    
+    Args:
+        lines: Document lines
+        span: Section span
+        
+    Returns:
+        Line number where preamble ends (exclusive)
+    """
+    subs = find_subsections_within(lines, span)
+    if subs:
+        return subs[0].start_line
+    return span.end_line
+
+
+def section_preamble_text(lines: List[str], span: SectionSpan) -> str:
+    """
+    Extract the section preamble text (content before any subsections).
+    
+    This excludes subsection content while keeping the main section body.
+    Includes markers and headers in the preamble.
+    
+    Args:
+        lines: Document lines
+        span: Section span
+        
+    Returns:
+        Preamble text as a single string
+    """
+    preamble_end = get_section_preamble_end_line(lines, span)
+    return "\n".join(lines[span.start_line : preamble_end])
 
 
 def extract_all_section_ids(lines: List[str]) -> List[str]:
@@ -385,9 +428,21 @@ def find_duplicate_section_markers(lines: List[str]) -> List[str]:
 
 
 def has_placeholder(span: SectionSpan, lines: List[str]) -> bool:
-    """Check if a section span contains PLACEHOLDER token."""
-    section_lines = lines[span.start_line : span.end_line]
-    return any(PLACEHOLDER_TOKEN in line for line in section_lines)
+    """
+    Check if a section preamble contains PLACEHOLDER token.
+    
+    Only checks the main section body (preamble) before any subsections.
+    Subsection placeholders are ignored for section-level completion.
+    
+    Args:
+        span: Section span
+        lines: Document lines
+        
+    Returns:
+        True if preamble contains PLACEHOLDER token
+    """
+    preamble_text = section_preamble_text(lines, span)
+    return PLACEHOLDER_TOKEN in preamble_text
 
 
 def validate_open_questions_table_schema(lines: List[str]) -> bool:
