@@ -131,6 +131,9 @@ orchestrator-agent/
 │   ├── templates/
 │   │   └── requirements-template.md
 │   └── requirements.md                 # Example requirements document
+├── tests/
+│   └── requirements_automation/
+│       └── test_marker_preservation.py # Marker preservation test suite (CI)
 └── test-scripts/
     ├── test_integration.py             # Integration tests
     └── ...                             # Additional tests
@@ -206,6 +209,9 @@ pre-commit run --all-files
 ### Running Tests
 
 ```bash
+# Run marker preservation tests (CI test suite)
+python tests/requirements_automation/test_marker_preservation.py
+
 # Run integration tests
 python test-scripts/test_integration.py
 python test-scripts/test_e2e_prior_context.py
@@ -217,6 +223,8 @@ python test-scripts/test_cli_validate.py
 # Validate acceptance criteria
 python test-scripts/validate_acceptance_criteria.py
 ```
+
+The marker preservation test suite verifies that structural markers (`<!-- subsection:* -->` and `<!-- table:* -->`) survive LLM drafting operations. These tests run automatically in CI via GitHub Actions.
 
 See the [Contributing Guide](docs/developer/contributing.md) for detailed development guidelines.
 

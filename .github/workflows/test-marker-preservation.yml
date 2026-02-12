@@ -1,0 +1,39 @@
+name: Test Marker Preservation
+
+on:
+  push:
+    branches: [ main, develop, 'copilot/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-marker-preservation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run marker preservation tests
+      run: |
+        python tests/requirements_automation/test_marker_preservation.py
+        
+    - name: Test result
+      if: failure()
+      run: |
+        echo "❌ MARKER PRESERVATION TEST FAILED!"
+        echo "Some structural markers were lost during simulated LLM drafting."
+        echo "This indicates the editing function does not properly preserve markers."
+        exit 1
