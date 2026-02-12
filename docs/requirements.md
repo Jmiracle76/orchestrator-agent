@@ -227,6 +227,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 
 <!-- section:requirements -->
 ## 7.  Requirements
+### Technical Requirements
 The web interface SHALL be implemented as a separate service deployed on the same Linux VM that hosts the existing Python-based orchestrator. The system SHALL maintain architectural separation between the web interface and the orchestrator backend to support independent maintenance and future extensibility.
 
 The web interface SHALL communicate with the Python-based orchestrator through a well-defined integration layer that preserves the existing orchestrator functionality without modification to its core logic. The implementation SHALL support session persistence across browser refreshes, maintaining user workflow state and context.
@@ -235,6 +236,8 @@ The system SHALL provide feature parity with the Requirements Automation CLI (to
 
 The web interface SHALL deliver responsive UI/UX design inspired by the Codex interface pattern, supporting desktop, mobile, and tablet form factors. The implementation SHALL target current versions of Chrome and Edge browsers with broad compatibility across modern browsers.
 
+<!-- subsection:functional_requirements -->
+### Functional Requirements
 | Req ID | Description | Priority | Source | Acceptance Criteria |
 |--------|-------------|----------|--------|---------------------|
 | FR-001 | The web interface SHALL provide a browser-based UI that allows users to create new requirements documents without SSH or CLI access | High | Goals: Create web-based interface replacing SSH/CLI workflow | User can initiate document creation through web browser; No SSH session required; Document creation workflow completes without CLI commands |
@@ -246,6 +249,8 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 | FR-007 | The web interface SHALL handle user input errors including inaccurate data and malformed input without system failure | Medium | Constraints: Accommodate input errors without compromising stability | Invalid inputs trigger validation messages; System remains operational after input errors; Error messages guide user toward valid input |
 | FR-008 | The web interface SHALL be accessible via local network connectivity without requiring public internet access | Medium | Goals: Local network accessibility; Constraints: Local network only operation | Web interface accessible from local network clients; No public internet dependency for operation; VM accessibility sufficient for web interface access |
 
+<!-- subsection:non_functional_requirements -->
+### Non-Functional Requirements
 | Req ID | Category | Description | Priority | Measurement Criteria | Acceptance Criteria |
 |--------|----------|-------------|----------|---------------------|---------------------|
 | NFR-001 | Usability | The web interface SHALL reduce technical barrier to entry compared to SSH/CLI workflow | High | User feedback; Time to first successful document creation | Non-technical users complete document creation without CLI knowledge; Reduction in support requests for basic operations |
@@ -256,26 +261,6 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 | NFR-006 | Portability | The web interface SHALL provide responsive design supporting desktop, mobile, and tablet form factors | Medium | Device testing across form factors | Interface functional on desktop browsers; Interface functional on mobile devices; Interface functional on tablet devices; Layout adapts appropriately to screen size |
 | NFR-007 | Reliability | The web interface SHALL maintain stability when deployed as separate service on VM alongside orchestrator code | Medium | Service uptime monitoring; Resource utilization | Web service starts and stops cleanly; No interference with existing orchestrator functionality; Service recovers from expected failure modes |
 | NFR-008 | Deployability | The web interface SHALL deploy to existing locally hosted VM infrastructure without requiring additional VM provisioning | High | Deployment execution | Deployment completes on existing VM; No new VM procurement required; Resource allocation sufficient for proof-of-concept usage |
-<!-- subsection:technical_requirements -->
-| Req ID | Description | Priority | Source | Acceptance Criteria |
-|--------|-------------|----------|--------|---------------------|
-| <!-- PLACEHOLDER --> | - | - | - | - |
-
-<!-- subsection:functional_requirements -->
-### Functional Requirements
-
-<!-- table:functional_requirements -->
-| Req ID | Description | Priority | Source | Acceptance Criteria |
-|--------|-------------|----------|--------|---------------------|
-| <!-- PLACEHOLDER --> | - | - | - | - |
-
-<!-- subsection:non_functional_requirements -->
-### Non-Functional Requirements
-
-<!-- table:non_functional_requirements -->
-| Req ID | Category | Description | Priority | Measurement Criteria | Acceptance Criteria |
-|--------|----------|-------------|----------|---------------------|---------------------|
-| <!-- PLACEHOLDER --> | - | - | - | - | - | 
 
 <!-- subsection:questions_issues -->
 ### Questions & Issues
@@ -283,10 +268,7 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:requirements_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| requirements-Q1 | [BLOCKER] Functional requirements table contains only 4 populated requirements (FR-001 through FR-004) followed by PLACEHOLDER rows. Goals specify 'Support all existing CLI functionality in the initial release' but no enumeration exists of what CLI functionality must be implemented. | 2026-02-12 |  | Open |
-| requirements-Q2 | [BLOCKER] Non-functional requirements table contains only 4 populated requirements (NFR-001 through NFR-004) followed by PLACEHOLDER rows. NFR-003 acceptance criterion 'Interface loads within acceptable timeframe' is untestable without numeric threshold. | 2026-02-12 |  | Open |
-| requirements-Q3 | [WARNING] FR-004 requires 'feature parity with critical CLI workflows' but 'critical' is undefined and workflows are not enumerated. Priority is 'Medium' despite being derived from 'High' priority goal. | 2026-02-12 |  | Open |
-| requirements-Q4 | [WARNING] NFR-004 acceptance criterion 'Measurable increase in user engagement' lacks baseline definition. No current CLI engagement metrics documented. | 2026-02-12 |  | Open |
+
 
 <!-- section_lock:requirements lock=false -->
 ---
@@ -318,7 +300,7 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:interfaces_integrations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| interfaces_integrations-Q1 | [BLOCKER] Section contains only PLACEHOLDER content. Integration with 'existing orchestrator-agent CLI backend' is mentioned in FR-003 and multiple assumptions/constraints but no interface specification exists. | 2026-02-12 |  | Open |
+
 
 <!-- section_lock:interfaces_integrations lock=false -->
 ---
@@ -350,7 +332,7 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:data_considerations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| data_considerations-Q1 | [BLOCKER] Section contains only PLACEHOLDER content. Requirements documents are created/iterated but no data schema, persistence model, or storage requirements are specified. Security risk identified in risks section but no security requirements defined here. | 2026-02-12 |  | Open |
+
 
 <!-- section_lock:data_considerations lock=false -->
 ---
@@ -396,10 +378,6 @@ Success criteria will be fully defined after functional requirements are drafted
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| success_criteria-Q6 | [BLOCKER] Circular dependency: 'Success criteria will be fully defined after functional requirements are drafted' but functional requirements derive validity from success criteria. Several success criteria reference concepts without corresponding requirements (e.g., error handling, input validation). | 2026-02-12 |  | Open |
-| success_criteria-Q7 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' lacks corresponding functional requirements defining expected validation behavior, error messages, or recovery mechanisms. | 2026-02-12 |  | Open |
-| success_criteria-Q4 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' appears without corresponding validation requirements or error handling specifications | 2026-02-12 |  | Open |
-| success_criteria-Q5 | [WARNING] Statement 'Success criteria will be fully defined after functional requirements are drafted' creates circular dependency - functional requirements should derive from success criteria | 2026-02-12 |  | Open |
 | success_criteria-Q3 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining expected behavior or validation rules | 2026-02-12 | success criteria will be fully defined after functional requirements are drafted. | Resolved |
 | success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Resolved |
 | success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | Unit test scripts must validate acceptance criteria have been met across all requirements and the product owner will approve test results. | Resolved |
