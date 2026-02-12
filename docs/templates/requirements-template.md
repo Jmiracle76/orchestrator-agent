@@ -208,6 +208,12 @@ approval_record
 ## 7.  Requirements
 <!-- PLACEHOLDER -->
 
+### Technical Requirements
+<!-- subsection:technical_requirements -->
+| Question ID | Question | Date | Answer | Status |
+|-------------|----------|------|--------|--------|
+| <!-- PLACEHOLDER --> | - | - | - | - 
+
 <!-- subsection:functional_requirements -->
 ### Functional Requirements
 
