@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from .editing import replace_block_body_preserving_markers
@@ -82,14 +83,13 @@ def _build_subsection_structure(
             # For "subsections" or "prose" output format, infer type from template content
             # Check the subsection content to determine the format
             sub_body_lines = lines[sub.start_line:sub.end_line]
-            sub_body = "\n".join(sub_body_lines)
             
             # Look for bullet list markers (dash at start of line)
             if any(line.strip().startswith("-") for line in sub_body_lines if line.strip()):
                 sub_info["type"] = "bullets"
             # Look for numbered list markers (digit followed by period at start of line)
-            elif any(line.strip() and line.strip()[0].isdigit() and "." in line.strip()[:3] 
-                     for line in sub_body_lines if line.strip()):
+            # Use regex to match pattern like "1. " or "2. " to avoid false positives
+            elif any(re.match(r'^\s*\d+\.\s', line) for line in sub_body_lines if line.strip()):
                 sub_info["type"] = "numbered"
             else:
                 sub_info["type"] = "prose"
