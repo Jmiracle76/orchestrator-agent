@@ -206,7 +206,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q4 | [WARNING] Assumption 7 references 'required UI/UX patterns' when no specific UI/UX patterns are formally defined as requirements, only 'inspired by Codex interface pattern' | 2026-02-12 |  | Open |
+| assumptions-Q4 | [WARNING] Assumption 7 references 'required UI/UX patterns' when no specific UI/UX patterns are formally defined as requirements, only 'inspired by Codex interface pattern' | 2026-02-12 | TBD | Open |
 | assumptions-Q3 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no specific UI/UX patterns are defined as requirements in the document beyond 'Codex interface pattern' inspiration | 2026-02-12 | UI/UX patterns are defined as being similara to and inspired by Codex ui/ux. | Resolved |
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Resolved |
 | assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Resolved |
