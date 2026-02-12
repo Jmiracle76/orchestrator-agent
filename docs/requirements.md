@@ -18,7 +18,7 @@ approval_record
 -->
 
 <!-- review_gate_result:review_gate:coherence_check status=passed issues=0 warnings=6 -->
-<!-- review_gate_result:review_gate:final_review status=failed issues=4 warnings=9 -->
+<!-- review_gate_result:review_gate:final_review status=failed issues=7 warnings=5 -->
 # Requirements Document
 
 <!-- meta:project_name -->
@@ -217,6 +217,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| constraints-Q4 | [BLOCKER] constraints-Q3 is marked 'Open' regarding deployment mechanism specification (systemd service vs container vs standalone process). Answer provided but not reflected in constraints section, creating implementation ambiguity. | 2026-02-12 |  | Open |
 | constraints-Q3 | [WARNING] Technical constraint 'The web interface SHALL be deployed as a separate service on the same VM as the orchestrator code' is documented, but no specification of deployment mechanism (systemd service, container, standalone process, web server integration) exists. Goals_objectives-Q18 answer provides clarification but this is not reflected in constraints or requirements sections. | 2026-02-12 | For the initial release, the web interface SHALL be deployed as a standalone Python web application process managed by systemd on the existing Linux VM. Containerization (e.g., Docker) is explicitly out of scope for the proof-of-concept release but MAY be considered in future enhancements if multi-user or distributed deployment requirements emerge. | Open |
 | constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
@@ -226,7 +227,6 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 
 <!-- section:requirements -->
 ## 7.  Requirements
-### Technical Requirements
 The web interface SHALL be implemented as a separate service deployed on the same Linux VM that hosts the existing Python-based orchestrator. The system SHALL maintain architectural separation between the web interface and the orchestrator backend to support independent maintenance and future extensibility.
 
 The web interface SHALL communicate with the Python-based orchestrator through a well-defined integration layer that preserves the existing orchestrator functionality without modification to its core logic. The implementation SHALL support session persistence across browser refreshes, maintaining user workflow state and context.
@@ -235,6 +235,7 @@ The system SHALL provide feature parity with the Requirements Automation CLI (to
 
 The web interface SHALL deliver responsive UI/UX design inspired by the Codex interface pattern, supporting desktop, mobile, and tablet form factors. The implementation SHALL target current versions of Chrome and Edge browsers with broad compatibility across modern browsers.
 
+Each functional requirement traces to one or more elements documented in the Problem Statement (Section 2), Goals and Objectives (Section 3), Constraints (Section 6), or Identified Risks (Section 10). A traceability matrix mapping each requirement to its source section and associated question ID is provided in Appendix A.
 <!-- subsection:functional_requirements -->
 ### Functional Requirements
 | Req ID | Description | Priority | Source | Acceptance Criteria |
@@ -247,11 +248,29 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 | FR-006 | The system SHALL provide document iteration capabilities allowing users to refine and regenerate requirements documents | Medium | Goals: Support document creation and iteration | User can trigger document regeneration; Previous document state informs iteration; Changes are tracked and displayable |
 | FR-007 | The web interface SHALL handle user input errors including inaccurate data and malformed input without system failure | Medium | Constraints: Accommodate input errors without compromising stability | Invalid inputs trigger validation messages; System remains operational after input errors; Error messages guide user toward valid input |
 | FR-008 | The web interface SHALL be accessible via local network connectivity without requiring public internet access | Medium | Goals: Local network accessibility; Constraints: Local network only operation | Web interface accessible from local network clients; No public internet dependency for operation; VM accessibility sufficient for web interface access |
+| Req ID | Description | Priority | Source | Acceptance Criteria |
+| FR-001 | The web interface SHALL provide a browser-based UI that allows users to create new requirements documents without SSH or CLI access | High | Problem Statement; Goals: Create web-based interface replacing SSH/CLI workflow | User can initiate document creation through web browser; No SSH session required; Document creation workflow completes without CLI commands |
+| FR-002 | The system SHALL accept user input for repository root, template selection, and document specification equivalent to CLI arguments (--repo-root, --template, --doc) | High | Goals: Support all existing CLI functionality (goals_objectives-Q16, goals_objectives-Q17) | Web UI presents input fields for repo-root, template, and doc parameters; Validation prevents invalid path/template combinations; Inputs map correctly to orchestrator backend |
+| FR-003 | The web interface SHALL support operational modes equivalent to CLI options including dry-run, commit control, logging levels, step limits, handler configuration, and validation modes | High | Goals: Support all existing CLI functionality (goals_objectives-Q16, goals_objectives-Q17) | Web UI provides controls for --dry-run, --no-commit, --log-level, --max-steps, --handler-config, --validate, --strict, --validate-structure; Each option produces equivalent backend behavior to CLI; Mode selections persist in session state |
+| FR-004 | The system SHALL display orchestrator execution results including success/blocked/error states with associated logs and output information | High | Goals: Support all existing CLI functionality (goals_objectives-Q17) | Web UI presents execution outcome state (success/blocked/error); Logs and output information are displayed in readable format; User can distinguish between different outcome states |
+| FR-005 | The web interface SHALL maintain workflow state and user inputs across browser refresh events | Medium | Goals: Maintain session state across browser refreshes (goals_objectives-Q14) | Session state persists after browser refresh; User inputs remain populated; Workflow position is preserved |
+| FR-006 | The system SHALL provide document iteration capabilities allowing users to refine and regenerate requirements documents | Medium | Goals: Support document creation and iteration; Problem Statement | User can trigger document regeneration; Previous document state informs iteration; Changes are tracked and displayable |
+| FR-007 | The web interface SHALL handle user input errors including inaccurate data and malformed input without system failure | Medium | Constraints: Accommodate input errors without compromising stability; Stakeholders: End user could feed inaccurate data or malformed input (stakeholders_users-Q2) | Invalid inputs trigger validation messages; System remains operational after input errors; Error messages guide user toward valid input |
+| FR-008 | The web interface SHALL be accessible via local network connectivity without requiring public internet access | Medium | Goals: Local network accessibility (goals_objectives-Q6); Constraints: Local network only operation | Web interface accessible from local network clients; No public internet dependency for operation; VM accessibility sufficient for web interface access |
 
 <!-- subsection:non_functional_requirements -->
 ### Non-Functional Requirements
 | Req ID | Category | Description | Priority | Measurement Criteria | Acceptance Criteria |
 |--------|----------|-------------|----------|---------------------|---------------------|
+| Req ID | Category | Description | Priority | Measurement Criteria | Acceptance Criteria |
+| NFR-001 | Usability | The web interface SHALL reduce technical barrier to entry compared to SSH/CLI workflow | High | User workflow completion; Time to first successful document creation | User unfamiliar with CLI commands completes new document creation workflow using only web interface without referencing CLI documentation; Time to first successful document creation does not require SSH login |
+| NFR-002 | Compatibility | The web interface SHALL operate correctly on current versions of Chrome and Edge with broad compatibility across modern browsers | High | Browser version testing matrix | Functional testing passes on current versions of Chrome and Edge; No critical failures observed during exploratory testing on Firefox and Safari current versions (best effort, non-blocking) |
+| NFR-003 | Performance | The web interface SHALL operate within proof-of-concept performance parameters without optimization requirements | Low | User experience observation | Interface loads and responds without excessive delay; Document operations complete within user tolerance; No performance-related blocking issues |
+| NFR-004 | Scalability | The web interface SHALL support single concurrent user for initial release | Medium | Concurrent session testing | Single user session operates correctly; Multi-user scenarios out of scope; Resource consumption appropriate for single-user workload |
+| NFR-005 | Maintainability | The web interface architecture SHALL support future enhancements without significant refactoring | High | Code review; Architecture assessment | Feature additions possible without core redesign; Clear separation of concerns; Extension points documented |
+| NFR-006 | Portability | The web interface SHALL provide responsive design supporting desktop, mobile, and tablet form factors | Medium | Device testing across form factors | Interface functional on desktop browsers; Interface functional on mobile devices; Interface functional on tablet devices; Layout adapts appropriately to screen size |
+| NFR-007 | Reliability | The web interface SHALL maintain stability when deployed as separate service on VM alongside orchestrator code | Medium | Service uptime monitoring; Resource utilization | Web service starts and stops cleanly; No interference with existing orchestrator functionality; Service recovers from expected failure modes |
+| NFR-008 | Deployability | The web interface SHALL deploy to existing locally hosted VM infrastructure without requiring additional VM provisioning | High | Deployment execution | Deployment completes on existing VM; No new VM procurement required; Resource allocation sufficient for proof-of-concept usage |
 | NFR-001 | Usability | The web interface SHALL reduce technical barrier to entry compared to SSH/CLI workflow | High | User feedback; Time to first successful document creation | Non-technical users complete document creation without CLI knowledge; Reduction in support requests for basic operations |
 | NFR-002 | Compatibility | The web interface SHALL operate correctly on current versions of Chrome and Edge with broad compatibility across modern browsers | High | Browser version testing matrix | Functional testing passes on Chrome current version; Functional testing passes on Edge current version; No critical failures on Firefox/Safari current versions |
 | NFR-003 | Performance | The web interface SHALL operate within proof-of-concept performance parameters without optimization requirements | Low | User experience observation | Interface loads and responds without excessive delay; Document operations complete within user tolerance; No performance-related blocking issues |
@@ -267,9 +286,14 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:requirements_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| requirements-Q1 | [WARNING] FR-001 through FR-008 all lack traceability to specific source requirements. 'Source' column references high-level goals but not specific stakeholder questions, problem statement elements, or constraint IDs. | 2026-02-12 | Each Functional Requirement SHALL trace to at least one of the following: Problem Statement section 2. Goals and Objectives section 3. Constraints section 6. Identified Risks section 10. A traceability matrix SHALL be added in Appendix A mapping: FR-XXX → Source Section → Question ID (if applicable). This SHALL be completed prior to final approval. | Open |
-| requirements-Q2 | [WARNING] NFR-001 acceptance criterion 'Reduction in support requests for basic operations' is not measurable for single-user proof-of-concept system. No baseline support request metrics exist, and success_criteria section confirms single user for initial release. | 2026-02-12 |A user unfamiliar with CLI commands SHALL complete a new document creation workflow using only the web interface without referencing CLI documentation.Time to first successful document creation SHALL not require SSH login.  | Open |
-| requirements-Q3 | [WARNING] NFR-002 acceptance criteria includes 'No critical failures on Firefox/Safari current versions' but constraints section specifies 'SHALL support current versions of Chrome and Edge browsers' with broad compatibility preferred, not required. Acceptance criteria may be stricter than requirement. | 2026-02-12 | Functional testing passes on current versions of Chrome and Edge (REQUIRED). No critical failures observed during exploratory testing on Firefox/Safari (BEST EFFORT, non-blocking) | Open |
+| requirements-Q4 | [BLOCKER] FR-001 through FR-008 appear duplicated in functional_requirements table with different source traceability information. First set lacks specific traceability; second set includes question IDs. This creates ambiguity about which requirement definition is authoritative. | 2026-02-12 |  | Open |
+| requirements-Q5 | [BLOCKER] NFR-001 through NFR-008 appear duplicated in non_functional_requirements table with different measurement and acceptance criteria. Creates ambiguity about which criteria apply. | 2026-02-12 |  | Open |
+| requirements-Q6 | [BLOCKER] requirements-Q4 is marked 'Open' indicating FR-006 'document iteration capabilities' lacks critical specification detail (what constitutes iteration, version preservation, change tracking mechanism). This impacts testability and implementation. | 2026-02-12 |  | Open |
+| requirements-Q7 | [BLOCKER] requirements-Q5 is marked 'Open' indicating missing orchestrator execution lifecycle controls (start, stop, monitor status). FR-003 covers configuration options but not execution control, creating incomplete workflow specification. | 2026-02-12 |  | Open |
+| requirements-Q8 | [WARNING] Section narrative states 'A traceability matrix mapping each requirement to its source section and associated question ID is provided in Appendix A' but no Appendix A exists in provided sections. | 2026-02-12 |  | Open |
+| requirements-Q1 | [WARNING] FR-001 through FR-008 all lack traceability to specific source requirements. 'Source' column references high-level goals but not specific stakeholder questions, problem statement elements, or constraint IDs. | 2026-02-12 | Each Functional Requirement SHALL trace to at least one of the following: Problem Statement section 2. Goals and Objectives section 3. Constraints section 6. Identified Risks section 10. A traceability matrix SHALL be added in Appendix A mapping: FR-XXX → Source Section → Question ID (if applicable). This SHALL be completed prior to final approval. | Resolved |
+| requirements-Q2 | [WARNING] NFR-001 acceptance criterion 'Reduction in support requests for basic operations' is not measurable for single-user proof-of-concept system. No baseline support request metrics exist, and success_criteria section confirms single user for initial release. | 2026-02-12 | A user unfamiliar with CLI commands SHALL complete a new document creation workflow using only the web interface without referencing CLI documentation.Time to first successful document creation SHALL not require SSH login. | Resolved |
+| requirements-Q3 | [WARNING] NFR-002 acceptance criteria includes 'No critical failures on Firefox/Safari current versions' but constraints section specifies 'SHALL support current versions of Chrome and Edge browsers' with broad compatibility preferred, not required. Acceptance criteria may be stricter than requirement. | 2026-02-12 | Functional testing passes on current versions of Chrome and Edge (REQUIRED). No critical failures observed during exploratory testing on Firefox/Safari (BEST EFFORT, non-blocking) | Resolved |
 | requirements-Q4 | [WARNING] FR-006 'document iteration capabilities' lacks specificity. No definition of what constitutes an 'iteration', whether previous versions are preserved, how changes are tracked, or how users trigger iteration vs. new document creation. | 2026-02-12 | “Iteration” SHALL mean: User initiates regeneration of an existing requirements document using the same document identifier. The system preserves the previous document version in version history. The updated document replaces the working version while retaining change traceability. The user SHALL be able to distinguish between: New document creation, 
 Regeneration/iteration of existing document. This behavior SHALL align with current CLI behavior. | Open |
 | requirements-Q5 | [WARNING] FR-003 lists 8 CLI options that must be supported, but no requirement addresses orchestrator execution control (start, stop, monitor status). Requirements describe configuration inputs but not execution lifecycle. | 2026-02-12 | The web interface SHALL provide explicit execution lifecycle controls including: Start execution. Display running status. Prevent duplicate concurrent executions. Display completion state | Open |
@@ -279,7 +303,7 @@ Regeneration/iteration of existing document. This behavior SHALL align with curr
 
 <!-- section:interfaces_integrations -->
 ## 8. Interfaces and Integrations
-
+The web interface integrates with the existing Python-based orchestrator through a local process invocation model. The system invokes the Requirements Automation CLI (tools/requirements_automation/cli.py) as a subprocess, mapping web UI inputs to corresponding CLI arguments without introducing intermediate API layers or remote exposure mechanisms.
 <!-- subsection:external_systems -->
 ### External Systems
 
@@ -287,7 +311,9 @@ Regeneration/iteration of existing document. This behavior SHALL align with curr
 
 | System | Purpose | Interface Type | Dependencies |
 |--------|---------|----------------|--------------|
-| <!-- PLACEHOLDER --> | - | - | - |
+| System | Purpose | Interface Type | Dependencies |
+| Requirements Automation CLI (tools/requirements_automation/cli.py) | Orchestrator backend for requirements document generation and iteration | Subprocess invocation (local process execution) | Python 3.x runtime; orchestrator-agent repository access; Git repository access for document commits |
+| Local Git Repository | Version control for requirements documents and change tracking | File system access via orchestrator CLI | Git binary; repository write permissions; network access for remote push operations (if enabled) |
 
 <!-- subsection:data_exchange -->
 ### Data Exchange
@@ -296,6 +322,11 @@ Regeneration/iteration of existing document. This behavior SHALL align with curr
 
 | Integration Point | Data Flow | Format | Frequency |
 |-------------------|-----------|--------|-----------|
+| Integration Point | Data Flow | Format | Frequency |
+| Web UI → CLI Invocation | User inputs (repo-root, template, doc, operational flags) mapped to CLI arguments | Command-line argument strings; file path parameters | Per user-initiated document creation or iteration request |
+| CLI → Web UI Status | Execution outcome state (success/blocked/error); exit codes; log output; generated document content | Standard output and standard error streams captured as text; exit code integer (0 for success, non-zero for blocked/error states) | Synchronous response per CLI invocation; real-time log streaming during execution |
+| Web UI → File System | Session state persistence; user workflow context | JSON or structured text format stored in temporary session directory | On session state change; on browser refresh event |
+| CLI → Git Repository | Generated requirements documents; commit metadata; change tracking | Markdown files; Git commit objects | Per successful document generation when commit mode enabled (default behavior unless --no-commit specified) |
 | <!-- PLACEHOLDER --> | - | - | - |
 
 <!-- subsection:questions_issues -->
@@ -304,7 +335,8 @@ Regeneration/iteration of existing document. This behavior SHALL align with curr
 <!-- table:interfaces_integrations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| interfaces_integrations-Q1 | [BLOCKER] Section contains only placeholder content with no actual interface or integration specifications defined. Requirements FR-002, FR-003, FR-004 reference orchestrator backend integration but no integration contract, API specification, or data exchange format is documented. | 2026-02-12 | The web interface SHALL integrate with the existing orchestrator CLI via a local process invocation model: Integration Mechanism: Subprocess execution of cli.py. Invocation: Parameter mapping from web UI inputs to CLI arguments. Communication Model: Standard output and error stream capture. Execution Control: Synchronous invocation with status polling for UI updates. Exit Code Handling: 0 → success. Non-zero defined codes → blocked or error states. No REST API layer is introduced in initial release. No remote API exposure is permitted. All integration remains local to the VM host. | Open |
+| interfaces_integrations-Q2 | [WARNING] data_exchange table contains '<!-- PLACEHOLDER -->' row at end with empty data, indicating incomplete table structure despite having substantive integration points documented above it. | 2026-02-12 |  | Open |
+| interfaces_integrations-Q1 | [BLOCKER] Section contains only placeholder content with no actual interface or integration specifications defined. Requirements FR-002, FR-003, FR-004 reference orchestrator backend integration but no integration contract, API specification, or data exchange format is documented. | 2026-02-12 | The web interface SHALL integrate with the existing orchestrator CLI via a local process invocation model: Integration Mechanism: Subprocess execution of cli.py. Invocation: Parameter mapping from web UI inputs to CLI arguments. Communication Model: Standard output and error stream capture. Execution Control: Synchronous invocation with status polling for UI updates. Exit Code Handling: 0 → success. Non-zero defined codes → blocked or error states. No REST API layer is introduced in initial release. No remote API exposure is permitted. All integration remains local to the VM host. | Resolved |
 
 
 <!-- section_lock:interfaces_integrations lock=false -->
@@ -342,6 +374,7 @@ Regeneration/iteration of existing document. This behavior SHALL align with curr
 <!-- table:data_considerations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| data_considerations-Q1 | [BLOCKER] data_retention subsection contains placeholder comment '<!-- PLACEHOLDER -->' mixed with actual content, indicating incomplete section despite having content below the placeholder. | 2026-02-12 |  | Open |
 
 
 <!-- section_lock:data_considerations lock=false -->
@@ -388,6 +421,8 @@ Success criteria will be fully defined after functional requirements are drafted
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| success_criteria-Q5 | [BLOCKER] success_criteria-Q4 is marked 'Open' regarding unit test coverage requirements, testing framework, and test automation approach. Success criterion 'Unit test scripts validate all functional requirements' lacks implementation specification. | 2026-02-12 |  | Open |
+| success_criteria-Q6 | [WARNING] Success criteria includes 'Success criteria will be fully defined after functional requirements are drafted' as trailing statement, but functional requirements are already drafted and populated in requirements section. Statement is outdated. | 2026-02-12 |  | Open |
 | success_criteria-Q4 | [WARNING] Success criterion 'Unit test scripts validate all functional requirements' has no corresponding requirement defining unit test coverage requirements, testing framework, or test automation approach. | 2026-02-12 | The project SHALL utilize Python-based unit testing (pytest) for backend validation and integration testing for CLI invocation mapping. Automated test scripts SHALL validate: Parameter mapping correctness. CLI exit code handling. Session persistence behavior. Error handling pathways. Test framework specification SHALL be documented in implementation plan, not in requirements document. | Open |
 | success_criteria-Q3 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining expected behavior or validation rules | 2026-02-12 | success criteria will be fully defined after functional requirements are drafted. | Resolved |
 | success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Resolved |
