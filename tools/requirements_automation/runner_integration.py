@@ -48,6 +48,10 @@ def _build_subsection_structure(
         List of subsection dicts with 'id' and 'type' keys, or None if no subsections
     """
     # Only build structure if handler supports subsections
+    # Check both handler_config.subsections flag AND output_format because:
+    # - subsections=True means handler explicitly declares subsection support
+    # - output_format="subsections" means LLM should organize content with subsection headers
+    # Both conditions ensure subsection-aware content generation
     if not handler_config.subsections and handler_config.output_format != "subsections":
         return None
     

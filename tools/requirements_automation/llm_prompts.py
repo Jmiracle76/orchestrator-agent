@@ -35,14 +35,14 @@ def format_prior_sections(prior_sections: dict) -> str:
     return "\n".join(lines)
 
 
-def _build_format_guidance(output_format: str) -> str:
+def _build_base_format_guidance(output_format: str) -> str:
     """Build base format guidance string from output_format.
     
     Args:
         output_format: Output format hint ("prose", "bullets", "subsections")
         
     Returns:
-        Format guidance string
+        Base format guidance string
     """
     format_guidance_map = {
         "prose": "Write content as flowing prose paragraphs.",
@@ -196,11 +196,8 @@ def build_integrate_answers_prompt(
     Returns:
         Formatted prompt string
     """
-    # Build format guidance
-    format_guidance = _build_format_guidance(output_format)
-    
-    # Build subsection-specific guidance if provided
-    format_guidance += _build_subsection_guidance(subsection_structure)
+    # Build format guidance - combine base format with subsection-specific guidance
+    format_guidance = _build_base_format_guidance(output_format) + _build_subsection_guidance(subsection_structure)
 
     # Build document context if prior sections provided
     doc_context = ""
@@ -260,11 +257,8 @@ def build_draft_section_prompt(
     Returns:
         Formatted prompt string
     """
-    # Build format guidance
-    format_guidance = _build_format_guidance(output_format)
-    
-    # Build subsection-specific guidance if provided
-    format_guidance += _build_subsection_guidance(subsection_structure)
+    # Build format guidance - combine base format with subsection-specific guidance
+    format_guidance = _build_base_format_guidance(output_format) + _build_subsection_guidance(subsection_structure)
 
     # Build document context - this is required for drafting
     doc_context = ""
