@@ -143,7 +143,7 @@ requirements:
     auto_apply_patches: never
     scope: all_prior_sections
     
-  risks_open_issues:
+  identified_risks:
     mode: integrate_then_questions
     output_format: prose
     subsections: false
@@ -153,6 +153,8 @@ requirements:
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections
+    questions_table: identified_risks_questions  # Per-section question table
+    bootstrap_questions: false  # Risks section doesn't pre-populate questions from template
     
   approval_record:
     mode: integrate_then_questions

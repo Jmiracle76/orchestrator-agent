@@ -67,7 +67,7 @@ PHASES = {
     "phase_4_interfaces_data_risks": [
         "interfaces_integrations",
         "data_considerations",
-        "risks_open_issues",
+        "identified_risks",
     ],
     "phase_5_approval": ["approval_record"],
 }

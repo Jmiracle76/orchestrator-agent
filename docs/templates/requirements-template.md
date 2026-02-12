@@ -12,7 +12,7 @@ review_gate:coherence_check
 requirements
 interfaces_integrations
 data_considerations
-risks_open_issues
+identified_risks
 review_gate:final_review
 approval_record
 -->
@@ -313,25 +313,15 @@ approval_record
 <!-- section_lock:data_considerations lock=false -->
 ---
 
-<!-- section:risks_open_issues -->
-## 10. Risks and Open Issues
-
-<!-- subsection:identified_risks -->
-### Identified Risks
+<!-- section:identified_risks -->
+## 10. Identified Risks
 
 <!-- table:risks -->
 | Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
 |---------|-------------|-------------|--------|---------------------|-------|
 | <!-- PLACEHOLDER --> | - | - | - | - | - |
 
-<!-- subsection:open_questions -->
-### Open Questions
-
-<!-- table:open_questions -->
-| Question ID | Question | Date | Answer | Section Target | Resolution Status |
-|-------------|----------|------|--------|----------------|-------------------|
-| Q-001 | What problem are we trying to solve? | [Date] |  | problem_statement | Open |
-
+<!-- section_lock:identified_risks lock=false -->
 ---
 
 <!-- section:success_criteria -->

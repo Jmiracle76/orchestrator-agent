@@ -18,21 +18,29 @@ def parse_markdown_table(table_lines: List[str]) -> List[List[str]]:
     return rows
 
 
-def open_questions_parse(lines: List[str]) -> Tuple[List[OpenQuestion], Tuple[int, int], List[str]]:
-    """Parse the Open Questions table and return rows with its span."""
-    span = find_table_block(lines, "open_questions")
+def open_questions_parse(lines: List[str], table_id: str = "open_questions") -> Tuple[List[OpenQuestion], Tuple[int, int], List[str]]:
+    """Parse an Open Questions table and return rows with its span.
+    
+    Args:
+        lines: Document lines
+        table_id: Table identifier to parse (default: "open_questions" for backward compatibility)
+        
+    Returns:
+        Tuple of (questions, (start_line, end_line), header_columns)
+    """
+    span = find_table_block(lines, table_id)
     if not span:
         raise ValueError(
-            "Open Questions table not found (missing <!-- table:open_questions --> or table)."
+            f"Open Questions table not found (missing <!-- table:{table_id} --> or table)."
         )
     start, end = span
     rows = parse_markdown_table(lines[start:end])
     if len(rows) < 2:
-        raise ValueError("Open Questions table malformed (missing header/separator).")
+        raise ValueError(f"Open Questions table malformed (missing header/separator) for table: {table_id}")
     # Validate the header row to ensure a stable schema.
     header = rows[0]
     if header != OPEN_Q_COLUMNS:
-        raise ValueError(f"Open Questions header mismatch. Expected {OPEN_Q_COLUMNS}, got {header}")
+        raise ValueError(f"Open Questions header mismatch for table {table_id}. Expected {OPEN_Q_COLUMNS}, got {header}")
     qs: List[OpenQuestion] = []
     # Skip separator row and any malformed or placeholder rows.
     for r in rows[2:]:
@@ -70,10 +78,19 @@ def open_questions_next_id(existing: List[OpenQuestion]) -> str:
 
 
 def open_questions_insert(
-    lines: List[str], new_questions: List[Tuple[str, str, str]]
+    lines: List[str], new_questions: List[Tuple[str, str, str]], table_id: str = "open_questions"
 ) -> Tuple[List[str], int]:
-    """Insert new questions, skipping duplicates, and return insert count."""
-    existing, (start, end), _ = open_questions_parse(lines)
+    """Insert new questions, skipping duplicates, and return insert count.
+    
+    Args:
+        lines: Document lines
+        new_questions: List of (question_text, section_target, date) tuples
+        table_id: Table identifier to insert into (default: "open_questions" for backward compatibility)
+        
+    Returns:
+        Tuple of (updated_lines, insert_count)
+    """
+    existing, (start, end), _ = open_questions_parse(lines, table_id)
     existing_keys = {(_norm(q.question), _norm(q.section_target)) for q in existing}
     to_insert: List[str] = []
     inserted = 0
@@ -93,9 +110,18 @@ def open_questions_insert(
     return lines[:start] + table_lines + lines[end:], inserted
 
 
-def open_questions_resolve(lines: List[str], question_ids: List[str]) -> Tuple[List[str], int]:
-    """Mark matching question IDs as Resolved and return resolve count."""
-    _, (start, end), _ = open_questions_parse(lines)
+def open_questions_resolve(lines: List[str], question_ids: List[str], table_id: str = "open_questions") -> Tuple[List[str], int]:
+    """Mark matching question IDs as Resolved and return resolve count.
+    
+    Args:
+        lines: Document lines
+        question_ids: List of question IDs to resolve
+        table_id: Table identifier to resolve in (default: "open_questions" for backward compatibility)
+        
+    Returns:
+        Tuple of (updated_lines, resolve_count)
+    """
+    _, (start, end), _ = open_questions_parse(lines, table_id)
     qset = {q.strip() for q in question_ids}
     table_lines = lines[start:end]
     resolved = 0
