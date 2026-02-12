@@ -137,10 +137,10 @@ Without addressing this usability barrier, the project risks limited adoption. T
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q4 | What is the maximum acceptable time for a new user to complete their first requirements document using the web interface? | 2026-02-12 |  | Open |
-| goals_objectives-Q5 | What specific UI/UX patterns or frameworks are considered 'modern' for this project's target user base? | 2026-02-12 |  | Open |
-| goals_objectives-Q6 | Should the web interface support offline or local-only operation, or does it require network connectivity to the VM? | 2026-02-12 |  | Open |
-| goals_objectives-Q7 | Are mobile or tablet form factors in scope for the web interface, or is desktop browser access sufficient? | 2026-02-12 |  | Open |
+| goals_objectives-Q4 | What is the maximum acceptable time for a new user to complete their first requirements document using the web interface? | 2026-02-12 | There is no maximum acceptable time frame to complete a requirements document. | Open |
+| goals_objectives-Q5 | What specific UI/UX patterns or frameworks are considered 'modern' for this project's target user base? | 2026-02-12 | The current Codex ui/ux pattern could serve as the inspiration for this project. | Open |
+| goals_objectives-Q6 | Should the web interface support offline or local-only operation, or does it require network connectivity to the VM? | 2026-02-12 | The web interface should be accessible from the local network. It does not need public internet access capability. | Open |
+| goals_objectives-Q7 | Are mobile or tablet form factors in scope for the web interface, or is desktop browser access sufficient? | 2026-02-12 | Mobile/tablet form factors are in scope. A responsive interface is preferred. | Open |
 | goals_objectives-Q1 | What are the measurable success indicators for each goal? | [Date] | A lightweight, modern web interface exists that makes new document creation and iteration easier. The web app needs to support future enhacements and features that have not yet been identified. The app must be easily upgraded with future features and bug fixes. | Resolved |
 | goals_objectives-Q2 | What constraints must this solution respect? | [Date] | The orchestrator is built on python and runs on a locally hosted VM. | Resolved |
 | goals_objectives-Q3 | What is explicitly out of scope for this project? | [Date] | multi-user access and multi-project/multi-repo support may be added in future enhancements. | Resolved |
