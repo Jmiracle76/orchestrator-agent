@@ -59,6 +59,13 @@ class ReviewGateHandler:
         # 1. Determine scope (which sections to review)
         scope_sections = self._determine_scope(gate_id, config.scope)
 
+        # 1.5. For coherence_check gate, perform automated validation checks
+        if gate_id == "review_gate:coherence_check":
+            validation_result = self._validate_coherence_requirements(scope_sections)
+            if not validation_result.passed:
+                # Return early with validation failures
+                return validation_result
+
         # 2. Extract content for all scope sections
         section_contents = self._extract_sections(scope_sections)
 
@@ -76,6 +83,10 @@ class ReviewGateHandler:
 
         # 5. Validate patches (structural validation, not semantic)
         result = self._validate_patches(result)
+
+        # 6. For coherence_check gate, if passed, lock prior sections and update approval record
+        if gate_id == "review_gate:coherence_check" and result.passed:
+            self._apply_coherence_gate_pass_actions(scope_sections)
 
         return result
 
@@ -413,3 +424,96 @@ class ReviewGateHandler:
                 continue
 
         return updated_lines, total_inserted
+
+    def _validate_coherence_requirements(self, scope_sections: List[str]) -> ReviewResult:
+        """
+        Validate coherence_check gate requirements before passing.
+        
+        Checks:
+        1. All section-level question tables have zero "Open" status rows
+        2. All rows in risks table have Probability and Impact both set to "Low"
+        
+        Args:
+            scope_sections: List of section IDs to check
+        
+        Returns:
+            ReviewResult with pass/fail status and blocker issues if validation fails
+        """
+        from .parsing import (
+            check_risks_table_for_non_low_risks,
+            check_section_table_for_open_questions,
+        )
+        
+        issues = []
+        
+        # Check 1: Verify no open questions in prior section tables
+        for section_id in scope_sections:
+            has_open, open_count = check_section_table_for_open_questions(self.lines, section_id)
+            if has_open:
+                issues.append(
+                    ReviewIssue(
+                        severity="blocker",
+                        section=section_id,
+                        description=f"Section has {open_count} open question(s) that must be resolved before passing gate",
+                        suggestion="Please resolve all open questions in the section's question table",
+                    )
+                )
+        
+        # Check 2: Verify all risks are Low/Low
+        has_non_low, non_low_risks = check_risks_table_for_non_low_risks(self.lines)
+        if has_non_low:
+            risk_descriptions = "\n".join([f"  - {r}" for r in non_low_risks])
+            issues.append(
+                ReviewIssue(
+                    severity="blocker",
+                    section="identified_risks",
+                    description=f"Found {len(non_low_risks)} risk(s) with non-Low probability or impact:\n{risk_descriptions}",
+                    suggestion="All risks must have both Probability and Impact set to 'Low' before passing gate",
+                )
+            )
+        
+        # If no issues, gate can pass
+        if not issues:
+            return ReviewResult(
+                gate_id="review_gate:coherence_check",
+                passed=True,
+                issues=[],
+                patches=[],
+                scope_sections=scope_sections,
+                summary="Coherence validation checks passed",
+            )
+        
+        # Return result with blocker issues
+        return ReviewResult(
+            gate_id="review_gate:coherence_check",
+            passed=False,
+            issues=issues,
+            patches=[],
+            scope_sections=scope_sections,
+            summary=f"Coherence validation failed with {len(issues)} blocker(s)",
+        )
+
+    def _apply_coherence_gate_pass_actions(self, scope_sections: List[str]) -> None:
+        """
+        Apply actions when coherence_check gate passes.
+        
+        Actions:
+        1. Lock all prior sections
+        2. Update approval record table with reviewer and date
+        
+        Args:
+            scope_sections: List of section IDs that were in scope (these get locked)
+        """
+        from .config import AUTOMATION_ACTOR
+        from .parsing import set_section_lock, update_approval_record_table
+        
+        # Lock all prior sections
+        for section_id in scope_sections:
+            self.lines = set_section_lock(self.lines, section_id, lock=True)
+            logging.info(f"Locked section: {section_id}")
+        
+        # Update approval record table
+        self.lines = update_approval_record_table(
+            self.lines, reviewer=AUTOMATION_ACTOR, status="Coherence Check Passed"
+        )
+        logging.info("Updated approval record table")

@@ -416,3 +416,211 @@ def validate_open_questions_table_schema(lines: List[str]) -> bool:
 
     header_cells = [c.strip() for c in header_line.strip().strip("|").split("|")]
     return header_cells == OPEN_Q_COLUMNS
+
+
+def check_section_table_for_open_questions(lines: List[str], section_id: str) -> Tuple[bool, int]:
+    """
+    Check if a section's question table has any "Open" status rows.
+    
+    Args:
+        lines: Document content as list of strings
+        section_id: Section ID to check (e.g., "problem_statement")
+    
+    Returns:
+        Tuple of (has_open_questions, open_count)
+    """
+    table_id = f"{section_id}_questions"
+    span = find_table_block(lines, table_id)
+    
+    if not span:
+        # No table found - no open questions
+        return False, 0
+    
+    start, end = span
+    table_lines = lines[start:end]
+    
+    if len(table_lines) < 2:
+        # Header only, no data rows
+        return False, 0
+    
+    # Skip header and separator rows
+    data_rows = table_lines[2:]
+    
+    open_count = 0
+    for row in data_rows:
+        if not row.strip().startswith("|"):
+            continue
+        
+        # Parse row cells
+        cells = [c.strip() for c in row.strip().strip("|").split("|")]
+        
+        # Typically: | Question ID | Question | Date | Answer | Status |
+        # Status is the last column (index -1)
+        if len(cells) >= 5:
+            status = cells[-1].strip()
+            if status.lower() == "open":
+                open_count += 1
+    
+    return open_count > 0, open_count
+
+
+def check_risks_table_for_non_low_risks(lines: List[str]) -> Tuple[bool, List[str]]:
+    """
+    Check if the risks table has any risks that are not Low/Low.
+    
+    Args:
+        lines: Document content as list of strings
+    
+    Returns:
+        Tuple of (has_non_low_risks, list_of_risk_descriptions)
+    """
+    span = find_table_block(lines, "risks")
+    
+    if not span:
+        # No risks table found - consider this as pass (no risks to check)
+        return False, []
+    
+    start, end = span
+    table_lines = lines[start:end]
+    
+    if len(table_lines) < 2:
+        # Header only, no data rows
+        return False, []
+    
+    # Skip header and separator rows
+    data_rows = table_lines[2:]
+    
+    non_low_risks = []
+    for row in data_rows:
+        if not row.strip().startswith("|"):
+            continue
+        
+        # Parse row cells
+        cells = [c.strip() for c in row.strip().strip("|").split("|")]
+        
+        # Expected: | Risk ID | Description | Probability | Impact | Mitigation Strategy | Owner |
+        if len(cells) >= 4:
+            description = cells[1].strip() if len(cells) > 1 else "Unknown"
+            probability = cells[2].strip() if len(cells) > 2 else ""
+            impact = cells[3].strip() if len(cells) > 3 else ""
+            
+            # Skip placeholder rows
+            if description in ("", "-", "<!-- PLACEHOLDER -->"):
+                continue
+            
+            # Check if both probability and impact are "Low" (case-insensitive)
+            if probability.lower() != "low" or impact.lower() != "low":
+                non_low_risks.append(f"{description} (Probability: {probability}, Impact: {impact})")
+    
+    return len(non_low_risks) > 0, non_low_risks
+
+
+def set_section_lock(lines: List[str], section_id: str, lock: bool) -> List[str]:
+    """
+    Set the section lock marker for a section.
+    
+    Args:
+        lines: Document content as list of strings
+        section_id: Section ID to lock/unlock
+        lock: True to lock, False to unlock
+    
+    Returns:
+        Updated document lines
+    """
+    spans = find_sections(lines)
+    span = get_section_span(spans, section_id)
+    
+    if not span:
+        # Section not found, return lines unchanged
+        return lines
+    
+    lock_value = "true" if lock else "false"
+    new_marker = f"<!-- section_lock:{section_id} lock={lock_value} -->"
+    
+    # Look for existing lock marker in the section
+    lock_line_idx = None
+    for i in range(span.start_line, span.end_line):
+        m = SECTION_LOCK_RE.search(lines[i])
+        if m and m.group("id") == section_id:
+            lock_line_idx = i
+            break
+    
+    new_lines = lines.copy()
+    
+    if lock_line_idx is not None:
+        # Replace existing lock marker
+        new_lines[lock_line_idx] = new_marker
+    else:
+        # Insert new lock marker at the end of the section (before the separator)
+        # Find the last line before the next section or end
+        insert_idx = span.end_line - 1
+        
+        # Move back to skip trailing empty lines and "---" separators
+        while insert_idx > span.start_line and (
+            new_lines[insert_idx].strip() == "" or new_lines[insert_idx].strip() == "---"
+        ):
+            insert_idx -= 1
+        
+        # Insert after the last content line
+        new_lines.insert(insert_idx + 1, new_marker)
+    
+    return new_lines
+
+
+def update_approval_record_table(
+    lines: List[str], reviewer: str, status: str = "Approved"
+) -> List[str]:
+    """
+    Update the approval record table with reviewer information and current date.
+    
+    Args:
+        lines: Document content as list of strings
+        reviewer: Name of the reviewer/approver
+        status: Approval status (default: "Approved")
+    
+    Returns:
+        Updated document lines
+    """
+    from datetime import datetime
+    
+    span = find_table_block(lines, "approval_record")
+    
+    if not span:
+        # No approval record table found
+        return lines
+    
+    start, end = span
+    new_lines = lines.copy()
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Update the table rows
+    for i in range(start, end):
+        line = new_lines[i]
+        
+        # Look for specific fields and update them
+        if "| Current Status |" in line or "| Status |" in line:
+            # Update status
+            new_lines[i] = re.sub(
+                r"\|\s*[^|]+\s*\|$",
+                f"| {status} |",
+                line,
+                count=1
+            )
+        elif "| Recommended By |" in line or "| Reviewer |" in line:
+            # Update reviewer
+            new_lines[i] = re.sub(
+                r"\|\s*[^|]+\s*\|$",
+                f"| {reviewer} |",
+                line,
+                count=1
+            )
+        elif "| Recommendation Date |" in line or "| Review Date |" in line:
+            # Update date
+            new_lines[i] = re.sub(
+                r"\|\s*[^|]+\s*\|$",
+                f"| {today} |",
+                line,
+                count=1
+            )
+    
+    return new_lines
