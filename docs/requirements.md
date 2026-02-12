@@ -18,7 +18,7 @@ approval_record
 -->
 
 <!-- review_gate_result:review_gate:coherence_check status=passed issues=0 warnings=6 -->
-<!-- review_gate_result:review_gate:final_review status=failed issues=5 warnings=9 -->
+<!-- review_gate_result:review_gate:final_review status=failed issues=4 warnings=9 -->
 # Requirements Document
 
 <!-- meta:project_name -->
@@ -123,6 +123,7 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| goals_objectives-Q19 | [BLOCKER] Three open questions remain unresolved (goals_objectives-Q16, Q17, Q18), with Q17 flagged as impacting ability to implement core goal 'Support all existing CLI functionality'. Answers are marked 'Open' status despite being incorporated into FR-002 and FR-003 requirements. | 2026-02-12 |  | Open |
 | goals_objectives-Q17 | [WARNING] Open question goals_objectives-Q16 flags lack of CLI functionality enumeration, directly impacting ability to implement 'Support all existing CLI functionality' goal. | 2026-02-12 | Support all existing CLI functionality” for initial Web UI release SHALL mean feature parity with the current Requirements Automation CLI (tools/requirements_automation/cli.py), including: configuring inputs equivalent to required CLI args (--repo-root, --template, --doc); supporting the same operational modes and options (--dry-run, --no-commit, --log-level, --max-steps, --handler-config, --validate, --strict, --validate-structure); and exposing outcome states equivalent to CLI exit codes (success/blocked/error) along with the associated log/output information. | Open |
 | goals_objectives-Q18 | [WARNING] Primary goal 'Deploy the web interface as a separate service on the same VM' contradicts constraint that describes it as operating on 'existing locally hosted VM infrastructure' without specifying whether this VM has capacity for additional services. | 2026-02-12 | There is no contradiction intended. The web interface SHALL be deployed as an additional service on the existing locally hosted VM where the current Python CLI/automation runs today. “Separate service” means a separately managed web process (and, if applicable, its supporting services) running alongside the existing CLI workflow on the same host, not a separate VM. The existing VM has sufficient available CPU/RAM/storage to host this additional service for the initial release (single-user, low-traffic usage), and no new VM procurement is required. If capacity constraints are encountered during implementation, the fallback plan is to adjust resource allocation and/or move the web service to a separate host in a later phase. | Open |
 | goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' lacks specificity - no enumeration of what CLI functionality exists | 2026-02-12 | Support all existing CLI functionality” for initial Web UI release SHALL mean feature parity with the current Requirements Automation CLI (tools/requirements_automation/cli.py), including: configuring inputs equivalent to required CLI args (--repo-root, --template, --doc); supporting the same operational modes and options (--dry-run, --no-commit, --log-level, --max-steps, --handler-config, --validate, --strict, --validate-structure); and exposing outcome states equivalent to CLI exit codes (success/blocked/error) along with the associated log/output information. | Open |
@@ -162,6 +163,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| stakeholders_users-Q9 | [BLOCKER] Product Owner contact information listed as 'TBD' with two open questions (stakeholders_users-Q7, Q8) flagging this ambiguity. Product owner is identified as approval authority for success criteria but cannot be contacted. | 2026-02-12 |  | Open |
 | stakeholders_users-Q8 | [WARNING] Open question stakeholders_users-Q7 identifies Product Owner contact as 'TBD', creating communication ambiguity. | 2026-02-12 |  | Open |
 | stakeholders_users-Q7 | [WARNING] Contact information listed as 'TBD' for Product Owner creates communication ambiguity | 2026-02-12 |  | Open |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
@@ -187,6 +189,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| assumptions-Q3 | [WARNING] Assumption numbering skips from #4 to #6, suggesting assumption #5 was removed without renumbering. | 2026-02-12 |  | Open |
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Resolved |
 | assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Resolved |
 
@@ -219,6 +222,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| constraints-Q3 | [WARNING] Technical constraint 'The web interface SHALL be deployed as a separate service on the same VM as the orchestrator code' is documented, but no specification of deployment mechanism (systemd service, container, standalone process, web server integration) exists. Goals_objectives-Q18 answer provides clarification but this is not reflected in constraints or requirements sections. | 2026-02-12 |  | Open |
 | constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
 
@@ -268,6 +272,11 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:requirements_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| requirements-Q1 | [WARNING] FR-001 through FR-008 all lack traceability to specific source requirements. 'Source' column references high-level goals but not specific stakeholder questions, problem statement elements, or constraint IDs. | 2026-02-12 |  | Open |
+| requirements-Q2 | [WARNING] NFR-001 acceptance criterion 'Reduction in support requests for basic operations' is not measurable for single-user proof-of-concept system. No baseline support request metrics exist, and success_criteria section confirms single user for initial release. | 2026-02-12 |  | Open |
+| requirements-Q3 | [WARNING] NFR-002 acceptance criteria includes 'No critical failures on Firefox/Safari current versions' but constraints section specifies 'SHALL support current versions of Chrome and Edge browsers' with broad compatibility preferred, not required. Acceptance criteria may be stricter than requirement. | 2026-02-12 |  | Open |
+| requirements-Q4 | [WARNING] FR-006 'document iteration capabilities' lacks specificity. No definition of what constitutes an 'iteration', whether previous versions are preserved, how changes are tracked, or how users trigger iteration vs. new document creation. | 2026-02-12 |  | Open |
+| requirements-Q5 | [WARNING] FR-003 lists 8 CLI options that must be supported, but no requirement addresses orchestrator execution control (start, stop, monitor status). Requirements describe configuration inputs but not execution lifecycle. | 2026-02-12 |  | Open |
 
 
 <!-- section_lock:requirements lock=false -->
@@ -300,6 +309,7 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:interfaces_integrations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| interfaces_integrations-Q1 | [BLOCKER] Section contains only placeholder content with no actual interface or integration specifications defined. Requirements FR-002, FR-003, FR-004 reference orchestrator backend integration but no integration contract, API specification, or data exchange format is documented. | 2026-02-12 |  | Open |
 
 
 <!-- section_lock:interfaces_integrations lock=false -->
@@ -332,6 +342,7 @@ The web interface SHALL deliver responsive UI/UX design inspired by the Codex in
 <!-- table:data_considerations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| data_considerations-Q1 | [BLOCKER] Section contains only placeholder content with no actual data requirements, privacy, security, or retention policies defined. Identified_risks section explicitly flags 'Security Exposure Risk' noting 'Data Considerations section currently lacks defined security requirements', and success_criteria includes 'The system handles inaccurate data entry and malformed input' without corresponding data validation specifications. | 2026-02-12 |  | Open |
 
 
 <!-- section_lock:data_considerations lock=false -->
@@ -378,6 +389,7 @@ Success criteria will be fully defined after functional requirements are drafted
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
+| success_criteria-Q4 | [WARNING] Success criterion 'Unit test scripts validate all functional requirements' has no corresponding requirement defining unit test coverage requirements, testing framework, or test automation approach. | 2026-02-12 |  | Open |
 | success_criteria-Q3 | [WARNING] Success criterion 'The system handles inaccurate data entry and malformed input without compromising stability' has no corresponding functional requirement defining expected behavior or validation rules | 2026-02-12 | success criteria will be fully defined after functional requirements are drafted. | Resolved |
 | success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Resolved |
 | success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | Unit test scripts must validate acceptance criteria have been met across all requirements and the product owner will approve test results. | Resolved |
