@@ -383,8 +383,8 @@ Given the single-user deployment model on a locally hosted VM, the system operat
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| success_criteria-Q1 | How will success be measured and validated? | [Date] | | Open |
-| success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | | Open |
+| success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Open |
+| success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | Unit test scripts must validate acceptance criteria have been met across all requirements and the product owner will approve test results. | Open |
 
 <!-- section_lock:success_criteria lock=false -->
 ---
