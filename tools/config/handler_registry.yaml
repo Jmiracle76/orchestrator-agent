@@ -57,7 +57,7 @@ requirements:
   stakeholders_users:
     mode: integrate_then_questions
     output_format: prose
-    subsections: false
+    subsections: true  # supports primary_stakeholders, end_users subsections with table content
     dedupe: false
     preserve_headers: []
     sanitize_remove: []
