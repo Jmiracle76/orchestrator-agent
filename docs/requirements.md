@@ -120,8 +120,6 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q19 | [BLOCKER] Duplicate content structure: objectives are listed in both main section body and organized subsections (objective_statement, primary_goals, secondary_goals, non_goals). This violates single-source-of-truth principle and creates maintenance burden. | 2026-02-12 |  | Open |
-| goals_objectives-Q18 | [WARNING] Goals section contains duplicate content - objectives are listed in both main section body and organized subsections (objective_statement, primary_goals, secondary_goals, non_goals). | 2026-02-12 | acknowledged. This will be resolved in future enhancements. | Resolved |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
 | goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
@@ -158,9 +156,6 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q9 | [WARNING] User characteristic 'single-user deployment with exclusive system access' describes a system constraint rather than a user characteristic. Question stakeholders_users-Q8 flags this as WARNING. This belongs in constraints section, not user characteristics. | 2026-02-12 |  | Open |
-| stakeholders_users-Q8 | [WARNING] User characteristic 'single-user deployment with exclusive system access' describes a system constraint rather than a user characteristic. | 2026-02-12 |  | Resolved |
-| stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 | This is acceptable for this proof of concept design. | Resolved |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
 | stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
 | stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Resolved |
@@ -186,14 +181,10 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q6 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no formal UI/UX requirements are defined beyond 'inspired by Codex interface pattern' guidance. Questions assumptions-Q3, assumptions-Q4, and assumptions-Q5 flag this ambiguity. The term 'required UI/UX patterns' implies mandatory specifications that do not exist. | 2026-02-12 |  | Open |
-| assumptions-Q5 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no formal UI/UX requirements are defined beyond 'inspired by Codex interface pattern' guidance. | 2026-02-12 |  | Resolved |
-| assumptions-Q4 | [WARNING] Assumption 7 references 'required UI/UX patterns' when no specific UI/UX patterns are formally defined as requirements, only 'inspired by Codex interface pattern' | 2026-02-12 | TBD | Resolved |
-| assumptions-Q3 | [WARNING] Assumption 7 references 'required UI/UX patterns' but no specific UI/UX patterns are defined as requirements in the document beyond 'Codex interface pattern' inspiration | 2026-02-12 | UI/UX patterns are defined as being similara to and inspired by Codex ui/ux. | Resolved |
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Resolved |
 | assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Resolved |
 
-<!-- section_lock:assumptions lock=false -->
+<!-- section_lock:assumptions lock=true -->
 ---
 
 <!-- section:constraints -->
@@ -224,10 +215,6 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q6 | [BLOCKER] Duplicate content structure: constraints are listed in main section body and subsection placeholders exist (technical_constraints, operational_constraints, resource_constraints) but are not populated. Question constraints-Q3 and constraints-Q4 identify this as a blocker requiring reorganization. | 2026-02-12 |  | Open |
-| constraints-Q5 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content. Constraints are listed in main section body but not organized into required subsections. | 2026-02-12 |  | Resolved |
-| constraints-Q3 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content that has not been populated with actual constraints | 2026-02-12 | The constraints listed in the main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Resolved |
-| constraints-Q4 | [WARNING] Constraints section has duplicate content - constraints are listed both in main section body and in placeholder subsections structure | 2026-02-12 | constraints listed in main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Resolved |
 | constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
 
