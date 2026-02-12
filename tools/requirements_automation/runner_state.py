@@ -12,6 +12,7 @@ from .parsing import (
     find_sections,
     find_subsections_within,
     get_section_span,
+    has_placeholder,
     section_body,
     section_is_blank,
     section_is_locked,
@@ -88,10 +89,8 @@ def get_section_state(
     locked = section_is_locked(lines, span)
     is_blank = section_is_blank(lines, span)
 
-    # Check for placeholder token
-    has_placeholder = any(
-        PLACEHOLDER_TOKEN in line for line in lines[span.start_line : span.end_line]
-    )
+    # Check for placeholder token in preamble only (ignoring subsections)
+    section_has_placeholder = has_placeholder(span, lines)
 
     # Determine if using section-specific questions
     use_section_qs = (
@@ -157,7 +156,7 @@ def get_section_state(
         exists=True,
         locked=locked,
         is_blank=is_blank,
-        has_placeholder=has_placeholder,
+        has_placeholder=section_has_placeholder,
         has_open_questions=has_open_questions,
         has_answered_questions=has_answered_questions,
     )
