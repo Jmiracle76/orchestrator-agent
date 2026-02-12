@@ -24,6 +24,61 @@ from .section_questions import (
 from .utils_io import iso_today
 
 
+# Subsections that contain table content
+TABLE_SUBSECTIONS = {
+    "primary_stakeholders",
+    "end_users",
+    "external_systems",
+    "data_exchange",
+    "risks",
+}
+
+
+def _build_subsection_structure(
+    lines: List[str], span: Any, handler_config: Any
+) -> Optional[List[dict]]:
+    """Build subsection structure information for LLM prompts.
+    
+    Args:
+        lines: Document lines
+        span: Section span
+        handler_config: Handler configuration
+        
+    Returns:
+        List of subsection dicts with 'id' and 'type' keys, or None if no subsections
+    """
+    # Only build structure if handler supports subsections
+    if not handler_config.subsections and handler_config.output_format != "subsections":
+        return None
+    
+    subs = find_subsections_within(lines, span)
+    if not subs:
+        return None
+    
+    # Filter out questions_issues subsection as it's metadata, not content
+    content_subs = [s for s in subs if not s.subsection_id.endswith("_questions") 
+                    and s.subsection_id != "questions_issues"]
+    
+    if not content_subs:
+        return None
+    
+    structure = []
+    for sub in content_subs:
+        sub_info = {"id": sub.subsection_id}
+        
+        # Determine content type
+        if sub.subsection_id in TABLE_SUBSECTIONS:
+            sub_info["type"] = "table"
+        elif handler_config.output_format == "bullets":
+            sub_info["type"] = "bullets"
+        else:
+            sub_info["type"] = "prose"
+        
+        structure.append(sub_info)
+    
+    return structure if structure else None
+
+
 def _use_section_questions(handler_config: Any) -> bool:
     """Determine if section uses per-section questions table.
 
@@ -154,6 +209,9 @@ def integrate_answered_questions(
 
     # Include subsections for boundary calculation
     subs = find_subsections_within(lines, span)
+    
+    # Build subsection structure for LLM prompt
+    subsection_structure = _build_subsection_structure(lines, span, handler_config)
 
     # Group questions by target (section or subsection)
     by_target: Dict[str, List] = {}
@@ -195,6 +253,7 @@ def integrate_answered_questions(
             llm_profile=handler_config.llm_profile,
             output_format=handler_config.output_format,
             prior_sections=prior_sections,
+            subsection_structure=subsection_structure,
         )
 
         if new_body.strip() and new_body.strip() != context.strip():
@@ -285,12 +344,17 @@ def draft_section_content(
 
     try:
         ctx = section_body(lines, span)
+        
+        # Build subsection structure for LLM prompt
+        subsection_structure = _build_subsection_structure(lines, span, handler_config)
+        
         draft = llm.draft_section(
             target_id,
             ctx,
             prior_sections,
             llm_profile=handler_config.llm_profile,
             output_format=handler_config.output_format,
+            subsection_structure=subsection_structure,
         )
 
         if draft.strip() and draft.strip() != ctx.strip():
@@ -403,11 +467,16 @@ def generate_questions_for_section(
     )
 
     ctx = section_body(lines, span)
+    
+    # Build subsection structure for LLM prompt
+    subsection_structure = _build_subsection_structure(lines, span, handler_config)
+    
     proposed = llm.generate_open_questions(
         target_id,
         ctx,
         llm_profile=handler_config.llm_profile,
         prior_sections=prior_sections,
+        subsection_structure=subsection_structure,
     )
 
     new_qs = []
