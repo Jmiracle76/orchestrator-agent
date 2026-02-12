@@ -61,6 +61,7 @@ class LLMClient:
         section_context: str,
         llm_profile: str = "requirements",
         prior_sections: Optional[dict[str, str]] = None,
+        subsection_structure: Optional[List[dict]] = None,
     ) -> List[dict]:
         """Ask the LLM to propose clarifying questions for a blank section.
 
@@ -69,6 +70,7 @@ class LLMClient:
             section_context: Current section content
             llm_profile: Profile name to use (default: "requirements")
             prior_sections: Optional dict of completed section IDs to their content
+            subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
 
         Returns:
             List of question dictionaries with fields: question, section_target, rationale
@@ -78,7 +80,7 @@ class LLMClient:
 
         # Build prompt
         prompt = build_open_questions_prompt(
-            section_id, section_context, full_profile, prior_sections
+            section_id, section_context, full_profile, prior_sections, subsection_structure
         )
 
         # Call LLM
@@ -110,6 +112,7 @@ class LLMClient:
         llm_profile: str = "requirements",
         output_format: str = "prose",
         prior_sections: Optional[dict[str, str]] = None,
+        subsection_structure: Optional[List[dict]] = None,
     ) -> str:
         """Ask the LLM to rewrite a section using the provided Q&A context.
 
@@ -120,6 +123,7 @@ class LLMClient:
             llm_profile: Profile name to use (default: "requirements")
             output_format: Output format hint ("prose", "bullets", "subsections")
             prior_sections: Optional dict of completed section IDs to their content
+            subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
 
         Returns:
             Rewritten section body text
@@ -135,6 +139,7 @@ class LLMClient:
             full_profile,
             output_format,
             prior_sections,
+            subsection_structure,
         )
 
         return self._call(prompt).strip()
@@ -146,6 +151,7 @@ class LLMClient:
         prior_sections: dict[str, str],
         llm_profile: str = "requirements",
         output_format: str = "prose",
+        subsection_structure: Optional[List[dict]] = None,
     ) -> str:
         """Draft initial section content from prior section context.
 
@@ -158,6 +164,7 @@ class LLMClient:
             prior_sections: Dict of completed section IDs to their content
             llm_profile: Profile name to use (default: "requirements")
             output_format: Output format hint ("prose", "bullets", "subsections")
+            subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
 
         Returns:
             Drafted section body text
@@ -167,7 +174,7 @@ class LLMClient:
 
         # Build prompt
         prompt = build_draft_section_prompt(
-            section_id, section_context, prior_sections, full_profile, output_format
+            section_id, section_context, prior_sections, full_profile, output_format, subsection_structure
         )
 
         return self._call(prompt).strip()

@@ -35,11 +35,81 @@ def format_prior_sections(prior_sections: dict) -> str:
     return "\n".join(lines)
 
 
+def _build_base_format_guidance(output_format: str) -> str:
+    """Build base format guidance string from output_format.
+    
+    Args:
+        output_format: Output format hint ("prose", "bullets", "subsections")
+        
+    Returns:
+        Base format guidance string
+    """
+    format_guidance_map = {
+        "prose": "Write content as flowing prose paragraphs.",
+        "bullets": "Write content as a bullet list (dash-prefixed, one item per line).",
+        "subsections": "Organize content under appropriate subsection headers (###).",
+    }
+    return format_guidance_map.get(output_format, "Write content as prose.")
+
+
+def _build_subsection_guidance_for_questions(subsection_structure: Optional[List[dict]]) -> str:
+    """Build simpler subsection guidance for question generation prompts.
+    
+    Args:
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
+        
+    Returns:
+        Subsection guidance string for questions, or empty string if no subsections
+    """
+    if not subsection_structure:
+        return ""
+    
+    guidance = "\n\n**Subsection Structure:**\nThis section has the following subsections:\n"
+    for sub in subsection_structure:
+        sub_id = sub.get("id", "")
+        sub_type = sub.get("type", "prose")
+        guidance += f"- `{sub_id}`: {sub_type}\n"
+    guidance += "\nWhen generating questions, target them to the appropriate subsection using section_target.\n"
+    
+    return guidance
+
+
+def _build_subsection_guidance(subsection_structure: Optional[List[dict]]) -> str:
+    """Build subsection structure guidance for LLM prompts.
+    
+    Args:
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
+        
+    Returns:
+        Subsection guidance string, or empty string if no subsections
+    """
+    if not subsection_structure:
+        return ""
+    
+    guidance = "\n\n**Subsection Structure:**\n"
+    guidance += "This section has the following subsections. Output content using subsection delimiters:\n"
+    for sub in subsection_structure:
+        sub_id = sub.get("id", "")
+        sub_type = sub.get("type", "prose")
+        # Convert subsection_id to readable header
+        readable_header = sub_id.replace("_", " ").title()
+        guidance += f"\n### {readable_header}\n"
+        if sub_type == "table":
+            guidance += "Output: Markdown table rows only (no header, just data rows with pipe delimiters).\n"
+        elif sub_type == "bullets":
+            guidance += "Output: Bullet list items (dash-prefixed).\n"
+        else:
+            guidance += "Output: Prose or list as appropriate.\n"
+    
+    return guidance
+
+
 def build_open_questions_prompt(
     section_id: str,
     section_context: str,
     full_profile: str,
     prior_sections: Optional[dict[str, str]] = None,
+    subsection_structure: Optional[List[dict]] = None,
 ) -> str:
     """Build prompt for generating open questions.
 
@@ -48,6 +118,7 @@ def build_open_questions_prompt(
         section_context: Current section content
         full_profile: LLM profile text
         prior_sections: Optional dict of completed section IDs to their content
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
 
     Returns:
         Formatted prompt string
@@ -56,6 +127,9 @@ def build_open_questions_prompt(
     doc_context = ""
     if prior_sections:
         doc_context = f"\n\n{format_prior_sections(prior_sections)}\n"
+
+    # Build subsection structure guidance if provided
+    subsection_guidance = _build_subsection_guidance_for_questions(subsection_structure)
 
     # Update task instruction based on whether context is present
     task_instruction = (
@@ -76,6 +150,7 @@ def build_open_questions_prompt(
 ## Task: Generate Clarifying Questions
 
 Section ID: {section_id}
+{subsection_guidance}
 
 Current Section Content:
 """{section_context}"""
@@ -105,6 +180,7 @@ def build_integrate_answers_prompt(
     full_profile: str,
     output_format: str = "prose",
     prior_sections: Optional[dict[str, str]] = None,
+    subsection_structure: Optional[List[dict]] = None,
 ) -> str:
     """Build prompt for integrating answered questions into section.
 
@@ -115,16 +191,13 @@ def build_integrate_answers_prompt(
         full_profile: LLM profile text
         output_format: Output format hint ("prose", "bullets", "subsections")
         prior_sections: Optional dict of completed section IDs to their content
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
 
     Returns:
         Formatted prompt string
     """
-    # Build format guidance
-    format_guidance = {
-        "prose": "Write integrated content as flowing prose paragraphs.",
-        "bullets": "Write integrated content as a bullet list (dash-prefixed, one item per line).",
-        "subsections": "Organize content under appropriate subsection headers (###).",
-    }.get(output_format, "Write integrated content as prose.")
+    # Build format guidance - combine base format with subsection-specific guidance
+    format_guidance = _build_base_format_guidance(output_format) + _build_subsection_guidance(subsection_structure)
 
     # Build document context if prior sections provided
     doc_context = ""
@@ -169,6 +242,7 @@ def build_draft_section_prompt(
     prior_sections: dict[str, str],
     full_profile: str,
     output_format: str = "prose",
+    subsection_structure: Optional[List[dict]] = None,
 ) -> str:
     """Build prompt for drafting initial section content from prior context.
 
@@ -178,16 +252,13 @@ def build_draft_section_prompt(
         prior_sections: Dict of completed section IDs to their content
         full_profile: LLM profile text
         output_format: Output format hint ("prose", "bullets", "subsections")
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
 
     Returns:
         Formatted prompt string
     """
-    # Build format guidance
-    format_guidance = {
-        "prose": "Write content as flowing prose paragraphs.",
-        "bullets": "Write content as a bullet list (dash-prefixed, one item per line).",
-        "subsections": "Organize content under appropriate subsection headers (###).",
-    }.get(output_format, "Write content as prose.")
+    # Build format guidance - combine base format with subsection-specific guidance
+    format_guidance = _build_base_format_guidance(output_format) + _build_subsection_guidance(subsection_structure)
 
     # Build document context - this is required for drafting
     doc_context = ""
