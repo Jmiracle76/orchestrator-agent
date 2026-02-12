@@ -23,7 +23,7 @@ approval_record
 - **Project:** [Project Name - Replace with your project name]
 
 <!-- meta:version -->
-- **Version:** 0.2 
+- **Version:** 0.4 
 
 <!-- meta:status -->
 - **Status:** Draft 
@@ -48,7 +48,7 @@ approval_record
 | Field | Value |
 |-------|-------|
 | Document Status | Draft |
-| Current Version | 0.2 |
+| Current Version | 0.4 |
 | Last Modified | [Date] |
 | Modified By | [Author] |
 | Approval Status | Draft |
@@ -163,14 +163,26 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 
 <!-- section:stakeholders_users -->
 ## 4. Stakeholders and Users
-<!-- PLACEHOLDER -->
+The orchestrator-agent web interface project serves a focused stakeholder and user base aligned with its proof-of-concept scope and single-user deployment model.
+
+| Stakeholder | Role | Interest/Need | Contact |
+|-------------|------|---------------|---------|
+| Product Owner | End User, Primary Customer | Direct consumer of the web interface; requires streamlined workflow for requirements document creation and iteration without SSH/CLI dependencies | - |
+
+| User Type | Characteristics | Needs | Use Cases |
+|-----------|----------------|-------|-----------|
+| Product Owner | Single user with local VM access; may provide inaccurate data or malformed input to web interface | Web-based interface to create and iterate on requirements documents; reduced technical barrier compared to SSH/CLI workflow | Creating new requirements documents, modifying existing documents, accessing all current CLI functionality through browser interface |
+
+The Product Owner serves as both the primary stakeholder and sole end user for the initial release. This user requires access to all existing CLI functionality through a browser-based interface that eliminates the need for SSH access and command-line proficiency. The web interface SHALL accommodate potential user errors including inaccurate data entry and malformed input without compromising system stability.
+
+Given the single-user deployment model on a locally hosted VM, the system operates as a single-user appliance accessible to whoever connects via the local network. No multi-user authentication, session management, or role-based access controls are required for the initial release.
 <!-- subsection:primary_stakeholders -->
 ### Primary Stakeholders
 
 <!-- table:primary_stakeholders -->
 | Stakeholder | Role | Interest/Need | Contact |
 |-------------|------|---------------|---------|
-| <!-- PLACEHOLDER --> | - | - | - |
+| 0.4 | 2026-02-12 | requirements-automation | Stakeholders Users completed |
 
 <!-- subsection:end_users -->
 ### End Users
@@ -186,8 +198,12 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | The product owner is also the end user and primary customer | Open |
-| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | The end user could feed inaccurate data, or malformed input to web interface. | Open |
+| stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 |  | Open |
+| stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 |  | Open |
+| stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 |  | Open |
+| stakeholders_users-Q6 | SHALL the system support multiple user accounts with individual sessions, or SHALL it operate as a single-user appliance accessible to whoever connects? | 2026-02-12 |  | Open |
+| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | The product owner is also the end user and primary customer | Resolved |
+| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | The end user could feed inaccurate data, or malformed input to web interface. | Resolved |
 
 <!-- section_lock:stakeholders_users lock=false -->
 ---
