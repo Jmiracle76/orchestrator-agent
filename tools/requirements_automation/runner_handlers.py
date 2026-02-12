@@ -47,6 +47,9 @@ def execute_review_gate(
     handler = ReviewGateHandler(llm, lines, doc_type)
     review_result = handler.execute_review(target_id, handler_config)
 
+    # Get any document changes made during execute_review (e.g., section locks, approval updates)
+    lines = handler.lines
+
     # Write review gate result marker to document
     lines, marker_changed = handler.write_review_gate_result(review_result, lines)
 
