@@ -231,13 +231,10 @@ class StructuralValidator:
         missing_tables = set(template_tables.keys()) - doc_tables
 
         # Attempt auto-repair for missing markers
-        repaired_something = False
-
         # Repair missing sections
         for section_id in missing_sections:
             if self._try_repair_missing_section(section_id, template_sections[section_id]):
                 self.repairs_made.append(f"section:{section_id}")
-                repaired_something = True
             else:
                 self.errors.append(
                     MalformedMarkerError(
@@ -254,7 +251,6 @@ class StructuralValidator:
                 subsection_id, template_subsections[subsection_id]
             ):
                 self.repairs_made.append(f"subsection:{subsection_id}")
-                repaired_something = True
             else:
                 self.errors.append(
                     MalformedMarkerError(
@@ -269,7 +265,6 @@ class StructuralValidator:
         for table_id in missing_tables:
             if self._try_repair_missing_table(table_id, template_tables[table_id]):
                 self.repairs_made.append(f"table:{table_id}")
-                repaired_something = True
             else:
                 self.errors.append(
                     MalformedMarkerError(
@@ -318,7 +313,8 @@ class StructuralValidator:
         if insert_index > 0 and self.lines[-1].strip() == "":
             insert_index = len(self.lines) - 1
 
-        # Add separator if needed
+        # Add separator if needed (format: blank line, separator, blank line)
+        # This matches the standard section separator pattern used throughout the template
         if insert_index > 0 and self.lines[insert_index - 1].strip() != "---":
             section_content = ["", "---", ""] + section_content
 
