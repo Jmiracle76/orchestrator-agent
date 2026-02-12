@@ -75,8 +75,9 @@ def _build_subsection_structure(
         # Determine content type
         if sub.subsection_id in TABLE_SUBSECTIONS:
             sub_info["type"] = "table"
-        elif handler_config.output_format == "bullets":
-            sub_info["type"] = "bullets"
+        elif handler_config.output_format in ("bullets", "numbered"):
+            # Use handler's output format for subsection content
+            sub_info["type"] = handler_config.output_format
         else:
             sub_info["type"] = "prose"
         

@@ -56,6 +56,7 @@ class HandlerRegistry:
     VALID_OUTPUT_FORMATS = {
         "prose",  # Paragraph format
         "bullets",  # Bullet list format
+        "numbered",  # Numbered list format
         "subsections",  # Preserve subsection headers
     }
 

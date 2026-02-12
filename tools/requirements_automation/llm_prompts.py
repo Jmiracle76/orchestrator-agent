@@ -39,7 +39,7 @@ def _build_base_format_guidance(output_format: str) -> str:
     """Build base format guidance string from output_format.
     
     Args:
-        output_format: Output format hint ("prose", "bullets", "subsections")
+        output_format: Output format hint ("prose", "bullets", "numbered", "subsections")
         
     Returns:
         Base format guidance string
@@ -47,6 +47,7 @@ def _build_base_format_guidance(output_format: str) -> str:
     format_guidance_map = {
         "prose": "Write content as flowing prose paragraphs.",
         "bullets": "Write content as a bullet list (dash-prefixed, one item per line).",
+        "numbered": "Write content as a numbered list (1., 2., 3., etc., one item per line).",
         "subsections": "Organize content under appropriate subsection headers (###).",
     }
     return format_guidance_map.get(output_format, "Write content as prose.")
@@ -98,6 +99,8 @@ def _build_subsection_guidance(subsection_structure: Optional[List[dict]]) -> st
             guidance += "Output: Markdown table rows only (no header, just data rows with pipe delimiters).\n"
         elif sub_type == "bullets":
             guidance += "Output: Bullet list items (dash-prefixed).\n"
+        elif sub_type == "numbered":
+            guidance += "Output: Numbered list items (1., 2., 3., etc.).\n"
         else:
             guidance += "Output: Prose or list as appropriate.\n"
     

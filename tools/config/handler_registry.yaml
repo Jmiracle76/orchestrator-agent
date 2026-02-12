@@ -20,6 +20,7 @@
 # Output Formats:
 #   - prose: Paragraph format (default)
 #   - bullets: Bullet list format
+#   - numbered: Numbered list format (1., 2., 3., etc.)
 #   - subsections: Preserve subsection headers (e.g., ### Technical Constraints)
 
 # Scope Values:
@@ -82,7 +83,7 @@ requirements:
     
   assumptions:
     mode: integrate_then_questions
-    output_format: bullets
+    output_format: numbered  # numbered list format (1., 2., 3., etc.)
     subsections: false
     dedupe: true  # remove duplicate assumptions after integration
     preserve_headers: []
@@ -97,7 +98,7 @@ requirements:
   constraints:
     mode: integrate_then_questions
     output_format: subsections  # preserve ### Technical/Operational/Resource Constraints
-    subsections: false
+    subsections: true  # Enable subsection structure for LLM guidance
     dedupe: false
     preserve_headers:
       - "### Technical Constraints"
