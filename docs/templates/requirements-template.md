@@ -210,9 +210,9 @@ approval_record
 
 ### Technical Requirements
 <!-- subsection:technical_requirements -->
-| Question ID | Question | Date | Answer | Status |
-|-------------|----------|------|--------|--------|
-| <!-- PLACEHOLDER --> | - | - | - | - 
+| Req ID | Description | Priority | Source | Acceptance Criteria |
+|--------|-------------|----------|--------|---------------------|
+| <!-- PLACEHOLDER --> | - | - | - | - |
 
 <!-- subsection:functional_requirements -->
 ### Functional Requirements
