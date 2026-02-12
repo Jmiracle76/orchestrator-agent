@@ -27,7 +27,6 @@ from .parsing import (
     find_sections,
     get_section_span,
     has_placeholder,
-    validate_open_questions_table_schema,
 )
 from .versioning import get_current_version
 
@@ -124,16 +123,22 @@ class DocumentValidator:
         )
 
     def _check_no_open_questions(self, strict: bool) -> CompletionCheck:
-        """Check that no questions remain unanswered."""
+        """Check that no questions remain unanswered.
+        
+        Note: This check is for the deprecated global open_questions table.
+        Per-section question tables are checked separately by section handlers.
+        """
         try:
             open_questions, _, _ = open_questions_parse(self.lines)
         except Exception as e:
-            logging.warning("Failed to parse open questions: %s", e)
+            # If the global open_questions table doesn't exist, that's OK now
+            # (it's been retired in favor of per-section tables)
+            logging.debug("Global open_questions table not found (expected): %s", e)
             return CompletionCheck(
                 criterion="no_open_questions",
-                passed=False,
-                details=f"Failed to parse Open Questions table: {e}",
-                blocking=True,
+                passed=True,
+                details="No global open_questions table (using per-section tables)",
+                blocking=False,
             )
 
         if strict:
@@ -211,10 +216,6 @@ class DocumentValidator:
         missing_sections = self._find_missing_workflow_sections()
         if missing_sections:
             errors.append(f"Missing sections: {', '.join(missing_sections)}")
-
-        # Check: Open Questions table has correct schema
-        if not validate_open_questions_table_schema(self.lines):
-            errors.append("Open Questions table schema invalid")
 
         # Check: No duplicate section markers
         duplicate_sections = find_duplicate_section_markers(self.lines)
@@ -309,8 +310,9 @@ class DocumentValidator:
         try:
             open_qs, _, _ = open_questions_parse(self.lines)
         except Exception:
-            # If we can't parse questions, consider incomplete
-            return False
+            # If global open_questions table doesn't exist, that's OK
+            # (it's been retired in favor of per-section tables)
+            open_qs = []
 
         # Import here to avoid circular dependency
         from .config import TARGET_CANONICAL_MAP
