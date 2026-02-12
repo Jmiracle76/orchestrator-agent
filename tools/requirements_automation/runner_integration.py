@@ -79,7 +79,20 @@ def _build_subsection_structure(
             # Use handler's output format for subsection content
             sub_info["type"] = handler_config.output_format
         else:
-            sub_info["type"] = "prose"
+            # For "subsections" or "prose" output format, infer type from template content
+            # Check the subsection content to determine the format
+            sub_body_lines = lines[sub.start_line:sub.end_line]
+            sub_body = "\n".join(sub_body_lines)
+            
+            # Look for bullet list markers (dash at start of line)
+            if any(line.strip().startswith("-") for line in sub_body_lines if line.strip()):
+                sub_info["type"] = "bullets"
+            # Look for numbered list markers (digit followed by period at start of line)
+            elif any(line.strip() and line.strip()[0].isdigit() and "." in line.strip()[:3] 
+                     for line in sub_body_lines if line.strip()):
+                sub_info["type"] = "numbered"
+            else:
+                sub_info["type"] = "prose"
         
         structure.append(sub_info)
     
