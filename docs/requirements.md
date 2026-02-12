@@ -150,21 +150,6 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 | User Type | Characteristics | Needs | Use Cases |
 |-----------|----------------|-------|-----------|
 | Technical User | Advanced proficiency with technical interfaces; operates as single-user with exclusive system access | Web-based alternative to SSH/CLI workflow that supports all existing CLI functionality for requirements document creation and iteration | Creating new requirements documents; iterating on existing documents; managing document workflows without command-line interface |
-<!-- subsection:primary_stakeholders -->
-### Primary Stakeholders
-<!-- PLACEHOLDER -->
-<!-- table:primary_stakeholders -->
-| Stakeholder | Role | Interest/Need | Contact |
-|-------------|------|---------------|---------|
-| <!-- PLACEHOLDER --> |  |  |  |
-
-<!-- subsection:end_users -->
-### End Users
-<!-- PLACEHOLDER -->
-<!-- table:end_users -->
-| User Type | Characteristics | Needs | Use Cases |
-|-----------|----------------|-------|-----------|
-| <!-- PLACEHOLDER --> |  |  |  |
 
 <!-- subsection:questions_issues -->
 ### Questions & Issues
