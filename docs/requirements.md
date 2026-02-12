@@ -22,7 +22,7 @@ approval_record
 # Requirements Document
 
 <!-- meta:project_name -->
-- **Project:** [Project Name - Replace with your project name]
+- **Project:** Project Orchestrator Web Wrapper
 
 <!-- meta:version -->
 - **Version:** 0.9 
