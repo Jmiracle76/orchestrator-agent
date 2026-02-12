@@ -107,38 +107,41 @@ Without addressing this usability barrier, the project risks limited adoption. T
 - Compliance with accessibility standards such as WCAG 2.1 or Section 508
 <!-- subsection:objective_statement -->
 ### Objective Statement
-| 0.2 | 2026-02-12 | requirements-automation | Goals Objectives completed |
-[Clear, concise statement of the project objective]
+Deliver a lightweight, modern web interface that replaces the current SSH/CLI workflow for the orchestrator-agent project, reducing user friction and enabling broader adoption.
 
 <!-- subsection:primary_goals -->
 ### Primary Goals
-<!-- PLACEHOLDER -->
-1. [Primary goal 1]
-2. [Primary goal 2]
+- Create a web-based interface that replaces the current SSH/CLI workflow for document creation and iteration
+- Reduce the technical barrier to entry for end users unfamiliar with command-line interfaces
+- Support all existing CLI functionality in the initial release
+- Maintain compatibility with the existing Python-based orchestrator running on a locally hosted VM
+- Deploy the web interface as a separate service on the same VM as the orchestrator code
 
 <!-- subsection:secondary_goals -->
 ### Secondary Goals
-<!-- PLACEHOLDER -->
-1. [Secondary goal 1]
-2. [Secondary goal 2]
-
+- Establish an extensible architecture that accommodates future feature additions without significant refactoring
+- Provide a responsive UI/UX inspired by the Codex interface pattern that supports desktop, mobile, and tablet form factors
+- Maintain session state across browser refreshes
+- Provide local network accessibility without requiring public internet access capability
+- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
+- Encourage user engagement and adoption through modern interface design
 
 <!-- subsection:non_goals -->
 ### Non-Goals
-<!-- PLACEHOLDER -->
-1. [Non-goal 1]
-2. [Non-goal 2]
-
+- Multi-user concurrent access and authentication systems
+- Real-time collaboration features where multiple users can view or simultaneously edit the same document
+- Multi-project or multi-repository management capabilities
+- Cloud-hosted or distributed deployment models
+- Migration away from the Python-based orchestrator backend
+- Time-bound completion requirements for document creation workflows
+- Performance optimization beyond proof-of-concept needs
+- Compliance with accessibility standards such as WCAG 2.1 or Section 508
 <!-- subsection:questions_issues -->
 ### Questions & Issues
 
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q16 | What specific CLI functionality currently exists in the orchestrator-agent project that MUST be replicated in the web interface? | 2026-02-12 |  | Open |
-| goals_objectives-Q17 | What constitutes 'significant refactoring' that the extensible architecture should avoid when accommodating future features? | 2026-02-12 |  | Open |
-| goals_objectives-Q18 | SHALL the web interface require authentication or authorization for the single concurrent user, or is access control out of scope? | 2026-02-12 |  | Open |
-| goals_objectives-Q19 | What backward compatibility requirements exist for documents created via CLI versus the web interface? | 2026-02-12 |  | Open |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
 | goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
