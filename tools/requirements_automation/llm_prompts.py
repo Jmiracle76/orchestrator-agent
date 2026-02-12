@@ -72,6 +72,9 @@ def _build_subsection_guidance_for_questions(subsection_structure: Optional[List
     guidance += "\nWhen generating questions, target them to the appropriate subsection using section_target.\n"
     
     return guidance
+
+
+def _build_subsection_guidance(subsection_structure: Optional[List[dict]]) -> str:
     """Build subsection structure guidance for LLM prompts.
     
     Args:
