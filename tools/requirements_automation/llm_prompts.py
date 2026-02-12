@@ -52,7 +52,26 @@ def _build_format_guidance(output_format: str) -> str:
     return format_guidance_map.get(output_format, "Write content as prose.")
 
 
-def _build_subsection_guidance(subsection_structure: Optional[List[dict]]) -> str:
+def _build_subsection_guidance_for_questions(subsection_structure: Optional[List[dict]]) -> str:
+    """Build simpler subsection guidance for question generation prompts.
+    
+    Args:
+        subsection_structure: Optional list of subsection dicts with 'id' and 'type' keys
+        
+    Returns:
+        Subsection guidance string for questions, or empty string if no subsections
+    """
+    if not subsection_structure:
+        return ""
+    
+    guidance = "\n\n**Subsection Structure:**\nThis section has the following subsections:\n"
+    for sub in subsection_structure:
+        sub_id = sub.get("id", "")
+        sub_type = sub.get("type", "prose")
+        guidance += f"- `{sub_id}`: {sub_type}\n"
+    guidance += "\nWhen generating questions, target them to the appropriate subsection using section_target.\n"
+    
+    return guidance
     """Build subsection structure guidance for LLM prompts.
     
     Args:
@@ -107,14 +126,7 @@ def build_open_questions_prompt(
         doc_context = f"\n\n{format_prior_sections(prior_sections)}\n"
 
     # Build subsection structure guidance if provided
-    subsection_guidance = ""
-    if subsection_structure:
-        subsection_guidance = "\n\n**Subsection Structure:**\nThis section has the following subsections:\n"
-        for sub in subsection_structure:
-            sub_id = sub.get("id", "")
-            sub_type = sub.get("type", "prose")
-            subsection_guidance += f"- `{sub_id}`: {sub_type}\n"
-        subsection_guidance += "\nWhen generating questions, target them to the appropriate subsection using section_target.\n"
+    subsection_guidance = _build_subsection_guidance_for_questions(subsection_structure)
 
     # Update task instruction based on whether context is present
     task_instruction = (

@@ -55,7 +55,9 @@ def _build_subsection_structure(
     if not subs:
         return None
     
-    # Filter out questions_issues subsection as it's metadata, not content
+    # Filter out question-related subsections as they're metadata, not content
+    # - subsections ending with '_questions' (e.g., 'goals_objectives_questions')
+    # - 'questions_issues' subsection (doesn't end with '_questions')
     content_subs = [s for s in subs if not s.subsection_id.endswith("_questions") 
                     and s.subsection_id != "questions_issues"]
     
