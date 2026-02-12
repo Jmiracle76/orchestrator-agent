@@ -86,9 +86,11 @@ Without addressing this usability barrier, the project risks limited adoption. T
 
 - Create a web-based interface that replaces the current SSH/CLI workflow for document creation and iteration
 - Reduce the technical barrier to entry for end users unfamiliar with command-line interfaces
+- Support all existing CLI functionality in the initial release
 - Maintain compatibility with the existing Python-based orchestrator running on a locally hosted VM
 - Implement a deployment architecture that supports seamless upgrades for future features and bug fixes
 - Provide local network accessibility without requiring public internet access capability
+- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
 
 - Establish an extensible architecture that accommodates future feature additions without significant refactoring
 - Provide a responsive UI/UX inspired by the Codex interface pattern that supports desktop, mobile, and tablet form factors
@@ -99,20 +101,7 @@ Without addressing this usability barrier, the project risks limited adoption. T
 - Cloud-hosted or distributed deployment models
 - Migration away from the Python-based orchestrator backend
 - Time-bound completion requirements for document creation workflows
-
-| Question ID | Question | Date | Answer | Status |
-|-------------|----------|------|--------|--------|
-| goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 | There are no performance objectives at this time. This is a proof-of-concept system to start. | Open |
-| goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 | A single concurrent user is all that is required for initial release. | Open |
-| goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 | All existing CLI functionality should be targeted for initial release and may be scaled back in future revisions. | Open |
-| goals_objectives-Q11 | What browser versions and types MUST be supported (e.g., Chrome 100+, Firefox 95+, Safari 15+)? | 2026-02-12 | Current versions of Chrome and Edge are required. Broad support of current modern browsers is preferred. | Open |
-| goals_objectives-Q4 | What is the maximum acceptable time for a new user to complete their first requirements document using the web interface? | 2026-02-12 | There is no maximum acceptable time frame to complete a requirements document. | Resolved |
-| goals_objectives-Q5 | What specific UI/UX patterns or frameworks are considered 'modern' for this project's target user base? | 2026-02-12 | The current Codex ui/ux pattern could serve as the inspiration for this project. | Resolved |
-| goals_objectives-Q6 | Should the web interface support offline or local-only operation, or does it require network connectivity to the VM? | 2026-02-12 | The web interface should be accessible from the local network. It does not need public internet access capability. | Resolved |
-| goals_objectives-Q7 | Are mobile or tablet form factors in scope for the web interface, or is desktop browser access sufficient? | 2026-02-12 | Mobile/tablet form factors are in scope. A responsive interface is preferred. | Resolved |
-| goals_objectives-Q1 | What are the measurable success indicators for each goal? | [Date] | A lightweight, modern web interface exists that makes new document creation and iteration easier. The web app needs to support future enhancements and features that have not yet been identified. The app must be easily upgraded with future features and bug fixes. | Resolved |
-| goals_objectives-Q2 | What constraints must this solution respect? | [Date] | The orchestrator is built on python and runs on a locally hosted VM. | Resolved |
-| goals_objectives-Q3 | What is explicitly out of scope for this project? | [Date] | multi-user access and multi-project/multi-repo support may be added in future enhancements. | Resolved |
+- Performance optimization beyond proof-of-concept needs
 <!-- subsection:objective_statement -->
 ### Objective Statement
 | 0.2 | 2026-02-12 | requirements-automation | Goals Objectives completed |
@@ -143,10 +132,14 @@ Without addressing this usability barrier, the project risks limited adoption. T
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 | There are no performance objectives at this time. This is a proof-of-concept system to start. | Open |
-| goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 | A single concurrent user is all that is required for initial release. | Open |
-| goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 | All existing CLI functionality should be targeted for initial release and may be scaled back in future revisions. | Open |
-| goals_objectives-Q11 | What browser versions and types MUST be supported (e.g., Chrome 100+, Firefox 95+, Safari 15+)? | 2026-02-12 | Current versions of Chrome and Edge are required. Broad support of current modern browsers is preferred. | Open |
+| goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 |  | Open |
+| goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 |  | Open |
+| goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 |  | Open |
+| goals_objectives-Q15 | What accessibility standards (WCAG 2.1, Section 508) MUST the web interface meet? | 2026-02-12 |  | Open |
+| goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 | There are no performance objectives at this time. This is a proof-of-concept system to start. | Resolved |
+| goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 | A single concurrent user is all that is required for initial release. | Resolved |
+| goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 | All existing CLI functionality should be targeted for initial release and may be scaled back in future revisions. | Resolved |
+| goals_objectives-Q11 | What browser versions and types MUST be supported (e.g., Chrome 100+, Firefox 95+, Safari 15+)? | 2026-02-12 | Current versions of Chrome and Edge are required. Broad support of current modern browsers is preferred. | Resolved |
 | goals_objectives-Q4 | What is the maximum acceptable time for a new user to complete their first requirements document using the web interface? | 2026-02-12 | There is no maximum acceptable time frame to complete a requirements document. | Resolved |
 | goals_objectives-Q5 | What specific UI/UX patterns or frameworks are considered 'modern' for this project's target user base? | 2026-02-12 | The current Codex ui/ux pattern could serve as the inspiration for this project. | Resolved |
 | goals_objectives-Q6 | Should the web interface support offline or local-only operation, or does it require network connectivity to the VM? | 2026-02-12 | The web interface should be accessible from the local network. It does not need public internet access capability. | Resolved |
