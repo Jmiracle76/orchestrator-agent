@@ -199,7 +199,6 @@ The system SHALL operate as a single-user appliance accessible to whoever connec
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q7 | [BLOCKER] Section has 4 open question(s) that must be resolved before passing gate | 2026-02-12 |  | Open |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
 | stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
 | stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Resolved |
@@ -400,7 +399,6 @@ The system SHALL operate as a single-user appliance accessible to whoever connec
 <!-- table:success_criteria_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| success_criteria-Q3 | [BLOCKER] Section has 2 open question(s) that must be resolved before passing gate | 2026-02-12 |  | Open |
 | success_criteria-Q1 | How will success be measured and validated? | [Date] | 100% of acceptance criteria for all requirements must be met for this project to be declared successful. | Open |
 | success_criteria-Q2 | Who is responsible for verifying each success criterion? | [Date] | Unit test scripts must validate acceptance criteria have been met across all requirements and the product owner will approve test results. | Open |
 
