@@ -355,10 +355,11 @@ def test_full_coherence_gate_integration():
     
     if not result.passed:
         print("  ✓ Gate blocked for document with open questions")
-        if any("open question" in issue.description.lower() for issue in result.issues):
+        # Updated to check for "open blocker" or "open question" for backward compatibility
+        if any("open blocker" in issue.description.lower() or "open question" in issue.description.lower() for issue in result.issues):
             print("  ✓ Correct blocker reason provided")
         else:
-            print(f"  ✗ Expected blocker about open questions, got: {result.issues}")
+            print(f"  ✗ Expected blocker about open questions/blockers, got: {result.issues}")
             return False
     else:
         print("  ✗ Gate should have been blocked")
