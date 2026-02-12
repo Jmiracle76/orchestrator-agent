@@ -83,29 +83,6 @@ Without addressing this usability barrier, the project risks limited adoption. T
 
 <!-- section:goals_objectives -->
 ## 3. Goals and Objectives
-- Deliver a lightweight, modern web interface that replaces the current SSH/CLI workflow for the orchestrator-agent project, reducing user friction and enabling broader adoption
-
-- Create a web-based interface that replaces the current SSH/CLI workflow for document creation and iteration
-- Reduce the technical barrier to entry for end users unfamiliar with command-line interfaces
-- Maintain compatibility with the existing Python-based orchestrator running on a locally hosted VM
-- Deploy the web interface as a separate service on the same VM as the orchestrator code
-- Establish a proof-of-concept design that demonstrates core functionality and validates the approach for future evolution
-
-- Establish an extensible architecture that accommodates future feature additions without significant refactoring
-- Provide a responsive UI/UX inspired by the Codex interface pattern that supports desktop, mobile, and tablet form factors
-- Maintain session state across browser refreshes
-- Provide local network accessibility without requiring public internet access capability
-- Support current versions of Chrome and Edge browsers with broad compatibility across modern browsers
-- Encourage user engagement and adoption through modern interface design
-
-- Multi-user concurrent access and authentication systems
-- Real-time collaboration features where multiple users can view or simultaneously edit the same document
-- Multi-project or multi-repository management capabilities
-- Cloud-hosted or distributed deployment models
-- Migration away from the Python-based orchestrator backend
-- Time-bound completion requirements for document creation workflows
-- Performance optimization beyond proof-of-concept needs
-- Compliance with accessibility standards such as WCAG 2.1 or Section 508
 <!-- subsection:objective_statement -->
 ### Objective Statement
 Deliver a lightweight, modern web interface that replaces the current SSH/CLI workflow for the orchestrator-agent project, reducing user friction and enabling broader adoption.
@@ -161,7 +138,7 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 | goals_objectives-Q2 | What constraints must this solution respect? | [Date] | The orchestrator is built on python and runs on a locally hosted VM. | Resolved |
 | goals_objectives-Q3 | What is explicitly out of scope for this project? | [Date] | multi-user access and multi-project/multi-repo support may be added in future enhancements. | Resolved |
 
-<!-- section_lock:goals_objectives lock=false -->
+<!-- section_lock:goals_objectives lock=true -->
 ---
 
 <!-- section:stakeholders_users -->
@@ -191,7 +168,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 | stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | The product owner is also the end user and primary customer | Resolved |
 | stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | The end user could feed inaccurate data, or malformed input to web interface. | Resolved |
 
-<!-- section_lock:stakeholders_users lock=false -->
+<!-- section_lock:stakeholders_users lock=true -->
 ---
 
 <!-- section:assumptions -->
