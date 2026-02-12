@@ -120,7 +120,7 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' conflicts with success criterion and Q10 answer that states this 'may be scaled back in future revisions' | 2026-02-12 |  | Open |
+| goals_objectives-Q16 | [WARNING] Primary goal 'Support all existing CLI functionality in the initial release' conflicts with success criterion and Q10 answer that states this 'may be scaled back in future revisions' | 2026-02-12 | Acknowledged. This is a proof of concept design and will evolve. | Open |
 | goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Resolved |
 | goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Resolved |
 | goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Resolved |
@@ -158,7 +158,7 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 |  | Open |
+| stakeholders_users-Q7 | [WARNING] User type 'Technical User' characteristic states 'operates as single-user with exclusive system access' but this is a system constraint, not a user characteristic | 2026-02-12 | This is acceptable for this proof of concept design. | Open |
 | stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
 | stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
 | stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Resolved |
@@ -231,8 +231,8 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q3 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content that has not been populated with actual constraints | 2026-02-12 |  | Open |
-| constraints-Q4 | [WARNING] Constraints section has duplicate content - constraints are listed both in main section body and in placeholder subsections structure | 2026-02-12 |  | Open |
+| constraints-Q3 | [BLOCKER] Three subsections (technical_constraints, operational_constraints, resource_constraints) contain only placeholder content that has not been populated with actual constraints | 2026-02-12 | The constraints listed in the main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Open |
+| constraints-Q4 | [WARNING] Constraints section has duplicate content - constraints are listed both in main section body and in placeholder subsections structure | 2026-02-12 | constraints listed in main section body need moved and reorganized across technical, operational, and resource constraint sub-sections. | Open |
 | constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Resolved |
 | constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Resolved |
 
