@@ -129,11 +129,16 @@ def _get_section_questions(
 
     Returns:
         Tuple of (questions_list, found_section_questions)
-        - questions_list: List of questions from section-specific table, or empty list
+        - questions_list: List of questions from section-specific table, or empty list if:
+          * handler_config is None
+          * handler doesn't specify a questions_table
+          * section questions table doesn't exist or can't be parsed
         - found_section_questions: True if section questions table was found and parsed, False otherwise
     """
     if _use_section_questions(handler_config):
         try:
+            # parse_section_questions returns (questions, table_span)
+            # We only need the questions list here
             qs, _ = parse_section_questions(lines, target_id)
             return qs, True
         except ValueError:

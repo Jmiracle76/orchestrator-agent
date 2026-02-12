@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import warnings
 from typing import Any, List
 
 from .config import PHASES
@@ -244,10 +245,11 @@ def execute_phase_based_handler(
     Returns:
         Tuple of (updated_lines, WorkflowResult)
     """
-    logging.warning(
-        "Using deprecated phase-based handler for section '%s'. "
+    warnings.warn(
+        f"Using deprecated phase-based handler for section '{target_id}'. "
         "Consider adding handler configuration in handler_registry.yaml.",
-        target_id
+        DeprecationWarning,
+        stacklevel=2
     )
     # Map section to phase for backward compatibility
     phase_name = None

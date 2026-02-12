@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import Any, Dict, List, Tuple
 
 from ..config import PHASES, TARGET_CANONICAL_MAP
@@ -35,9 +36,11 @@ def process_phase_1(
     in handler_registry.yaml. This function remains for backward compatibility with
     sections that don't have handler configurations.
     """
-    logging.warning(
+    warnings.warn(
         "Using deprecated phase-based handler for phase_1. "
-        "Consider migrating to unified handler with per-section question tables."
+        "Consider migrating to unified handler with per-section question tables.",
+        DeprecationWarning,
+        stacklevel=2
     )
     changed = False
     blocked: List[str] = []

@@ -38,6 +38,8 @@ def validate_section_complete(section_id: str, lines: List[str]) -> Tuple[bool, 
 
     # Try to use per-section questions table
     try:
+        # parse_section_questions returns (questions, table_span)
+        # We only need the questions list for validation
         qs, _ = parse_section_questions(lines, section_id)
         # Check for open questions
         if any(q.status.strip() == "Open" for q in qs):
