@@ -124,24 +124,28 @@ requirements:
   interfaces_integrations:
     mode: integrate_then_questions
     output_format: prose
-    subsections: false
+    subsections: true  # supports external_systems, data_exchange subsections with table content
     dedupe: false
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections
+    questions_table: interfaces_integrations_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   data_considerations:
     mode: integrate_then_questions
-    output_format: prose
-    subsections: false
+    output_format: bullets
+    subsections: true  # supports data_requirements, privacy_security, data_retention subsections
     dedupe: false
     preserve_headers: []
     sanitize_remove: []
     llm_profile: requirements
     auto_apply_patches: never
     scope: all_prior_sections
+    questions_table: data_considerations_questions  # Per-section question table
+    bootstrap_questions: true  # Pre-populate from template
     
   identified_risks:
     mode: integrate_then_questions
