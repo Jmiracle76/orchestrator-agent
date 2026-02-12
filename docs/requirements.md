@@ -74,8 +74,8 @@ approval_record
 <!-- table:problem_statement_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| problem_statement-Q1 | What is the primary pain point this project addresses? | [Date] | | Open |
-| problem_statement-Q2 | What are the consequences of not solving this problem? | [Date] | | Open |
+| problem_statement-Q1 | What is the primary pain point this project addresses? | [Date] | Interacting with the orchestrator-agent project requires logging in to a VM via SSH and remembering a series of CLI commands in order to draft a new requirements document. Creating a lightweight web interface will reduce enduser friction when using the tool. | Open |
+| problem_statement-Q2 | What are the consequences of not solving this problem? | [Date] | The project may fail to gain traction due to high level of effort required to interact through CLI. A lightweight, modern web UI/UX will help streamline usage and encourage user engagement. | Open |
 
 <!-- section_lock:problem_statement lock=false -->
 ---
@@ -115,9 +115,9 @@ approval_record
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q1 | What are the measurable success indicators for each goal? | [Date] | | Open |
-| goals_objectives-Q2 | What constraints must this solution respect? | [Date] | | Open |
-| goals_objectives-Q3 | What is explicitly out of scope for this project? | [Date] | | Open |
+| goals_objectives-Q1 | What are the measurable success indicators for each goal? | [Date] | A lightweight, modern web interface exists that makes new document creation and iteration easier. The web app needs to support future enhacements and features that have not yet been identified. The app must be easily upgraded with future features and bug fixes. | Open |
+| goals_objectives-Q2 | What constraints must this solution respect? | [Date] | The orchestrator is built on python and runs on a locally hosted VM. | Open |
+| goals_objectives-Q3 | What is explicitly out of scope for this project? | [Date] | multi-user access and multi-project/multi-repo support may be added in future enhancements. | Open |
 
 <!-- section_lock:goals_objectives lock=false -->
 ---
@@ -147,8 +147,8 @@ approval_record
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | | Open |
-| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | | Open |
+| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | The product owner is also the end user and primary customer | Open |
+| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | The end user could feed inaccurate data, or malformed input to web interface. | Open |
 
 <!-- section_lock:stakeholders_users lock=false -->
 ---
@@ -165,8 +165,8 @@ approval_record
 <!-- table:assumptions_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| assumptions-Q1 | What technical assumptions exist for this project? | [Date] | | Open |
-| assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | | Open |
+| assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Open |
+| assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] |  | Open |
 
 <!-- section_lock:assumptions lock=false -->
 ---
@@ -198,8 +198,8 @@ approval_record
 <!-- table:constraints_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| constraints-Q1 | What technical constraints exist for this project? | [Date] | | Open |
-| constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | | Open |
+| constraints-Q1 | What technical constraints exist for this project? | [Date] | The web app much run on a local linux VM. The web app must support the existing python code base. | Open |
+| constraints-Q2 | What is the priority ranking of constraints if trade-offs are needed? | [Date] | Unknown at this time. | Open |
 
 <!-- section_lock:constraints lock=false -->
 ---
