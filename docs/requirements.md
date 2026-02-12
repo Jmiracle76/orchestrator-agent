@@ -141,8 +141,15 @@ Deliver a lightweight, modern web interface that replaces the current SSH/CLI wo
 
 <!-- section:stakeholders_users -->
 ## 4. Stakeholders and Users
-The orchestrator-agent web interface project serves a focused stakeholder and user base aligned with its proof-of-concept scope and single-user deployment model.
+The orchestrator-agent web interface project serves a focused stakeholder and user base aligned with its proof-of-concept scope and single-user deployment model. The product owner functions as the primary stakeholder, end user, and customer for this system.
 
+| Stakeholder | Role | Interest/Need | Contact |
+|-------------|------|---------------|---------|
+| Product Owner | Primary Stakeholder, End User, Customer | Requires a web-based interface to replace SSH/CLI workflow for orchestrator-agent document creation and iteration | TBD |
+
+| User Type | Characteristics | Needs | Use Cases |
+|-----------|----------------|-------|-----------|
+| Technical User | Advanced proficiency with technical interfaces; operates as single-user with exclusive system access | Web-based alternative to SSH/CLI workflow that supports all existing CLI functionality for requirements document creation and iteration | Creating new requirements documents; iterating on existing documents; managing document workflows without command-line interface |
 <!-- subsection:primary_stakeholders -->
 ### Primary Stakeholders
 <!-- PLACEHOLDER -->
@@ -165,12 +172,12 @@ The orchestrator-agent web interface project serves a focused stakeholder and us
 <!-- table:stakeholders_users_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Open |
-| stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Open |
-| stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Open |
-| stakeholders_users-Q6 | SHALL the system support multiple user accounts with individual sessions, or SHALL it operate as a single-user appliance accessible to whoever connects? | 2026-02-12 | The app will operate as a single-user appliance to start but may evolve to support multiple users in future enhancements. | Open |
-| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | The product owner is also the end user and primary customer | Open |
-| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | The end user could feed inaccurate data, or malformed input to web interface. | Open |
+| stakeholders_users-Q3 | Are there secondary stakeholders such as system administrators, DevOps personnel, or infrastructure maintainers who need to deploy, monitor, or maintain the web interface? | 2026-02-12 | There are no secondary stakeholders at this time. | Resolved |
+| stakeholders_users-Q4 | What SHALL be the user's expected technical proficiency level with web applications (novice browser user, intermediate with web forms, advanced with technical interfaces)? | 2026-02-12 | Advanced with technical interfaces | Resolved |
+| stakeholders_users-Q5 | What user roles or permission levels SHALL exist within the web interface (e.g., read-only viewer, editor, administrator), or is a single-role model sufficient? | 2026-02-12 | A single role model is sufficient to start but will likely expand in future enhancements. | Resolved |
+| stakeholders_users-Q6 | SHALL the system support multiple user accounts with individual sessions, or SHALL it operate as a single-user appliance accessible to whoever connects? | 2026-02-12 | The app will operate as a single-user appliance to start but may evolve to support multiple users in future enhancements. | Resolved |
+| stakeholders_users-Q1 | Who is directly impacted by the output of this system, and how? | [Date] | The product owner is also the end user and primary customer | Resolved |
+| stakeholders_users-Q2 | Who could unintentionally break or misuse this system? | [Date] | The end user could feed inaccurate data, or malformed input to web interface. | Resolved |
 
 <!-- section_lock:stakeholders_users lock=false -->
 ---
