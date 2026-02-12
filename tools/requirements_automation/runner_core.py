@@ -262,9 +262,10 @@ class WorkflowRunner:
                 logging.info("Section '%s' is locked, skipping", target_id)
                 continue
 
-            # Skip completed sections (no placeholder, no open questions)
-            # A section is complete if it has content (not blank, no placeholder) and no open questions
-            if not state.has_placeholder and not state.has_open_questions:
+            # Skip completed sections (no placeholder, no open questions, no unintegrated answers)
+            # A section is complete if it has content (not blank, no placeholder),
+            # no unanswered open questions, and no answered questions awaiting integration
+            if not state.has_placeholder and not state.has_open_questions and not state.has_answered_questions:
                 logging.debug("Section '%s' is complete, skipping", target_id)
                 continue
 
