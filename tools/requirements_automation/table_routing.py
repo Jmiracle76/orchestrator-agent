@@ -16,13 +16,15 @@ from .config import SUBSECTION_MARKER_RE, TABLE_MARKER_RE, PLACEHOLDER_TOKEN
 
 # Constants for markdown parsing
 SUBSECTION_HEADER_PREFIX = "###"  # Markdown subsection header marker
+TABLE_SEPARATOR_PATTERN = r'^\s*\|[\s\-:|]+\|\s*$'  # Regex for table separator rows like |---|---|
 
 
 def _extract_markdown_table_rows(text: str) -> List[str]:
     """Extract markdown table data rows from text.
     
     Extracts lines that appear to be markdown table rows (contain pipes).
-    Skips header rows and separator rows.
+    Skips header rows and separator rows. Only includes rows that appear after
+    a separator row to avoid capturing headers.
     
     Args:
         text: Text containing potential markdown tables
@@ -32,6 +34,7 @@ def _extract_markdown_table_rows(text: str) -> List[str]:
     """
     lines = text.split('\n')
     rows = []
+    found_separator = False
     
     for line in lines:
         stripped = line.strip()
@@ -40,14 +43,16 @@ def _extract_markdown_table_rows(text: str) -> List[str]:
             continue
         # Must contain pipes to be a table row
         if '|' not in stripped:
+            found_separator = False  # Reset when we leave a table
             continue
-        # Skip separator rows (e.g., |---|---|)
-        if re.match(r'^\s*\|[\s\-:|]+\|\s*$', stripped):
+        # Check for separator rows (e.g., |---|---|)
+        if re.match(TABLE_SEPARATOR_PATTERN, stripped):
+            found_separator = True
             continue
         
-        # All other pipe-delimited lines are considered table rows
-        # The separator row check above is sufficient to filter out headers in most cases
-        rows.append(stripped)
+        # Only include rows that come after a separator (data rows, not headers)
+        if found_separator:
+            rows.append(stripped)
     
     return rows
 
@@ -108,7 +113,7 @@ def _identify_table_content_by_subsection(
         # If we're in a table subsection, collect table rows
         if current_subsection and '|' in stripped:
             # Skip separator and header rows
-            if re.match(r'^\s*\|[\s\-:|]+\|\s*$', stripped):
+            if re.match(TABLE_SEPARATOR_PATTERN, stripped):
                 continue
             result[current_subsection].append(stripped)
     
@@ -192,10 +197,10 @@ def _insert_table_rows_into_subsection(
             if table_start is None:
                 table_start = i
                 # First row is likely the header
-                if not re.match(r'^\s*\|[\s\-:|]+\|\s*$', stripped):
+                if not re.match(TABLE_SEPARATOR_PATTERN, stripped):
                     header_row_idx = i
             # Check for separator row
-            elif re.match(r'^\s*\|[\s\-:|]+\|\s*$', stripped):
+            elif re.match(TABLE_SEPARATOR_PATTERN, stripped):
                 separator_row_idx = i
                 # Stop after separator - data rows should follow
                 break

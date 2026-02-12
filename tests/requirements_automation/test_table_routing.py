@@ -31,6 +31,8 @@ def test_extract_markdown_table_rows():
     text = """
 Some prose content here.
 
+| Req ID | Description | Priority | Source | Acceptance Criteria |
+|--------|-------------|----------|--------|---------------------|
 | REQ-001 | User login | High | Stakeholder A | User can authenticate |
 | REQ-002 | Data export | Medium | Stakeholder B | System exports CSV |
 
