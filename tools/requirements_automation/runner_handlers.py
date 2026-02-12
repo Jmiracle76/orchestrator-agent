@@ -182,27 +182,26 @@ def execute_unified_handler(
         elif gen_count == 0 and not gen_changed:
             # Section is blank but has open questions - blocked waiting for answers
             try:
-                from .parsing import find_subsections_within
+                from .section_questions import parse_section_questions
 
-                if span is not None:
-                    subs = find_subsections_within(lines, span)
-                target_ids = {target_id} | {s.subsection_id for s in subs}
+                # Try to get section-specific questions
+                if handler_config and hasattr(handler_config, "questions_table") and handler_config.questions_table:
+                    try:
+                        qs, _ = parse_section_questions(lines, target_id)
+                        open_unanswered = [
+                            q
+                            for q in qs
+                            if q.status.strip() in ("Open", "Deferred")
+                            and q.answer.strip() in ("", "-", "Pending")
+                        ]
 
-                open_qs, _, _ = open_questions_parse(lines)
-                targeted_questions = [
-                    q for q in open_qs if _canon_target(q.section_target) in target_ids
-                ]
-                open_unanswered = [
-                    q
-                    for q in targeted_questions
-                    if q.status.strip() in ("Open", "Deferred")
-                    and q.answer.strip() in ("", "-", "Pending")
-                ]
-
-                if open_unanswered:
-                    blocked_reasons.append(
-                        f"Waiting for {len(open_unanswered)} questions to be answered"
-                    )
+                        if open_unanswered:
+                            blocked_reasons.append(
+                                f"Waiting for {len(open_unanswered)} questions to be answered"
+                            )
+                    except Exception:
+                        # No section questions available
+                        pass
             except Exception:
                 pass
 
