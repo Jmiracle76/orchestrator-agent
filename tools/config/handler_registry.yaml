@@ -167,7 +167,11 @@ requirements:
     auto_apply_patches: never
     scope: current_section
   
-  # Review gate example (for Issue 7 implementation)
+  # Review gate: coherence_check (Issue 1d)
+  # Enforces automated validation before passing:
+  # 1. All section-level question tables must have zero "Open" status rows
+  # 2. All risks in the risks table must be Low/Low (Probability and Impact)
+  # On pass: locks all prior sections and updates approval record table
   review_gate:coherence_check:
     mode: review_gate
     output_format: prose
