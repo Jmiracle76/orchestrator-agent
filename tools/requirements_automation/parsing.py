@@ -521,6 +521,67 @@ def check_section_table_for_open_questions(lines: List[str], section_id: str) ->
     return open_count > 0, open_count
 
 
+def check_section_table_for_open_blockers(lines: List[str], section_id: str) -> Tuple[bool, int]:
+    """
+    Check if a section's question table has any "Open" status rows that are blockers.
+    
+    This function only counts questions prefixed with [BLOCKER] or unprefixed questions
+    (for backward compatibility) that have "Open" status. Questions prefixed with 
+    [WARNING] are not counted as blockers.
+    
+    Args:
+        lines: Document content as list of strings
+        section_id: Section ID to check (e.g., "problem_statement")
+    
+    Returns:
+        Tuple of (has_open_blockers, open_blocker_count)
+    """
+    table_id = f"{section_id}_questions"
+    span = find_table_block(lines, table_id)
+    
+    if not span:
+        # No table found - no open blockers
+        return False, 0
+    
+    start, end = span
+    table_lines = lines[start:end]
+    
+    if len(table_lines) < 2:
+        # Header only, no data rows
+        return False, 0
+    
+    # Skip header and separator rows
+    data_rows = table_lines[2:]
+    
+    blocker_count = 0
+    for row in data_rows:
+        if not row.strip().startswith("|"):
+            continue
+        
+        # Parse row cells
+        cells = [c.strip() for c in row.strip().strip("|").split("|")]
+        
+        # Typically: | Question ID | Question | Date | Answer | Status |
+        # Question is at index 1, Status is at index -1
+        if len(cells) >= 5:
+            question_text = cells[1].strip()
+            status = cells[-1].strip()
+            
+            # Only count as blocker if:
+            # 1. Status is "Open" (case-insensitive)
+            # 2. Question is NOT a warning (backward compatibility: unprefixed questions = blockers)
+            if status.lower() == "open":
+                # Check if it's a warning (which should NOT block)
+                if question_text.upper().startswith("[WARNING]"):
+                    continue
+                # Count as blocker if:
+                # - Explicitly marked as [BLOCKER], OR
+                # - No severity prefix (backward compatibility)
+                blocker_count += 1
+    
+    return blocker_count > 0, blocker_count
+
+
 def check_risks_table_for_non_low_risks(lines: List[str]) -> Tuple[bool, List[str]]:
     """
     Check if the risks table has any risks that are not Low/Low.

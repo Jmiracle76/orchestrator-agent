@@ -430,7 +430,8 @@ class ReviewGateHandler:
         Validate coherence_check gate requirements before passing.
         
         Checks:
-        1. All section-level question tables have zero "Open" status rows
+        1. All section-level question tables have zero "Open" blocker status rows
+           (warnings with [WARNING] prefix do not block progression)
         2. All rows in risks table have Probability and Impact both set to "Low"
         
         Args:
@@ -441,21 +442,24 @@ class ReviewGateHandler:
         """
         from .parsing import (
             check_risks_table_for_non_low_risks,
-            check_section_table_for_open_questions,
+            check_section_table_for_open_blockers,
         )
         
         issues = []
         
-        # Check 1: Verify no open questions in prior section tables
+        # Check 1: Verify no open blockers in prior section tables
+        # Note: Questions prefixed with [WARNING] do not block progression
         for section_id in scope_sections:
-            has_open, open_count = check_section_table_for_open_questions(self.lines, section_id)
-            if has_open:
+            has_open_blockers, blocker_count = check_section_table_for_open_blockers(
+                self.lines, section_id
+            )
+            if has_open_blockers:
                 issues.append(
                     ReviewIssue(
                         severity="blocker",
                         section=section_id,
-                        description=f"Section has {open_count} open question(s) that must be resolved before passing gate",
-                        suggestion="Please resolve all open questions in the section's question table",
+                        description=f"Section has {blocker_count} open blocker(s) that must be resolved before passing gate",
+                        suggestion="Please resolve all open blockers in the section's question table (warnings can remain open)",
                     )
                 )
         
