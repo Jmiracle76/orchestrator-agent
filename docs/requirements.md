@@ -391,8 +391,6 @@ The web interface integrates with the existing Python-based orchestrator through
 <!-- table:data_considerations_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| data_considerations-Q1 | [BLOCKER] data_retention subsection contains placeholder comment '<!-- PLACEHOLDER -->' mixed with actual content, indicating incomplete section despite having content below the placeholder. | 2026-02-12 |  | Open |
-
 
 <!-- section_lock:data_considerations lock=false -->
 ---
