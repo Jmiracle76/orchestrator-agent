@@ -569,13 +569,14 @@ def check_section_table_for_open_blockers(lines: List[str], section_id: str) -> 
             
             # Only count as blocker if:
             # 1. Status is "Open" (case-insensitive)
-            # 2. Question text starts with [BLOCKER] OR has no severity prefix
-            #    (backward compatibility: unprefixed questions are treated as blockers)
+            # 2. Question is NOT a warning (backward compatibility: unprefixed questions = blockers)
             if status.lower() == "open":
                 # Check if it's a warning (which should NOT block)
                 if question_text.upper().startswith("[WARNING]"):
                     continue
-                # Count everything else (blockers and unprefixed questions)
+                # Count as blocker if:
+                # - Explicitly marked as [BLOCKER], OR
+                # - No severity prefix (backward compatibility)
                 blocker_count += 1
     
     return blocker_count > 0, blocker_count

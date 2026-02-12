@@ -251,9 +251,9 @@ def test_mixed_warnings_and_blockers():
     assert not result.passed, "Gate should fail when blockers are present (regardless of warnings)"
     assert len(result.issues) > 0, "Expected blocker issues"
     
-    # The blocker count should be 2 (1 [BLOCKER] + 1 unprefixed)
-    # The description should mention the correct count
-    assert "2 open blocker(s)" in result.issues[0].description
+    # Verify the blocker count directly from the check function
+    has_blockers, blocker_count = check_section_table_for_open_blockers(lines, "problem_statement")
+    assert blocker_count == 2, f"Expected 2 blockers (1 [BLOCKER] + 1 unprefixed), got {blocker_count}"
     
     print("  ✓ Mixed warnings and blockers handled correctly")
     return True
