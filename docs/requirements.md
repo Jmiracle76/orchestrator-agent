@@ -132,10 +132,10 @@ Without addressing this usability barrier, the project risks limited adoption. T
 <!-- table:goals_objectives_questions -->
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
-| goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 |  | Open |
-| goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 |  | Open |
-| goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 |  | Open |
-| goals_objectives-Q15 | What accessibility standards (WCAG 2.1, Section 508) MUST the web interface meet? | 2026-02-12 |  | Open |
+| goals_objectives-Q12 | SHALL the web interface support real-time collaboration features where multiple users can view (but not simultaneously edit) the same document? | 2026-02-12 | real-time collaboration features are not required for this version | Open |
+| goals_objectives-Q13 | What SHALL be the deployment architecture for the web interface (embedded within VM, separate container, standalone service)? | 2026-02-12 | The web interface should be a separate service on the same VM as the orchestrator code. | Open |
+| goals_objectives-Q14 | SHALL the web interface maintain session state across browser refreshes or SHALL each refresh restart the workflow? | 2026-02-12 | The web interface should maintain session state across browser refreshes. | Open |
+| goals_objectives-Q15 | What accessibility standards (WCAG 2.1, Section 508) MUST the web interface meet? | 2026-02-12 | No accessibility standards are required at this stage. | Open |
 | goals_objectives-Q8 | What minimum performance metrics SHALL the web interface meet (e.g., page load time, response time for document operations)? | 2026-02-12 | There are no performance objectives at this time. This is a proof-of-concept system to start. | Resolved |
 | goals_objectives-Q9 | What is the maximum number of concurrent users the web interface MUST support during this initial release? | 2026-02-12 | A single concurrent user is all that is required for initial release. | Resolved |
 | goals_objectives-Q10 | SHALL the web interface support all existing CLI functionality, or only document creation and iteration workflows? | 2026-02-12 | All existing CLI functionality should be targeted for initial release and may be scaled back in future revisions. | Resolved |
@@ -195,7 +195,7 @@ Without addressing this usability barrier, the project risks limited adoption. T
 | Question ID | Question | Date | Answer | Status |
 |-------------|----------|------|--------|--------|
 | assumptions-Q1 | What technical assumptions exist for this project? | [Date] | The local VM must host the web app. The web app must support the existing python code base. The web app must be extensible for future enhancements. | Open |
-| assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] |  | Open |
+| assumptions-Q2 | What conditions must remain true for this solution to work as designed? | [Date] | Unknown at this time. | Open |
 
 <!-- section_lock:assumptions lock=false -->
 ---
