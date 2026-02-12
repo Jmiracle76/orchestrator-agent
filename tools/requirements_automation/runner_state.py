@@ -99,9 +99,13 @@ def get_section_state(
         and handler_config.questions_table is not None
     )
 
+    # Initialize question state
+    has_open_questions = False
+    has_answered_questions = False
+
     # Check for open questions
     if use_section_qs:
-        # Try section-specific table first
+        # Use section-specific table
         try:
             qs, _ = parse_section_questions(lines, target_id)
             has_open_questions = any(
@@ -116,40 +120,33 @@ def get_section_state(
             )
         except Exception as e:
             logging.debug(
-                "Failed to parse section questions for '%s': %s, falling back to global",
+                "Failed to parse section questions for '%s': %s",
                 target_id,
                 e,
             )
-            # Fall back to global table
-            use_section_qs = False
-
-    if not use_section_qs:
-        # Use global questions table
+            # When handler_config is None or section table parsing fails,
+            # default to no questions rather than falling back to global table
+            has_open_questions = False
+            has_answered_questions = False
+    elif handler_config is None:
+        # When handler_config is None, try to use section-specific questions
+        # using the naming convention {section_id}_questions
         try:
-            open_qs, _, _ = open_questions_parse(lines)
-        except Exception as e:
-            logging.warning("Failed to parse open questions: %s", e)
-            open_qs = []
-
-        # Include subsections when checking questions
-        subs = find_subsections_within(lines, span)
-        target_ids = {target_id} | {s.subsection_id for s in subs}
-
-        targeted_questions = [q for q in open_qs if _canon_target(q.section_target) in target_ids]
-
-        has_open_questions = any(
-            q.status.strip() in ("Open", "Deferred") and q.answer.strip() in ("", "-", "Pending")
-            for q in targeted_questions
-        )
-
-        # Note: Questions with status "Open"/"Deferred" and non-empty answers
-        # are considered "answered but not yet integrated". After integration,
-        # they are marked as "Resolved" by the phase processors.
-        has_answered_questions = any(
-            q.answer.strip() not in ("", "-", "Pending")
-            and q.status.strip() in ("Open", "Deferred")
-            for q in targeted_questions
-        )
+            qs, _ = parse_section_questions(lines, target_id)
+            has_open_questions = any(
+                q.status.strip() in ("Open", "Deferred")
+                and q.answer.strip() in ("", "-", "Pending")
+                for q in qs
+            )
+            has_answered_questions = any(
+                q.answer.strip() not in ("", "-", "Pending")
+                and q.status.strip() in ("Open", "Deferred")
+                for q in qs
+            )
+        except Exception:
+            # If section table doesn't exist, default to no questions
+            has_open_questions = False
+            has_answered_questions = False
 
     return SectionState(
         section_id=target_id,
@@ -163,7 +160,11 @@ def get_section_state(
 
 
 def gather_prior_sections(
-    lines: List[str], workflow_order: List[str], target_id: str
+    lines: List[str],
+    workflow_order: List[str],
+    target_id: str,
+    handler_registry: Optional[Any] = None,
+    doc_type: Optional[str] = None,
 ) -> dict[str, str]:
     """
     Gather completed prior section content before the target section.
@@ -176,6 +177,8 @@ def gather_prior_sections(
         lines: Document content as list of strings
         workflow_order: List of workflow target IDs
         target_id: Section ID to gather prior sections for
+        handler_registry: Optional handler registry for looking up section configs
+        doc_type: Optional document type for looking up section configs
 
     Returns:
         Dict mapping section_id → body content for all completed prior sections
@@ -200,8 +203,17 @@ def gather_prior_sections(
         if is_special_workflow_target(section_id):
             continue
 
+        # Get handler config for this section if available
+        handler_config = None
+        if handler_registry and doc_type:
+            try:
+                handler_config = handler_registry.get_handler_config(doc_type, section_id)
+            except Exception:
+                # If handler config not found, continue without it
+                pass
+
         # Check if section is complete
-        state = get_section_state(lines, section_id)
+        state = get_section_state(lines, section_id, handler_config)
 
         # Section must exist, not be blank, have no placeholder, and no open questions
         if not state.exists:

@@ -136,7 +136,9 @@ class WorkflowRunner:
         ):
             # Gather prior completed sections for context based on scope config
             if handler_config.scope == "all_prior_sections":
-                prior_sections = gather_prior_sections(self.lines, self.workflow_order, target_id)
+                prior_sections = gather_prior_sections(
+                    self.lines, self.workflow_order, target_id, self.handler_registry, self.doc_type
+                )
             else:
                 # For current_section scope or any other scope, don't pass prior context
                 prior_sections = {}

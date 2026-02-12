@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import warnings
 from typing import Any, List
 
 from .config import PHASES
@@ -14,6 +15,7 @@ from .parsing import find_sections, get_section_span, section_is_blank
 from .phases import process_phase_1, process_phase_2, process_placeholder_phase
 from .review_gate_handler import ReviewGateHandler
 from .runner_integration import (
+    _use_section_questions,
     draft_section_content,
     generate_questions_for_section,
     integrate_answered_questions,
@@ -182,27 +184,26 @@ def execute_unified_handler(
         elif gen_count == 0 and not gen_changed:
             # Section is blank but has open questions - blocked waiting for answers
             try:
-                from .parsing import find_subsections_within
+                from .section_questions import parse_section_questions
 
-                if span is not None:
-                    subs = find_subsections_within(lines, span)
-                target_ids = {target_id} | {s.subsection_id for s in subs}
+                # Try to get section-specific questions if configured
+                if _use_section_questions(handler_config):
+                    try:
+                        qs, _ = parse_section_questions(lines, target_id)
+                        open_unanswered = [
+                            q
+                            for q in qs
+                            if q.status.strip() in ("Open", "Deferred")
+                            and q.answer.strip() in ("", "-", "Pending")
+                        ]
 
-                open_qs, _, _ = open_questions_parse(lines)
-                targeted_questions = [
-                    q for q in open_qs if _canon_target(q.section_target) in target_ids
-                ]
-                open_unanswered = [
-                    q
-                    for q in targeted_questions
-                    if q.status.strip() in ("Open", "Deferred")
-                    and q.answer.strip() in ("", "-", "Pending")
-                ]
-
-                if open_unanswered:
-                    blocked_reasons.append(
-                        f"Waiting for {len(open_unanswered)} questions to be answered"
-                    )
+                        if open_unanswered:
+                            blocked_reasons.append(
+                                f"Waiting for {len(open_unanswered)} questions to be answered"
+                            )
+                    except Exception:
+                        # No section questions available
+                        pass
             except Exception:
                 pass
 
@@ -230,6 +231,10 @@ def execute_phase_based_handler(
 ) -> tuple[List[str], WorkflowResult]:
     """
     Execute phase-based handler for backward compatibility.
+    
+    DEPRECATED: This function uses the legacy phase processors that rely on the
+    global open_questions table. New sections should be configured in handler_registry.yaml
+    to use the unified handler with per-section question tables.
 
     Args:
         lines: Document content as list of strings
@@ -240,6 +245,12 @@ def execute_phase_based_handler(
     Returns:
         Tuple of (updated_lines, WorkflowResult)
     """
+    warnings.warn(
+        f"Using deprecated phase-based handler for section '{target_id}'. "
+        "Consider adding handler configuration in handler_registry.yaml.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     # Map section to phase for backward compatibility
     phase_name = None
     for phase, sections in PHASES.items():

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import Any, Dict, List, Tuple
 
 from ..config import PHASES, TARGET_CANONICAL_MAP
@@ -28,7 +29,19 @@ def _canon_target(t: str) -> str:
 def process_phase_1(
     lines: List[str], llm: Any, dry_run: bool, target_section: str | None = None
 ) -> Tuple[List[str], bool, List[str], bool, List[str]]:
-    """Fill intent/scope sections or create open questions when missing."""
+    """Fill intent/scope sections or create open questions when missing.
+    
+    DEPRECATED: This legacy phase processor uses the global open_questions table.
+    New code should use the unified handler with per-section question tables configured
+    in handler_registry.yaml. This function remains for backward compatibility with
+    sections that don't have handler configurations.
+    """
+    warnings.warn(
+        "Using deprecated phase-based handler for phase_1. "
+        "Consider migrating to unified handler with per-section question tables.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     changed = False
     blocked: List[str] = []
     needs_human = False
