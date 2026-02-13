@@ -258,6 +258,24 @@ jobs:
             } catch (error) {
               if (error.message.includes('already exists')) {
                 console.log('⚠️  Pull request already exists for this Epic');
+                
+                // Try to find the existing PR
+                const existingPRs = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${epicBranch}`,
+                  base: featureBranch,
+                  state: 'open'
+                });
+                
+                if (existingPRs.data.length > 0) {
+                  const existingPR = existingPRs.data[0];
+                  console.log(`   Existing PR: #${existingPR.number}`);
+                  console.log(`   URL: ${existingPR.html_url}`);
+                  core.setOutput('pr_number', existingPR.number);
+                  core.setOutput('pr_url', existingPR.html_url);
+                }
+                
                 core.setOutput('pr_exists', 'true');
               } else {
                 throw error;

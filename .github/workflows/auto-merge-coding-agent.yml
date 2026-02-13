@@ -165,9 +165,16 @@ jobs:
               console.log(`   Statuses: ${combinedStatus.statuses.length}`);
               
               // Check if all statuses are successful
-              if (combinedStatus.state === 'success' || combinedStatus.statuses.length === 0) {
+              if (combinedStatus.state === 'success') {
                 allChecksPassed = true;
                 console.log('✅ All status checks passed!');
+                break;
+              }
+              
+              // If no status checks are configured, allow after waiting
+              if (combinedStatus.statuses.length === 0 && attempt >= 3) {
+                allChecksPassed = true;
+                console.log('⚠️  No status checks configured, proceeding with auto-merge');
                 break;
               }
               

@@ -62,15 +62,15 @@ jobs:
             
             // Validate that we have all required information
             if (!issueNumber) {
-              core.setFailed('❌ Missing issue_number in payload');
+              core.setFailed('❌ Missing issue_number in client_payload from auto-assign-next-issue workflow');
               return;
             }
             if (!epicNumber) {
-              core.setFailed('❌ Missing epic_number in payload');
+              core.setFailed('❌ Missing epic_number in client_payload from auto-assign-next-issue workflow');
               return;
             }
             if (!baseBranch) {
-              core.setFailed('❌ Missing base_branch in payload');
+              core.setFailed('❌ Missing base_branch in client_payload from auto-assign-next-issue workflow');
               return;
             }
             

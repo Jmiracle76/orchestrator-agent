@@ -131,9 +131,10 @@ jobs:
             });
             
             // Extract all issue numbers from Epic body
-            // Look for patterns like "Closes #123", "#123", "- #123", etc.
+            // Look for patterns like "Closes #123", "- #123", "* #123" in lists
+            // This pattern avoids matching markdown headers or random numbers
             const epicBody = epicIssue.data.body || '';
-            const issueMatches = epicBody.matchAll(/#(\d+)/g);
+            const issueMatches = epicBody.matchAll(/(?:Closes|Fixes|Resolves|[-*])\s*#(\d+)/gi);
             const subIssues = [...new Set([...issueMatches].map(match => match[1]))];
             
             console.log('📋 Found sub-issues: ' + subIssues.join(', '));
