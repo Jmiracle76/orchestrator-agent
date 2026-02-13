@@ -1,0 +1,238 @@
+# ============================================================================
+# Trigger Coding Agent Workflow
+# ============================================================================
+# Purpose: Listens for repository_dispatch events and prepares issues for the
+#          coding agent by adding appropriate labels and comments with context
+#          about the Epic and target branch.
+#
+# Flow:
+#   repository_dispatch event → Extract issue info → Add labels →
+#   Comment with Epic context → Log base branch information
+#
+# Trigger: repository_dispatch event with type 'assign-to-coding-agent'
+# ============================================================================
+
+name: Trigger Coding Agent
+
+# Listen for repository_dispatch events
+# These are custom events triggered by other workflows
+on:
+  repository_dispatch:
+    types: [assign-to-coding-agent]
+
+# Permissions needed for this workflow
+permissions:
+  contents: read   # Required to read repository content
+  issues: write    # Required to comment on and label issues
+
+jobs:
+  prepare-issue:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ======================================================================
+      # Step 1: Extract Issue Information
+      # ======================================================================
+      # Extracts information from the repository_dispatch event payload:
+      # - issue_number: The issue to be assigned to the coding agent
+      # - epic_number: The parent Epic issue number
+      # - feature_branch: The parent feature branch name
+      # - base_branch: The target branch for PRs (epic-XXX)
+      # 
+      # This information is passed from the auto-assign-next-issue workflow
+      # ======================================================================
+      - name: Extract issue information
+        id: extract-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const payload = context.payload.client_payload;
+            
+            // Extract all relevant information from the payload
+            const issueNumber = payload.issue_number;
+            const epicNumber = payload.epic_number;
+            const featureBranch = payload.feature_branch;
+            const baseBranch = payload.base_branch;
+            
+            console.log('📋 Issue Information:');
+            console.log('   Issue Number: #' + issueNumber);
+            console.log('   Epic Number: #' + epicNumber);
+            console.log('   Feature Branch: ' + featureBranch);
+            console.log('   Base Branch: ' + baseBranch);
+            
+            // Validate that we have all required information
+            if (!issueNumber) {
+              core.setFailed('❌ Missing issue_number in payload');
+              return;
+            }
+            if (!epicNumber) {
+              core.setFailed('❌ Missing epic_number in payload');
+              return;
+            }
+            if (!baseBranch) {
+              core.setFailed('❌ Missing base_branch in payload');
+              return;
+            }
+            
+            // Set outputs for subsequent steps
+            core.setOutput('issue_number', issueNumber);
+            core.setOutput('epic_number', epicNumber);
+            core.setOutput('feature_branch', featureBranch || 'feature/web-wrapper');
+            core.setOutput('base_branch', baseBranch);
+            
+      # ======================================================================
+      # Step 2: Add Labels to Issue
+      # ======================================================================
+      # Adds tracking labels to the issue:
+      # - 'coding-agent-assigned': Indicates the issue has been assigned to
+      #                           the coding agent
+      # - 'in-progress': Indicates work has started on this issue
+      # 
+      # These labels help track:
+      # - Which issues are currently being worked on
+      # - Which issues were handled by the coding agent
+      # - Current status of issues in the workflow
+      # ======================================================================
+      - name: Add labels to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.extract-info.outputs.issue_number }}';
+            
+            // Add labels to indicate coding agent assignment
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['coding-agent-assigned', 'in-progress']
+            });
+            
+            console.log('✅ Labels added to issue #' + issueNumber);
+            console.log('   - coding-agent-assigned');
+            console.log('   - in-progress');
+            
+      # ======================================================================
+      # Step 3: Comment on Issue with Context
+      # ======================================================================
+      # Posts a comment on the issue providing context for the coding agent:
+      # - Link to the parent Epic issue
+      # - Target branch for the PR
+      # - Feature branch hierarchy
+      # - Instructions for creating the PR
+      # 
+      # This comment helps the coding agent understand:
+      # - Where this issue fits in the overall project structure
+      # - What branch to target with the PR
+      # - How to properly format the PR
+      # ======================================================================
+      - name: Comment on issue with epic context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.extract-info.outputs.issue_number }}';
+            const epicNumber = '${{ steps.extract-info.outputs.epic_number }}';
+            const featureBranch = '${{ steps.extract-info.outputs.feature_branch }}';
+            const baseBranch = '${{ steps.extract-info.outputs.base_branch }}';
+            
+            const message = `
+            ## 🤖 Coding Agent Assignment
+            
+            This issue has been automatically assigned to the coding agent.
+            
+            ### Epic Context
+            - **Parent Epic:** #${epicNumber}
+            - **Feature Branch:** \`${featureBranch}\`
+            - **Target Branch:** \`${baseBranch}\`
+            
+            ### Branch Hierarchy
+            \`\`\`
+            main
+              └── ${featureBranch}
+                   └── ${baseBranch} ← Target branch for PR
+            \`\`\`
+            
+            ### Instructions for Coding Agent
+            
+            1. Create a new branch from \`${baseBranch}\`
+            2. Implement the changes described in this issue
+            3. Create a pull request targeting \`${baseBranch}\`
+            4. Include "Closes #${issueNumber}" in the PR body
+            5. The PR will be automatically merged when all checks pass
+            
+            ### Important Notes
+            - ✅ Auto-merge is enabled for coding agent PRs
+            - ✅ Progress will be tracked on Epic #${epicNumber}
+            - ✅ Next issue will be assigned automatically after merge
+            
+            ### PR Body Template
+            \`\`\`
+            ## Description
+            [Brief description of changes]
+            
+            Closes #${issueNumber}
+            
+            ## Changes Made
+            - [List of changes]
+            
+            ## Testing
+            - [How to test]
+            \`\`\`
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: message
+            });
+            
+            console.log('✅ Context comment posted to issue #' + issueNumber);
+            
+      # ======================================================================
+      # Step 4: Create Workflow Notice
+      # ======================================================================
+      # Logs important information about the base branch to the workflow run
+      # This creates a visible notice in the GitHub Actions UI that makes it
+      # easy to see which branch should be used as the base for PRs
+      # 
+      # The notice appears in the workflow summary and helps with:
+      # - Debugging if PRs target the wrong branch
+      # - Quick reference for developers
+      # - Audit trail of assignments
+      # ======================================================================
+      - name: Create workflow notice about base branch
+        run: |
+          ISSUE_NUMBER="${{ steps.extract-info.outputs.issue_number }}"
+          BASE_BRANCH="${{ steps.extract-info.outputs.base_branch }}"
+          EPIC_NUMBER="${{ steps.extract-info.outputs.epic_number }}"
+          
+          echo "::notice title=Coding Agent Assignment::Issue #${ISSUE_NUMBER} assigned to coding agent. PRs should target branch: ${BASE_BRANCH} (Epic #${EPIC_NUMBER})"
+          
+          echo "📋 Assignment Summary:"
+          echo "   Issue: #${ISSUE_NUMBER}"
+          echo "   Epic: #${EPIC_NUMBER}"
+          echo "   Target Branch: ${BASE_BRANCH}"
+          echo ""
+          echo "✅ Issue prepared for coding agent"
+          
+      # ======================================================================
+      # Step 5: Log Success
+      # ======================================================================
+      # Final step to log successful preparation of the issue
+      # This provides a clear indication that the workflow completed
+      # successfully and the issue is ready for the coding agent
+      # ======================================================================
+      - name: Log success
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.extract-info.outputs.issue_number }}';
+            const baseBranch = '${{ steps.extract-info.outputs.base_branch }}';
+            
+            console.log('');
+            console.log('═══════════════════════════════════════════════');
+            console.log('✅ Coding Agent Trigger Complete');
+            console.log('═══════════════════════════════════════════════');
+            console.log('Issue #' + issueNumber + ' is ready for the coding agent');
+            console.log('PRs should target: ' + baseBranch);
+            console.log('═══════════════════════════════════════════════');

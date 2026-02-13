@@ -1,0 +1,237 @@
+# ============================================================================
+# Create Epic Branches Workflow
+# ============================================================================
+# Purpose: Automatically creates Epic branches from the feature branch when
+#          Epic issues are created. This ensures consistent branch naming
+#          and proper parent-child relationships in the three-tier structure.
+#
+# Branching Structure:
+#   main
+#     └── feature/web-wrapper
+#          ├── epic-133 ✅ (created by this workflow)
+#          ├── epic-142 ✅ (created by this workflow)
+#          └── ...
+#
+# Trigger: When an issue is opened or labeled, if the title starts with "Epic:"
+# ============================================================================
+
+name: Create Epic Branches
+
+# Trigger on issue events - specifically when issues are opened or labeled
+on:
+  issues:
+    types: [opened, labeled]
+
+# Permissions needed for this workflow
+permissions:
+  contents: write   # Required to create branches
+  issues: write     # Required to comment on and label issues
+
+jobs:
+  create-epic-branch:
+    runs-on: ubuntu-latest
+    
+    # ========================================================================
+    # Job Condition: Only run for Epic issues
+    # ========================================================================
+    # This workflow should only execute when:
+    # 1. An issue is opened or labeled
+    # 2. The issue title starts with "Epic:" (case-insensitive)
+    # This prevents the workflow from running on regular issues
+    # ========================================================================
+    if: startsWith(github.event.issue.title, 'Epic:') || startsWith(github.event.issue.title, 'epic:')
+    
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      # Check out the repository with full history to access all branches
+      # We need the feature branch to create the epic branch from it
+      # ======================================================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all branches so we can find the feature branch
+          fetch-depth: 0
+          
+      # ======================================================================
+      # Step 2: Determine Feature Branch
+      # ======================================================================
+      # Determines which feature branch this Epic belongs to by:
+      # 1. Checking issue labels for a "feature/*" label
+      # 2. Defaulting to 'feature/web-wrapper' if no feature label is found
+      # 
+      # Epic issues should be labeled with their parent feature branch name
+      # to establish the proper hierarchy
+      # ======================================================================
+      - name: Determine feature branch
+        id: feature-branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+            
+            // Look for a label that starts with 'feature/'
+            let featureBranch = labels.find(label => label.startsWith('feature/'));
+            
+            // Default to feature/web-wrapper if no feature label found
+            if (!featureBranch) {
+              featureBranch = 'feature/web-wrapper';
+              console.log('⚠️  No feature branch label found, using default: ' + featureBranch);
+            } else {
+              console.log('✅ Found feature branch label: ' + featureBranch);
+            }
+            
+            // Set output for use in subsequent steps
+            core.setOutput('branch', featureBranch);
+            return featureBranch;
+            
+      # ======================================================================
+      # Step 3: Create Epic Branch
+      # ======================================================================
+      # Creates the Epic branch from the feature branch
+      # Format: epic-<issue_number>
+      # 
+      # This branch will be used for all work related to this Epic and will
+      # eventually be merged back into the feature branch
+      # ======================================================================
+      - name: Create epic branch
+        id: create-branch
+        run: |
+          # Get the issue number and construct the epic branch name
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          EPIC_BRANCH="epic-${ISSUE_NUMBER}"
+          FEATURE_BRANCH="${{ steps.feature-branch.outputs.branch }}"
+          
+          echo "Creating Epic branch: $EPIC_BRANCH"
+          echo "Parent feature branch: $FEATURE_BRANCH"
+          
+          # Check if the epic branch already exists
+          if git ls-remote --heads origin "$EPIC_BRANCH" | grep -q "$EPIC_BRANCH"; then
+            echo "⚠️  Branch $EPIC_BRANCH already exists"
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "epic_branch=$EPIC_BRANCH" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Fetch the latest version of the feature branch
+          git fetch origin "$FEATURE_BRANCH"
+          
+          # Create the epic branch from the feature branch
+          git checkout -b "$EPIC_BRANCH" "origin/$FEATURE_BRANCH"
+          
+          # Push the new epic branch to remote
+          git push origin "$EPIC_BRANCH"
+          
+          echo "✅ Epic branch created successfully"
+          echo "branch_exists=false" >> $GITHUB_OUTPUT
+          echo "epic_branch=$EPIC_BRANCH" >> $GITHUB_OUTPUT
+          
+      # ======================================================================
+      # Step 4: Comment on Epic Issue
+      # ======================================================================
+      # Posts a comment showing the branching hierarchy and providing
+      # guidance on how to work with this Epic branch
+      # 
+      # The comment includes:
+      # - Visual diagram of the branch structure
+      # - Instructions for creating PRs
+      # - Information about the automation workflow
+      # ======================================================================
+      - name: Comment on epic issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicBranch = '${{ steps.create-branch.outputs.epic_branch }}';
+            const featureBranch = '${{ steps.feature-branch.outputs.branch }}';
+            const branchExists = '${{ steps.create-branch.outputs.branch_exists }}' === 'true';
+            const issueNumber = context.payload.issue.number;
+            
+            // Create a message based on whether the branch already existed
+            let message;
+            if (branchExists) {
+              message = `
+              ## ℹ️ Epic Branch Already Exists
+              
+              The Epic branch \`${epicBranch}\` already exists.
+              `;
+            } else {
+              message = `
+              ## 🌳 Epic Branch Created
+              
+              Epic branch \`${epicBranch}\` has been created from \`${featureBranch}\`.
+              `;
+            }
+            
+            // Add the branching hierarchy diagram
+            message += `
+            ### Branching Hierarchy
+            \`\`\`
+            main
+              └── ${featureBranch}
+                   └── ${epicBranch} ✅ (this Epic)
+            \`\`\`
+            
+            ### How to Work on This Epic
+            
+            1. **Create sub-issues** for individual tasks under this Epic
+            2. **List sub-issues** in the Epic issue body (e.g., "Closes #123, Closes #124")
+            3. **Coding agent PRs** should target the \`${epicBranch}\` branch
+            4. **Auto-merge** will be enabled for PRs created by the coding agent
+            5. **Progress tracking** will automatically update as sub-issues complete
+            6. **When complete**, the Epic will be merged into \`${featureBranch}\`
+            
+            ### Automated Workflows
+            - ✅ Sub-issues are automatically assigned as previous ones complete
+            - ✅ PRs from coding-agent are automatically merged when checks pass
+            - ✅ Progress is tracked and updated on this issue
+            - ✅ Epic completion triggers merge to feature branch
+            
+            ### Target Branch for PRs
+            All pull requests for this Epic should target: \`${epicBranch}\`
+            `;
+            
+            // Post the comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: message
+            });
+            
+            console.log('✅ Comment posted to Epic issue #' + issueNumber);
+            
+      # ======================================================================
+      # Step 5: Add Labels to Epic Issue
+      # ======================================================================
+      # Adds tracking labels to the Epic issue:
+      # - 'has-epic-branch': Indicates the Epic branch has been created
+      # - Feature branch name: Links the Epic to its parent feature branch
+      # 
+      # These labels enable:
+      # - Easy filtering of Epics by feature
+      # - Tracking which Epics have branches created
+      # - Automated workflows to find related issues
+      # ======================================================================
+      - name: Add labels to epic issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureBranch = '${{ steps.feature-branch.outputs.branch }}';
+            const issueNumber = context.payload.issue.number;
+            
+            // Prepare labels to add
+            const labelsToAdd = ['has-epic-branch', featureBranch];
+            
+            // Add labels to the Epic issue
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: labelsToAdd
+            });
+            
+            console.log('✅ Labels added to Epic issue #' + issueNumber);
+            console.log('   - has-epic-branch');
+            console.log('   - ' + featureBranch);
