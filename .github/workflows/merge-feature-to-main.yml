@@ -1,0 +1,590 @@
+# ============================================================================
+# Merge Feature to Main Workflow
+# ============================================================================
+# Purpose: Creates the final pull request to merge a completed feature branch
+#          into main. This workflow ensures all Epics are complete before
+#          creating the PR and represents the final step in the three-tier
+#          branching strategy.
+#
+# Flow:
+#   Manual trigger → Check all Epics complete → Create PR OR Display warning
+#
+# Trigger: Manual workflow_dispatch only
+# ============================================================================
+
+name: Merge Feature to Main
+
+# Manual trigger only - requires explicit decision to merge feature
+on:
+  workflow_dispatch:
+    inputs:
+      feature_branch:
+        description: 'Feature branch name (e.g., feature/web-wrapper)'
+        required: true
+        type: string
+      feature_issue:
+        description: 'Feature tracking issue number (e.g., 123)'
+        required: true
+        type: string
+
+# Permissions needed for this workflow
+permissions:
+  contents: read        # Required to read repository content
+  issues: write         # Required to comment on issues
+  pull-requests: write  # Required to create PRs
+
+jobs:
+  # ==========================================================================
+  # Job 1: Check All Epics Are Complete
+  # ==========================================================================
+  # Validates that all Epic issues associated with the feature branch have
+  # been completed before allowing the feature to be merged to main.
+  #
+  # Process:
+  # 1. Find all issues labeled with the feature branch name
+  # 2. Filter to only Epic issues (title starts with "Epic:")
+  # 3. Check each Epic for 'epic-complete' label
+  # 4. Output results for subsequent jobs
+  # ==========================================================================
+  check-epics:
+    runs-on: ubuntu-latest
+    outputs:
+      all_complete: ${{ steps.check.outputs.all_complete }}
+      incomplete_epics: ${{ steps.check.outputs.incomplete_epics }}
+      epic_list: ${{ steps.check.outputs.epic_list }}
+    
+    steps:
+      # ======================================================================
+      # Step 1: Get All Issues for Feature Branch
+      # ======================================================================
+      # Searches for all issues labeled with the feature branch name
+      # These are the Epic issues that belong to this feature
+      # ======================================================================
+      - name: Get all issues for feature branch
+        id: get-issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureBranch = '${{ inputs.feature_branch }}';
+            
+            console.log('🔍 Searching for issues labeled with: ' + featureBranch);
+            
+            // Search for issues with the feature branch label
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: featureBranch,
+              state: 'all',  // Include both open and closed issues
+              per_page: 100
+            });
+            
+            console.log(`✅ Found ${issues.data.length} issues with label ${featureBranch}`);
+            
+            // Return the issues data
+            return issues.data;
+            
+      # ======================================================================
+      # Step 2: Filter to Epic Issues
+      # ======================================================================
+      # Filters the issues to only include Epic issues
+      # Epic issues are identified by titles starting with "Epic:"
+      # 
+      # We only care about Epics for feature completion validation
+      # Regular sub-issues are not checked here
+      # ======================================================================
+      - name: Filter to epic issues
+        id: filter-epics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = ${{ steps.get-issues.outputs.result }};
+            
+            // Filter to only Epic issues
+            const epics = issues.filter(issue => 
+              issue.title.toLowerCase().startsWith('epic:')
+            );
+            
+            console.log(`✅ Found ${epics.length} Epic issues`);
+            
+            // Log each Epic
+            epics.forEach(epic => {
+              console.log(`   - #${epic.number}: ${epic.title}`);
+            });
+            
+            // Return epic data
+            return epics;
+            
+      # ======================================================================
+      # Step 3: Check Epic Completion Status
+      # ======================================================================
+      # Checks each Epic for the 'epic-complete' label
+      # 
+      # For each Epic:
+      # - If it has 'epic-complete' label → considered complete
+      # - If it lacks the label → considered incomplete
+      # 
+      # Results are used to determine if the feature is ready to merge
+      # ======================================================================
+      - name: Check epic completion status
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epics = ${{ steps.filter-epics.outputs.result }};
+            
+            if (epics.length === 0) {
+              console.log('⚠️  No Epic issues found for this feature');
+              core.setOutput('all_complete', 'false');
+              core.setOutput('incomplete_epics', 'No Epics found');
+              core.setOutput('epic_list', '[]');
+              return;
+            }
+            
+            // Check completion status of each Epic
+            const epicStatuses = epics.map(epic => {
+              const labels = epic.labels.map(l => l.name);
+              const isComplete = labels.includes('epic-complete');
+              
+              return {
+                number: epic.number,
+                title: epic.title,
+                complete: isComplete,
+                labels: labels
+              };
+            });
+            
+            // Separate complete and incomplete Epics
+            const completeEpics = epicStatuses.filter(e => e.complete);
+            const incompleteEpics = epicStatuses.filter(e => !e.complete);
+            
+            console.log('\n📊 Epic Status Summary:');
+            console.log(`   Total Epics: ${epics.length}`);
+            console.log(`   Complete: ${completeEpics.length}`);
+            console.log(`   Incomplete: ${incompleteEpics.length}`);
+            
+            // Log complete Epics
+            if (completeEpics.length > 0) {
+              console.log('\n✅ Complete Epics:');
+              completeEpics.forEach(epic => {
+                console.log(`   - #${epic.number}: ${epic.title}`);
+              });
+            }
+            
+            // Log incomplete Epics
+            if (incompleteEpics.length > 0) {
+              console.log('\n⚠️  Incomplete Epics:');
+              incompleteEpics.forEach(epic => {
+                console.log(`   - #${epic.number}: ${epic.title}`);
+              });
+            }
+            
+            // Determine if all Epics are complete
+            const allComplete = incompleteEpics.length === 0;
+            
+            // Set outputs
+            core.setOutput('all_complete', allComplete.toString());
+            core.setOutput('incomplete_epics', JSON.stringify(incompleteEpics));
+            core.setOutput('epic_list', JSON.stringify(completeEpics));
+            
+            if (allComplete) {
+              console.log('\n🎉 All Epics are complete! Ready to merge.');
+            } else {
+              console.log('\n❌ Not all Epics are complete. Cannot merge yet.');
+            }
+  
+  # ==========================================================================
+  # Job 2: Create Final Pull Request
+  # ==========================================================================
+  # Creates the final PR to merge the feature branch into main
+  # Only runs if all Epics are complete
+  #
+  # The PR includes:
+  # - List of all completed Epics
+  # - Branching structure diagram
+  # - Summary of the feature work
+  # ==========================================================================
+  create-pr:
+    runs-on: ubuntu-latest
+    needs: check-epics
+    # Only run if all Epics are complete
+    if: needs.check-epics.outputs.all_complete == 'true'
+    
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      # Checks out the repository to verify the feature branch exists
+      # ======================================================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      # ======================================================================
+      # Step 2: Verify Feature Branch Exists
+      # ======================================================================
+      # Validates that the feature branch exists before creating PR
+      # Provides clear error message if branch is missing
+      # ======================================================================
+      - name: Verify feature branch exists
+        run: |
+          FEATURE_BRANCH="${{ inputs.feature_branch }}"
+          
+          echo "Verifying feature branch: $FEATURE_BRANCH"
+          
+          if ! git ls-remote --heads origin "$FEATURE_BRANCH" | grep -q "$FEATURE_BRANCH"; then
+            echo "❌ Feature branch $FEATURE_BRANCH does not exist"
+            exit 1
+          fi
+          
+          echo "✅ Feature branch exists"
+          
+      # ======================================================================
+      # Step 3: Create Pull Request
+      # ======================================================================
+      # Creates the final PR to merge feature into main
+      # 
+      # PR Details:
+      # - Head: feature/xxx
+      # - Base: main
+      # - Title: "Feature: [feature name]"
+      # - Body: Comprehensive summary with all Epic details
+      # 
+      # This is a major milestone in the project and should be reviewed
+      # carefully before merging
+      # ======================================================================
+      - name: Create pull request
+        id: create-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureBranch = '${{ inputs.feature_branch }}';
+            const featureIssue = '${{ inputs.feature_issue }}';
+            const epicList = JSON.parse('${{ needs.check-epics.outputs.epic_list }}');
+            
+            // Extract feature name from branch
+            const featureName = featureBranch.replace('feature/', '');
+            
+            // Construct PR title
+            const prTitle = `Feature: ${featureName}`;
+            
+            // Build list of completed Epics for PR body
+            let epicListMarkdown = '';
+            epicList.forEach(epic => {
+              epicListMarkdown += `- [x] #${epic.number}: ${epic.title}\n`;
+            });
+            
+            // Construct comprehensive PR body
+            const prBody = `
+            ## Feature Completion
+            
+            This PR merges the completed \`${featureBranch}\` feature into \`main\`.
+            
+            Closes #${featureIssue}
+            
+            ### Branching Structure
+            \`\`\`
+            main ← Merging feature here
+              └── ${featureBranch}
+                   ├── epic-XXX ✅
+                   ├── epic-YYY ✅
+                   └── epic-ZZZ ✅
+            \`\`\`
+            
+            ### Completed Epics
+            
+            ${epicListMarkdown}
+            
+            ### Summary
+            
+            All Epic branches for this feature have been completed and merged into
+            \`${featureBranch}\`. This PR represents the culmination of the feature
+            development and is ready for final review and merge into \`main\`.
+            
+            ### Epic Count
+            
+            **Total Epics Completed:** ${epicList.length}
+            
+            ### Next Steps
+            
+            1. ✅ Review this PR thoroughly
+            2. ✅ Run final integration tests
+            3. ✅ Approve and merge when ready
+            4. ✅ Feature issue will be closed automatically
+            5. ✅ Consider creating a release tag
+            
+            ### Testing
+            
+            All Epics have been individually tested and merged. This PR brings
+            together all feature work for final integration testing.
+            
+            ---
+            
+            🤖 *This PR was automatically created by the merge-feature-to-main workflow*
+            `;
+            
+            try {
+              // Create the pull request
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: prTitle,
+                body: prBody,
+                head: featureBranch,
+                base: 'main'
+              });
+              
+              console.log('✅ Pull request created: #' + pr.data.number);
+              console.log('   From: ' + featureBranch);
+              console.log('   To: main');
+              console.log('   Epics included: ' + epicList.length);
+              
+              core.setOutput('pr_number', pr.data.number);
+              core.setOutput('pr_url', pr.data.html_url);
+              
+              return pr.data.number;
+            } catch (error) {
+              if (error.message.includes('already exists')) {
+                console.log('⚠️  Pull request already exists for this feature');
+                
+                // Try to find the existing PR
+                const existingPRs = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${featureBranch}`,
+                  base: 'main',
+                  state: 'open'
+                });
+                
+                if (existingPRs.data.length > 0) {
+                  const existingPR = existingPRs.data[0];
+                  console.log(`   Existing PR: #${existingPR.number}`);
+                  console.log(`   URL: ${existingPR.html_url}`);
+                  core.setOutput('pr_number', existingPR.number);
+                  core.setOutput('pr_url', existingPR.html_url);
+                }
+                
+                core.setOutput('pr_exists', 'true');
+              } else {
+                throw error;
+              }
+            }
+            
+      # ======================================================================
+      # Step 4: Add Labels to PR
+      # ======================================================================
+      # Adds important labels to the PR:
+      # - 'feature-merge': Indicates this is a feature merge PR
+      # - 'major-release': Suggests this should trigger a major release
+      # - 'automated': Shows this was created automatically
+      # 
+      # These labels help identify this as a significant milestone PR
+      # ======================================================================
+      - name: Add labels to PR
+        if: steps.create-pr.outputs.pr_number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: ['feature-merge', 'major-release', 'automated']
+            });
+            
+            console.log('✅ Labels added to PR #' + prNumber);
+            console.log('   - feature-merge');
+            console.log('   - major-release');
+            console.log('   - automated');
+            
+      # ======================================================================
+      # Step 5: Comment on Feature Issue
+      # ======================================================================
+      # Posts a comment on the feature tracking issue with PR link
+      # and completion details
+      # 
+      # This notifies stakeholders that the feature is ready for final review
+      # ======================================================================
+      - name: Comment on feature issue
+        if: steps.create-pr.outputs.pr_number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureIssue = '${{ inputs.feature_issue }}';
+            const prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+            const prUrl = '${{ steps.create-pr.outputs.pr_url }}';
+            const featureBranch = '${{ inputs.feature_branch }}';
+            const epicList = JSON.parse('${{ needs.check-epics.outputs.epic_list }}');
+            
+            // Build Epic list for comment
+            let epicListMarkdown = '';
+            epicList.forEach(epic => {
+              epicListMarkdown += `- ✅ #${epic.number}: ${epic.title}\n`;
+            });
+            
+            const message = `
+            ## 🎉 Feature Complete - Final Merge PR Created
+            
+            All Epics have been completed! A pull request has been created to merge
+            this feature into \`main\`.
+            
+            ### Final Merge Pull Request
+            
+            **PR:** #${prNumber}  
+            **Link:** ${prUrl}
+            
+            ### Completed Epics (${epicList.length})
+            
+            ${epicListMarkdown}
+            
+            ### Merge Details
+            
+            - **From:** \`${featureBranch}\`
+            - **To:** \`main\`
+            
+            ### Next Steps
+            
+            1. Review the final pull request
+            2. Run integration tests
+            3. Approve and merge when ready
+            4. This feature issue will be closed automatically
+            5. Consider creating a release tag
+            
+            ---
+            
+            🤖 *This PR was automatically created by the merge-feature-to-main workflow*
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: featureIssue,
+              body: message
+            });
+            
+            console.log('✅ Comment posted to feature issue #' + featureIssue);
+  
+  # ==========================================================================
+  # Job 3: Display Warning
+  # ==========================================================================
+  # Runs if not all Epics are complete
+  # Displays a warning and fails the workflow to prevent premature merging
+  #
+  # This job ensures that features are only merged when all work is complete
+  # ==========================================================================
+  display-warning:
+    runs-on: ubuntu-latest
+    needs: check-epics
+    # Only run if NOT all Epics are complete
+    if: needs.check-epics.outputs.all_complete != 'true'
+    
+    steps:
+      # ======================================================================
+      # Step 1: Display Incomplete Epic Warning
+      # ======================================================================
+      # Shows a clear warning about which Epics are not yet complete
+      # Lists each incomplete Epic with its issue number and title
+      # ======================================================================
+      - name: Display incomplete epic warning
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const incompleteEpics = JSON.parse('${{ needs.check-epics.outputs.incomplete_epics }}');
+            const featureBranch = '${{ inputs.feature_branch }}';
+            
+            console.log('');
+            console.log('═══════════════════════════════════════════════');
+            console.log('⚠️  FEATURE NOT READY FOR MERGE');
+            console.log('═══════════════════════════════════════════════');
+            console.log('');
+            
+            if (incompleteEpics === 'No Epics found') {
+              console.log('❌ No Epic issues found for feature: ' + featureBranch);
+              console.log('');
+              console.log('Please ensure:');
+              console.log('1. Epic issues exist with titles starting with "Epic:"');
+              console.log('2. Epic issues are labeled with: ' + featureBranch);
+            } else if (incompleteEpics.length > 0) {
+              console.log('The following Epics are not yet complete:');
+              console.log('');
+              
+              incompleteEpics.forEach(epic => {
+                console.log(`❌ #${epic.number}: ${epic.title}`);
+              });
+              
+              console.log('');
+              console.log('To complete an Epic:');
+              console.log('1. Ensure all sub-issues are completed');
+              console.log('2. Merge all sub-issue PRs');
+              console.log('3. Epic will be automatically labeled as "epic-complete"');
+              console.log('4. Run this workflow again once all Epics are complete');
+            }
+            
+            console.log('');
+            console.log('═══════════════════════════════════════════════');
+            
+            core.setFailed('Cannot merge feature - incomplete Epics remain');
+            
+      # ======================================================================
+      # Step 2: Comment on Feature Issue
+      # ======================================================================
+      # Posts a comment on the feature issue explaining why the merge
+      # cannot proceed and what needs to be done
+      # ======================================================================
+      - name: Comment on feature issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureIssue = '${{ inputs.feature_issue }}';
+            const incompleteEpics = JSON.parse('${{ needs.check-epics.outputs.incomplete_epics }}');
+            const featureBranch = '${{ inputs.feature_branch }}';
+            
+            let epicListMarkdown = '';
+            
+            if (incompleteEpics === 'No Epics found') {
+              epicListMarkdown = '**No Epic issues found for this feature.**\n\n';
+              epicListMarkdown += 'Please ensure Epic issues are created and labeled with `' + featureBranch + '`.';
+            } else if (incompleteEpics.length > 0) {
+              incompleteEpics.forEach(epic => {
+                epicListMarkdown += `- [ ] #${epic.number}: ${epic.title}\n`;
+              });
+            }
+            
+            const message = `
+            ## ⚠️ Feature Not Ready for Merge
+            
+            An attempt was made to merge \`${featureBranch}\` into \`main\`, but not all
+            Epics are complete.
+            
+            ### Incomplete Epics
+            
+            ${epicListMarkdown}
+            
+            ### What to Do
+            
+            1. Complete all sub-issues in the incomplete Epics
+            2. Ensure each Epic is labeled with \`epic-complete\`
+            3. Run the "Merge Feature to Main" workflow again
+            
+            ### How Epics Are Completed
+            
+            Epics are automatically marked complete when:
+            - All sub-issues listed in the Epic body are closed
+            - All sub-issue PRs are merged
+            - The \`auto-assign-next-issue\` workflow processes the last issue
+            
+            ---
+            
+            🤖 *This comment was automatically created by the merge-feature-to-main workflow*
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: featureIssue,
+              body: message
+            });
+            
+            console.log('✅ Warning comment posted to feature issue #' + featureIssue);

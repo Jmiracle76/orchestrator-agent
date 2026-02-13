@@ -1,0 +1,344 @@
+# ============================================================================
+# Auto-Assign Next Issue Workflow
+# ============================================================================
+# Purpose: Processes merged PRs and automatically assigns the next sequential
+#          sub-issue in an Epic. Tracks progress and triggers the coding agent
+#          when the next issue is ready.
+#
+# Flow:
+#   PR merged → Extract closed issue → Find Epic → Get sub-issues →
+#   Calculate progress → Assign next issue OR mark Epic complete
+#
+# Trigger: When a pull request is closed and merged
+# ============================================================================
+
+name: Auto-Assign Next Issue
+
+# Trigger when pull requests are closed
+on:
+  pull_request:
+    types: [closed]
+
+# Permissions needed for this workflow
+permissions:
+  contents: read        # Required to read repository content
+  issues: write         # Required to comment on and label issues
+  pull-requests: read   # Required to read PR information
+
+jobs:
+  process-merged-pr:
+    runs-on: ubuntu-latest
+    
+    # ========================================================================
+    # Job Condition: Only run for merged PRs
+    # ========================================================================
+    # Skip PRs that were closed without merging
+    # We only want to process successfully merged PRs
+    # ========================================================================
+    if: github.event.pull_request.merged == true
+    
+    steps:
+      # ======================================================================
+      # Step 1: Extract Issue and Epic Information
+      # ======================================================================
+      # Extracts key information from the merged PR:
+      # - Closed issue number (from PR body "Closes #XXX")
+      # - Epic number (from base branch name "epic-XXX")
+      # - Feature branch (from Epic labels)
+      # 
+      # This information is needed to track progress and assign the next issue
+      # ======================================================================
+      - name: Extract issue and epic information
+        id: extract-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Extract closed issue number from PR body
+            // Look for patterns like "Closes #123" or "Fixes #123"
+            const prBody = pr.body || '';
+            const closedIssueMatch = prBody.match(/(?:Closes|Fixes|Resolves|Close|Fix|Resolve)\s+#(\d+)/i);
+            
+            if (!closedIssueMatch) {
+              console.log('⚠️  No closed issue found in PR body');
+              core.setOutput('has_issue', 'false');
+              return;
+            }
+            
+            const closedIssue = closedIssueMatch[1];
+            console.log('✅ Closed issue: #' + closedIssue);
+            
+            // Extract epic number from base branch name
+            // Expected format: epic-XXX
+            const baseBranch = pr.base.ref;
+            const epicMatch = baseBranch.match(/^epic-(\d+)$/);
+            
+            if (!epicMatch) {
+              console.log('⚠️  Base branch is not an Epic branch: ' + baseBranch);
+              core.setOutput('has_issue', 'false');
+              return;
+            }
+            
+            const epicNumber = epicMatch[1];
+            console.log('✅ Epic number: #' + epicNumber);
+            
+            // Get Epic issue to find feature branch label
+            const epicIssue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber
+            });
+            
+            // Find feature branch from Epic labels
+            const labels = epicIssue.data.labels.map(l => l.name);
+            const featureBranch = labels.find(label => label.startsWith('feature/')) || 'feature/web-wrapper';
+            console.log('✅ Feature branch: ' + featureBranch);
+            
+            // Set outputs for subsequent steps
+            core.setOutput('has_issue', 'true');
+            core.setOutput('closed_issue', closedIssue);
+            core.setOutput('epic_number', epicNumber);
+            core.setOutput('feature_branch', featureBranch);
+            
+      # ======================================================================
+      # Step 2: Get Sub-Issues and Calculate Progress
+      # ======================================================================
+      # Retrieves all sub-issues mentioned in the Epic body and calculates:
+      # - Total number of sub-issues
+      # - Number of completed sub-issues
+      # - Number of remaining sub-issues
+      # - Completion percentage
+      # - Next issue to be assigned (if any)
+      # 
+      # Sub-issues are identified by scanning the Epic body for patterns
+      # like "Closes #123" or "#123" in lists
+      # ======================================================================
+      - name: Get sub-issues and calculate progress
+        id: calculate-progress
+        if: steps.extract-info.outputs.has_issue == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = '${{ steps.extract-info.outputs.epic_number }}';
+            const closedIssue = '${{ steps.extract-info.outputs.closed_issue }}';
+            
+            // Get Epic issue details
+            const epicIssue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber
+            });
+            
+            // Extract all issue numbers from Epic body
+            // Look for patterns like "Closes #123", "- #123", "* #123" in lists
+            // This pattern avoids matching markdown headers or random numbers
+            const epicBody = epicIssue.data.body || '';
+            const issueMatches = epicBody.matchAll(/(?:Closes|Fixes|Resolves|[-*])\s*#(\d+)/gi);
+            const subIssues = [...new Set([...issueMatches].map(match => match[1]))];
+            
+            console.log('📋 Found sub-issues: ' + subIssues.join(', '));
+            
+            if (subIssues.length === 0) {
+              console.log('⚠️  No sub-issues found in Epic body');
+              core.setOutput('has_next', 'false');
+              return;
+            }
+            
+            // Check which issues are closed
+            const issueStatuses = await Promise.all(
+              subIssues.map(async (issueNum) => {
+                try {
+                  const issue = await github.rest.issues.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNum
+                  });
+                  return { number: issueNum, closed: issue.data.state === 'closed' };
+                } catch (error) {
+                  console.log(`⚠️  Could not fetch issue #${issueNum}: ${error.message}`);
+                  return { number: issueNum, closed: false };
+                }
+              })
+            );
+            
+            // Calculate progress metrics
+            const totalIssues = subIssues.length;
+            const completedIssues = issueStatuses.filter(i => i.closed).length;
+            const remainingIssues = totalIssues - completedIssues;
+            const percentComplete = Math.round((completedIssues / totalIssues) * 100);
+            
+            console.log(`📊 Progress: ${completedIssues}/${totalIssues} (${percentComplete}%)`);
+            
+            // Find next issue to assign (first open issue in list)
+            const nextIssue = issueStatuses.find(i => !i.closed);
+            
+            // Set outputs
+            core.setOutput('total_issues', totalIssues);
+            core.setOutput('completed_issues', completedIssues);
+            core.setOutput('remaining_issues', remainingIssues);
+            core.setOutput('percent_complete', percentComplete);
+            
+            if (nextIssue) {
+              core.setOutput('has_next', 'true');
+              core.setOutput('next_issue', nextIssue.number);
+              console.log('✅ Next issue to assign: #' + nextIssue.number);
+            } else {
+              core.setOutput('has_next', 'false');
+              console.log('✅ All sub-issues completed!');
+            }
+            
+      # ======================================================================
+      # Step 3: Create Progress Bar
+      # ======================================================================
+      # Creates a visual progress bar using Unicode block characters:
+      # - █ represents completed work
+      # - ░ represents remaining work
+      # 
+      # Example: "Progress: ████████░░ 80%"
+      # This provides an easy-to-read visual representation of Epic progress
+      # ======================================================================
+      - name: Create progress bar
+        id: progress-bar
+        if: steps.extract-info.outputs.has_issue == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const percentComplete = parseInt('${{ steps.calculate-progress.outputs.percent_complete }}');
+            const barLength = 10;
+            const filledLength = Math.round((percentComplete / 100) * barLength);
+            const emptyLength = barLength - filledLength;
+            
+            // Create progress bar with Unicode block characters
+            const progressBar = '█'.repeat(filledLength) + '░'.repeat(emptyLength);
+            core.setOutput('bar', progressBar);
+            console.log(`Progress bar: ${progressBar} ${percentComplete}%`);
+            
+      # ======================================================================
+      # Step 4: Comment on Epic with Progress
+      # ======================================================================
+      # Posts a progress update comment on the Epic issue showing:
+      # - Completed issue
+      # - Visual progress bar
+      # - Completion statistics
+      # - Next issue assignment (if applicable)
+      # 
+      # This keeps the Epic issue updated with real-time progress
+      # ======================================================================
+      - name: Comment on epic with progress
+        if: steps.extract-info.outputs.has_issue == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = '${{ steps.extract-info.outputs.epic_number }}';
+            const closedIssue = '${{ steps.extract-info.outputs.closed_issue }}';
+            const totalIssues = '${{ steps.calculate-progress.outputs.total_issues }}';
+            const completedIssues = '${{ steps.calculate-progress.outputs.completed_issues }}';
+            const remainingIssues = '${{ steps.calculate-progress.outputs.remaining_issues }}';
+            const percentComplete = '${{ steps.calculate-progress.outputs.percent_complete }}';
+            const progressBar = '${{ steps.progress-bar.outputs.bar }}';
+            const hasNext = '${{ steps.calculate-progress.outputs.has_next }}' === 'true';
+            const nextIssue = '${{ steps.calculate-progress.outputs.next_issue }}';
+            
+            let message = `
+            ## ✅ Sub-Issue Completed
+            
+            Issue #${closedIssue} has been completed and merged.
+            
+            ### Epic Progress
+            \`\`\`
+            ${progressBar} ${percentComplete}%
+            \`\`\`
+            
+            **Completed:** ${completedIssues}/${totalIssues} issues  
+            **Remaining:** ${remainingIssues} issues
+            `;
+            
+            if (hasNext) {
+              message += `
+            
+            ### 🎯 Next Issue Assigned
+            
+            Issue #${nextIssue} has been automatically assigned to the coding agent.
+              `;
+            } else {
+              message += `
+            
+            ### 🎉 Epic Complete!
+            
+            All sub-issues have been completed. This Epic is ready to be merged into the feature branch.
+              `;
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+              body: message
+            });
+            
+            console.log('✅ Progress comment posted to Epic #' + epicNumber);
+            
+      # ======================================================================
+      # Step 5: Trigger Coding Agent (if next issue exists)
+      # ======================================================================
+      # Dispatches a repository event to trigger the coding agent workflow
+      # for the next sub-issue in the sequence
+      # 
+      # The repository_dispatch event includes:
+      # - Next issue number
+      # - Epic number
+      # - Feature branch name
+      # - Target branch (epic-XXX)
+      # 
+      # This enables the coding agent to start work on the next issue
+      # ======================================================================
+      - name: Trigger coding agent for next issue
+        if: steps.calculate-progress.outputs.has_next == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const nextIssue = '${{ steps.calculate-progress.outputs.next_issue }}';
+            const epicNumber = '${{ steps.extract-info.outputs.epic_number }}';
+            const featureBranch = '${{ steps.extract-info.outputs.feature_branch }}';
+            
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'assign-to-coding-agent',
+              client_payload: {
+                issue_number: nextIssue,
+                epic_number: epicNumber,
+                feature_branch: featureBranch,
+                base_branch: `epic-${epicNumber}`
+              }
+            });
+            
+            console.log('✅ Triggered coding agent for issue #' + nextIssue);
+            
+      # ======================================================================
+      # Step 6: Mark Epic as Complete (if all issues done)
+      # ======================================================================
+      # If all sub-issues are completed, adds labels to indicate:
+      # - 'ready-for-merge': Epic is ready to be merged into feature branch
+      # - 'epic-complete': All work on this Epic is finished
+      # 
+      # These labels trigger the merge-epic-to-feature workflow
+      # ======================================================================
+      - name: Mark epic as complete
+        if: steps.calculate-progress.outputs.has_next == 'false' && steps.extract-info.outputs.has_issue == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = '${{ steps.extract-info.outputs.epic_number }}';
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+              labels: ['ready-for-merge', 'epic-complete']
+            });
+            
+            console.log('✅ Epic #' + epicNumber + ' marked as complete');
+            console.log('   - Added label: ready-for-merge');
+            console.log('   - Added label: epic-complete');

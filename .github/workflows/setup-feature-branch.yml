@@ -1,0 +1,202 @@
+# ============================================================================
+# Setup Feature Branch Workflow
+# ============================================================================
+# Purpose: Creates the top-level feature branch from the main branch to serve
+#          as the parent branch for all Epic branches in the three-tier
+#          branching strategy.
+#
+# Branching Structure:
+#   main
+#     └── feature/web-wrapper (created by this workflow)
+#          ├── epic-133 (Backend Foundation)
+#          ├── epic-142 (Frontend UI)
+#          ├── epic-149 (Deployment)
+#          └── epic-154 (Security)
+#
+# Trigger: Manual workflow_dispatch with inputs for feature name and issue
+# ============================================================================
+
+name: Setup Feature Branch
+
+# Manual trigger only - requires explicit decision to create feature branch
+on:
+  workflow_dispatch:
+    inputs:
+      feature_name:
+        description: 'Feature branch name (e.g., web-wrapper)'
+        required: true
+        type: string
+      feature_issue:
+        description: 'Feature tracking issue number (e.g., 123)'
+        required: true
+        type: string
+
+# Permissions needed for this workflow
+permissions:
+  contents: write        # Required to create branches
+  issues: write          # Required to comment on and label issues
+  pull-requests: write   # Required to set branch protection rules
+
+jobs:
+  create-feature-branch:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ======================================================================
+      # Step 1: Checkout Repository
+      # ======================================================================
+      # Check out the repository with full history to ensure we can create
+      # branches from any commit in the history
+      # ======================================================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for all branches and tags
+          # This is required to create a new branch from main
+          fetch-depth: 0
+          
+      # ======================================================================
+      # Step 2: Create Feature Branch
+      # ======================================================================
+      # Creates the feature branch from the main branch
+      # Format: feature/<feature_name>
+      # This branch will serve as the parent for all Epic branches
+      # ======================================================================
+      - name: Create feature branch
+        run: |
+          # Construct the feature branch name
+          FEATURE_BRANCH="feature/${{ inputs.feature_name }}"
+          echo "Creating feature branch: $FEATURE_BRANCH"
+          
+          # Ensure we're on main branch
+          git checkout main
+          
+          # Create and push the feature branch
+          git checkout -b "$FEATURE_BRANCH"
+          git push origin "$FEATURE_BRANCH"
+          
+          echo "✅ Feature branch created successfully"
+          
+      # ======================================================================
+      # Step 3: Comment on Feature Issue
+      # ======================================================================
+      # Posts a comment on the feature tracking issue showing the branching
+      # structure and providing guidance on next steps
+      # ======================================================================
+      - name: Comment on feature issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Construct the feature branch name
+            const featureBranch = `feature/${{ inputs.feature_name }}`;
+            const issueNumber = parseInt('${{ inputs.feature_issue }}');
+            
+            // Create a visual diagram of the branching structure
+            const branchingDiagram = `
+            ## 🌳 Feature Branch Created
+            
+            Feature branch \`${featureBranch}\` has been created from \`main\`.
+            
+            ### Branching Structure
+            \`\`\`
+            main
+              └── ${featureBranch} ✅ (just created)
+                   ├── epic-XXX (will be created when Epic issues are opened)
+                   ├── epic-YYY
+                   └── epic-ZZZ
+            \`\`\`
+            
+            ### Next Steps
+            1. Create Epic issues with titles starting with "Epic:"
+            2. Epic branches will be automatically created from this feature branch
+            3. Sub-issues will be assigned automatically as work progresses
+            4. Once all Epics are complete, use the merge-feature-to-main workflow
+            
+            ### Important Notes
+            - All Epic branches will be created from \`${featureBranch}\`
+            - PRs from Epic branches should target \`${featureBranch}\`
+            - Final PR will merge \`${featureBranch}\` → \`main\`
+            `;
+            
+            // Post the comment to the issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: branchingDiagram
+            });
+            
+            console.log('✅ Comment posted to issue #' + issueNumber);
+            
+      # ======================================================================
+      # Step 4: Add Labels to Issue
+      # ======================================================================
+      # Adds tracking labels to the feature issue for easy filtering
+      # - 'feature-branch': Indicates this issue tracks a feature branch
+      # - 'has-feature-branch': Indicates the feature branch has been created
+      # ======================================================================
+      - name: Add labels to feature issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.feature_issue }}');
+            
+            // Add labels to help track feature branches
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['feature-branch', 'has-feature-branch']
+            });
+            
+            console.log('✅ Labels added to issue #' + issueNumber);
+            
+      # ======================================================================
+      # Step 5: Set Branch Protection Rules
+      # ======================================================================
+      # Configures protection rules for the feature branch to ensure:
+      # - At least 1 approval is required before merging
+      # - Force pushes are prevented to maintain history integrity
+      # - Deletions are prevented to avoid accidental branch removal
+      # ======================================================================
+      - name: Set branch protection rules
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureBranch = `feature/${{ inputs.feature_name }}`;
+            
+            try {
+              // Set up branch protection rules
+              await github.rest.repos.updateBranchProtection({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: featureBranch,
+                // Require pull request reviews before merging
+                required_pull_request_reviews: {
+                  dismiss_stale_reviews: true,
+                  // Code owner reviews not required for feature branches
+                  // Feature branches merge into main where code owner reviews can be enforced
+                  require_code_owner_reviews: false,
+                  required_approving_review_count: 1
+                },
+                // Prevent force pushes and deletions
+                enforce_admins: false,
+                allow_force_pushes: false,
+                allow_deletions: false,
+                // No required status checks initially
+                required_status_checks: null,
+                // No restrictions on who can push
+                restrictions: null
+              });
+              
+              console.log(`✅ Branch protection enabled for ${featureBranch}`);
+              console.log('   - Requires 1 approval before merge');
+              console.log('   - Prevents force pushes');
+              console.log('   - Prevents deletions');
+            } catch (error) {
+              // Log error but don't fail the workflow
+              // Branch protection might not be available in all GitHub plans
+              console.log('⚠️  Could not set branch protection rules');
+              console.log('   This feature may not be available on your GitHub plan');
+              console.log('   Error:', error.message);
+            }

@@ -1,0 +1,375 @@
+# ============================================================================
+# Merge Epic to Feature Branch Workflow
+# ============================================================================
+# Purpose: Creates a pull request to merge a completed Epic branch into its
+#          parent feature branch. This is triggered when all sub-issues in
+#          an Epic are completed.
+#
+# Flow:
+#   Epic complete → Determine branches → Create PR → Add labels → Comment
+#
+# Trigger: Manual workflow_dispatch or issues labeled 'ready-for-merge'
+# ============================================================================
+
+name: Merge Epic to Feature
+
+# Trigger on manual dispatch or when issues are labeled
+on:
+  workflow_dispatch:
+    inputs:
+      epic_number:
+        description: 'Epic issue number (e.g., 133)'
+        required: true
+        type: string
+  issues:
+    types: [labeled]
+
+# Permissions needed for this workflow
+permissions:
+  contents: read        # Required to read repository content
+  issues: write         # Required to comment on issues
+  pull-requests: write  # Required to create PRs
+
+jobs:
+  merge-epic:
+    runs-on: ubuntu-latest
+    
+    # ========================================================================
+    # Job Condition: Run for ready-for-merge label or manual trigger
+    # ========================================================================
+    # This workflow runs when:
+    # 1. Manually triggered via workflow_dispatch, OR
+    # 2. An issue is labeled with 'ready-for-merge'
+    # 
+    # Additionally, for labeled events, the issue must be an Epic
+    # (title starts with "Epic:")
+    # ========================================================================
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'ready-for-merge' && 
+       (startsWith(github.event.issue.title, 'Epic:') || startsWith(github.event.issue.title, 'epic:')))
+    
+    steps:
+      # ======================================================================
+      # Step 1: Determine Epic Number
+      # ======================================================================
+      # Gets the Epic issue number from either:
+      # - Manual input (workflow_dispatch)
+      # - Issue event (labeled)
+      # 
+      # The Epic number is needed to:
+      # - Construct the epic branch name
+      # - Link the PR to the Epic issue
+      # - Reference the Epic in comments
+      # ======================================================================
+      - name: Determine epic number
+        id: epic-number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let epicNumber;
+            
+            if (context.eventName === 'workflow_dispatch') {
+              // Manual trigger - use input parameter
+              epicNumber = '${{ inputs.epic_number }}';
+              console.log('✅ Epic number from manual input: #' + epicNumber);
+            } else {
+              // Label trigger - use issue number from event
+              epicNumber = context.payload.issue.number.toString();
+              console.log('✅ Epic number from labeled issue: #' + epicNumber);
+            }
+            
+            core.setOutput('number', epicNumber);
+            
+      # ======================================================================
+      # Step 2: Get Epic Details and Feature Branch
+      # ======================================================================
+      # Retrieves the Epic issue and extracts:
+      # - Feature branch name from labels
+      # - Epic title for PR description
+      # - Epic body for context
+      # 
+      # The feature branch label should have been added when the Epic
+      # branch was created (by create-epic-branches.yml)
+      # ======================================================================
+      - name: Get epic details and feature branch
+        id: epic-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = '${{ steps.epic-number.outputs.number }}';
+            
+            // Get Epic issue
+            const epicIssue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber
+            });
+            
+            // Extract feature branch from labels
+            const labels = epicIssue.data.labels.map(l => l.name);
+            const featureBranch = labels.find(label => label.startsWith('feature/'));
+            
+            if (!featureBranch) {
+              core.setFailed('❌ No feature branch label found on Epic #' + epicNumber);
+              return;
+            }
+            
+            console.log('✅ Found feature branch: ' + featureBranch);
+            
+            // Set outputs
+            core.setOutput('feature_branch', featureBranch);
+            core.setOutput('epic_title', epicIssue.data.title);
+            core.setOutput('epic_body', epicIssue.data.body || '');
+            
+      # ======================================================================
+      # Step 3: Checkout Repository
+      # ======================================================================
+      # Checks out the repository to verify branches exist
+      # We need to ensure both the Epic and feature branches exist before
+      # attempting to create a PR
+      # ======================================================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      # ======================================================================
+      # Step 4: Verify Branches Exist
+      # ======================================================================
+      # Validates that both branches exist before creating the PR:
+      # - Epic branch (epic-XXX)
+      # - Feature branch (feature/xxx)
+      # 
+      # This prevents errors when creating the PR and provides clear
+      # error messages if branches are missing
+      # ======================================================================
+      - name: Verify branches exist
+        run: |
+          EPIC_NUMBER="${{ steps.epic-number.outputs.number }}"
+          EPIC_BRANCH="epic-${EPIC_NUMBER}"
+          FEATURE_BRANCH="${{ steps.epic-details.outputs.feature_branch }}"
+          
+          echo "Verifying branches..."
+          echo "  Epic branch: $EPIC_BRANCH"
+          echo "  Feature branch: $FEATURE_BRANCH"
+          
+          # Check if epic branch exists
+          if ! git ls-remote --heads origin "$EPIC_BRANCH" | grep -q "$EPIC_BRANCH"; then
+            echo "❌ Epic branch $EPIC_BRANCH does not exist"
+            exit 1
+          fi
+          
+          # Check if feature branch exists
+          if ! git ls-remote --heads origin "$FEATURE_BRANCH" | grep -q "$FEATURE_BRANCH"; then
+            echo "❌ Feature branch $FEATURE_BRANCH does not exist"
+            exit 1
+          fi
+          
+          echo "✅ Both branches exist"
+          
+      # ======================================================================
+      # Step 5: Create Pull Request
+      # ======================================================================
+      # Creates a PR to merge the Epic branch into the feature branch
+      # 
+      # PR Details:
+      # - Head: epic-XXX
+      # - Base: feature/xxx
+      # - Title: "Merge Epic #XXX: [Epic Title]"
+      # - Body: Includes branching structure and Epic details
+      # 
+      # The PR body includes:
+      # - Reference to the Epic issue
+      # - Visual diagram of the branching structure
+      # - Summary of completed work
+      # - Next steps after merge
+      # ======================================================================
+      - name: Create pull request
+        id: create-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = '${{ steps.epic-number.outputs.number }}';
+            const epicTitle = `${{ steps.epic-details.outputs.epic_title }}`;
+            const featureBranch = '${{ steps.epic-details.outputs.feature_branch }}';
+            const epicBranch = `epic-${epicNumber}`;
+            
+            // Construct PR title
+            const prTitle = `Merge Epic #${epicNumber}: ${epicTitle}`;
+            
+            // Construct PR body with branching diagram
+            const prBody = `
+            ## Epic Completion
+            
+            This PR merges completed Epic #${epicNumber} into the feature branch.
+            
+            Closes #${epicNumber}
+            
+            ### Branching Structure
+            \`\`\`
+            main
+              └── ${featureBranch}
+                   └── ${epicBranch} ← Merging this Epic
+            \`\`\`
+            
+            ### Epic Details
+            
+            **Title:** ${epicTitle}
+            
+            **Epic Issue:** #${epicNumber}
+            
+            ### Summary
+            
+            All sub-issues for this Epic have been completed and merged. This PR
+            consolidates all Epic work into the feature branch.
+            
+            ### Next Steps
+            
+            1. ✅ Review and approve this PR
+            2. ✅ Merge this PR into \`${featureBranch}\`
+            3. ✅ Epic will be closed automatically
+            4. ✅ Progress towards feature completion will be updated
+            
+            ---
+            
+            🤖 *This PR was automatically created by the three-tier branching workflow*
+            `;
+            
+            try {
+              // Create the pull request
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: prTitle,
+                body: prBody,
+                head: epicBranch,
+                base: featureBranch
+              });
+              
+              console.log('✅ Pull request created: #' + pr.data.number);
+              console.log('   From: ' + epicBranch);
+              console.log('   To: ' + featureBranch);
+              
+              core.setOutput('pr_number', pr.data.number);
+              core.setOutput('pr_url', pr.data.html_url);
+              
+              return pr.data.number;
+            } catch (error) {
+              if (error.message.includes('already exists')) {
+                console.log('⚠️  Pull request already exists for this Epic');
+                
+                // Try to find the existing PR
+                const existingPRs = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${epicBranch}`,
+                  base: featureBranch,
+                  state: 'open'
+                });
+                
+                if (existingPRs.data.length > 0) {
+                  const existingPR = existingPRs.data[0];
+                  console.log(`   Existing PR: #${existingPR.number}`);
+                  console.log(`   URL: ${existingPR.html_url}`);
+                  core.setOutput('pr_number', existingPR.number);
+                  core.setOutput('pr_url', existingPR.html_url);
+                }
+                
+                core.setOutput('pr_exists', 'true');
+              } else {
+                throw error;
+              }
+            }
+            
+      # ======================================================================
+      # Step 6: Add Labels to PR
+      # ======================================================================
+      # Adds tracking labels to the PR:
+      # - 'epic-merge': Indicates this is an Epic merge PR
+      # - 'automated': Shows this was created automatically
+      # - Feature branch name: Links PR to the feature
+      # 
+      # These labels help with:
+      # - Filtering Epic merge PRs
+      # - Tracking automated PRs
+      # - Organizing work by feature
+      # ======================================================================
+      - name: Add labels to PR
+        if: steps.create-pr.outputs.pr_number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+            const featureBranch = '${{ steps.epic-details.outputs.feature_branch }}';
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: ['epic-merge', 'automated', featureBranch]
+            });
+            
+            console.log('✅ Labels added to PR #' + prNumber);
+            console.log('   - epic-merge');
+            console.log('   - automated');
+            console.log('   - ' + featureBranch);
+            
+      # ======================================================================
+      # Step 7: Comment on Epic Issue
+      # ======================================================================
+      # Posts a comment on the Epic issue with a link to the merge PR
+      # 
+      # The comment notifies stakeholders that:
+      # - The Epic is complete
+      # - A PR has been created for review
+      # - What happens after the PR is merged
+      # 
+      # This keeps the Epic issue as the central point of communication
+      # ======================================================================
+      - name: Comment on epic issue
+        if: steps.create-pr.outputs.pr_number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = '${{ steps.epic-number.outputs.number }}';
+            const prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+            const prUrl = '${{ steps.create-pr.outputs.pr_url }}';
+            const featureBranch = '${{ steps.epic-details.outputs.feature_branch }}';
+            const epicBranch = `epic-${epicNumber}`;
+            
+            const message = `
+            ## 🎉 Epic Complete - Merge PR Created
+            
+            All sub-issues have been completed! A pull request has been created to merge
+            this Epic into the feature branch.
+            
+            ### Merge Pull Request
+            
+            **PR:** #${prNumber}  
+            **Link:** ${prUrl}
+            
+            ### Merge Details
+            
+            - **From:** \`${epicBranch}\`
+            - **To:** \`${featureBranch}\`
+            
+            ### Next Steps
+            
+            1. Review the pull request
+            2. Approve and merge when ready
+            3. This Epic issue will be closed automatically
+            
+            ---
+            
+            🤖 *This PR was automatically created by the merge-epic-to-feature workflow*
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+              body: message
+            });
+            
+            console.log('✅ Comment posted to Epic issue #' + epicNumber);
