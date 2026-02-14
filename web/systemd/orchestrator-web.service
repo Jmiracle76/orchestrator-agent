@@ -1,0 +1,16 @@
+[Unit]
+Description=Orchestrator Agent Flask web interface
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/orchestrator-agent
+Environment="WEB_CONFIG=production"
+Environment="WEB_LOG_FILE=/var/log/orchestrator-web/app.log"
+ExecStart=/usr/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 "web.app:app"
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

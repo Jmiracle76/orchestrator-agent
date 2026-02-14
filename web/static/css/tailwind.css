@@ -1,0 +1,25 @@
+:root {
+  --font-display: 'Space Grotesk', 'Satoshi', 'Graphik', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: #0f172a;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+.nav-link {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  transition: all 120ms ease;
+}
+
+.nav-link:hover {
+  border-color: rgba(226, 232, 240, 0.25);
+  background-color: rgba(30, 41, 59, 0.7);
+}
