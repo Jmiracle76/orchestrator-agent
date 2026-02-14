@@ -16,7 +16,7 @@ from tools.requirements_automation.cli_validators import (
 )
 from tools.requirements_automation.document_validator import DocumentValidator
 from tools.requirements_automation.utils_io import read_text, split_lines
-from web.session_state import ensure_workflow_state, update_workflow_state
+from web.session_state import WorkflowState, ensure_workflow_state, update_workflow_state
 
 document_bp = Blueprint("document", __name__, url_prefix="/documents")
 document_api_bp = Blueprint("document_api", __name__, url_prefix="/api/document")
@@ -28,12 +28,20 @@ VALID_STATUSES = ACTIVE_STATUSES | FINAL_STATUSES | {"blocked"}
 
 @document_bp.route("/")
 def list_documents():
-    documents = [
-        {"name": "requirements.md", "status": "in-progress", "updated_at": datetime.utcnow()},
-        {"name": "architecture.md", "status": "review", "updated_at": datetime.utcnow()},
-    ]
+    repo_root = _repo_root()
+    state = ensure_workflow_state()
+    documents = _discover_documents(repo_root, state)
+    defaults = {
+        "template_path": "docs/templates/requirements-template.md",
+        "document_path": state.get("current_doc") or "docs/requirements.md",
+    }
     return render_template(
-        "documents/list.html", documents=documents, title="Documents overview"
+        "documents/list.html",
+        documents=documents,
+        workflow_state=state,
+        defaults=defaults,
+        repo_root=str(repo_root),
+        title="Documents overview",
     )
 
 
@@ -279,6 +287,42 @@ def document_status():
     )
 
 
+def _document_status(doc_path: str, state: WorkflowState) -> str:
+    active = state.get("active_execution")
+    if isinstance(active, MutableMapping):
+        if str(active.get("doc")) == doc_path:
+            return str(active.get("status") or "running")
+    if state.get("current_doc") == doc_path:
+        return "ready"
+    return "idle"
+
+
+def _discover_documents(repo_root: Path, state: WorkflowState) -> list[dict[str, Any]]:
+    docs_dir = repo_root / "docs"
+    if not docs_dir.exists():
+        return []
+
+    documents: list[dict[str, Any]] = []
+    for path in docs_dir.rglob("*.md"):
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
+            continue
+        relative = _relative_path(path, repo_root)
+        updated_at = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+        documents.append(
+            {
+                "name": relative,
+                "status": _document_status(relative, state),
+                "updated_at": updated_at,
+                "updated_at_iso": updated_at.isoformat(),
+            }
+        )
+
+    documents.sort(key=lambda item: item["updated_at"], reverse=True)
+    return documents
+
+
 @document_api_bp.post("/execute/status")
 def update_execution_status():
     repo_root = _repo_root()
@@ -362,6 +406,34 @@ def document_content():
         {
             "path": _relative_path(document_path, repo_root),
             "content": document_path.read_text(encoding="utf-8"),
+        }
+    )
+
+
+@document_api_bp.post("/content")
+def update_document_content():
+    repo_root = _repo_root()
+    try:
+        payload = _ensure_payload()
+        raw_path = payload.get("document_path") or payload.get("path")
+        document_path = _resolve_path(raw_path, repo_root, "document_path")
+        new_content = payload.get("content")
+        if not isinstance(new_content, str):
+            raise ValueError("content must be a string")
+    except ValueError as e:
+        return _json_error("Invalid input", 400, str(e))
+
+    if not document_path.exists():
+        return _json_error("Document not found", 404)
+
+    document_path.write_text(new_content, encoding="utf-8")
+    updated_at = datetime.fromtimestamp(document_path.stat().st_mtime, tz=timezone.utc)
+    update_workflow_state({"current_doc": _relative_path(document_path, repo_root)})
+    return jsonify(
+        {
+            "status": "updated",
+            "document_path": _relative_path(document_path, repo_root),
+            "updated_at": updated_at.isoformat(),
         }
     )
 
