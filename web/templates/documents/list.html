@@ -33,12 +33,21 @@
         </div>
       </div>
       <form id="create-form" class="mt-6 grid gap-4 lg:grid-cols-2">
+        <label class="text-sm text-slate-200 lg:col-span-2">
+          Repo root
+          <input id="repo-root" value="{{ repo_root }}" readonly class="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/40 focus:ring" />
+        </label>
         <label class="text-sm text-slate-200">
           Template path
           <input name="template_path" id="template-path" value="{{ defaults.template_path }}" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/40 focus:ring" placeholder="docs/templates/requirements-template.md" />
         </label>
         <label class="text-sm text-slate-200">
+          Document name
+          <input name="document_name" id="doc-name" value="{{ defaults.document_path.rsplit('/', 1)[-1] if defaults.document_path else '' }}" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/40 focus:ring" placeholder="requirements.md" />
+        </label>
+        <label class="text-sm text-slate-200">
           Document path
+          <span class="block text-xs font-normal text-slate-400">Relative to the repo root; auto-fills from document name.</span>
           <input name="document_path" data-doc-path id="doc-path" value="{{ defaults.document_path }}" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/40 focus:ring" placeholder="docs/requirements.md" />
         </label>
         <div class="lg:col-span-2 flex flex-wrap gap-3">
@@ -226,6 +235,8 @@
   const defaults = {{ defaults | tojson }};
 
   const docInputs = Array.from(document.querySelectorAll("[data-doc-path]"));
+  const repoRootInput = document.getElementById("repo-root");
+  const docNameInput = document.getElementById("doc-name");
   const templateInput = document.getElementById("template-path");
   const docEditor = document.getElementById("document-editor");
   const toast = document.getElementById("action-toast");
@@ -239,6 +250,13 @@
   let executionLog = Array.isArray(workflowState.execution_log) ? [...workflowState.execution_log] : [];
   let logCursor = executionLog.length;
   let documentList = Array.isArray(initialDocuments) ? [...initialDocuments] : [];
+  let docPathTouched = false;
+
+  docInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      docPathTouched = true;
+    });
+  });
 
   function readCookie(name) {
     const match = document.cookie.split("; ").find((row) => row.startsWith(name + "="));
@@ -267,12 +285,35 @@
     docInputs.forEach((input) => {
       input.value = value;
     });
+    if (docNameInput) {
+      if (value) {
+        const parts = value.split(/[\\/]/);
+        docNameInput.value = parts[parts.length - 1] || value;
+      } else {
+        docNameInput.value = "";
+      }
+    }
     activeDocChip.textContent = value || "None";
   }
 
   function getDocPath() {
     const target = docInputs[0];
     return target ? target.value.trim() : "";
+  }
+
+  function defaultDocDir() {
+    const raw = defaults.document_path || "";
+    if (raw.includes("/")) {
+      return raw.split("/").slice(0, -1).join("/");
+    }
+    return "docs";
+  }
+
+  function suggestedDocPath(name) {
+    if (!name) return "";
+    const cleanName = name.endsWith(".md") ? name : `${name}.md`;
+    const dir = defaultDocDir();
+    return dir ? `${dir}/${cleanName}` : cleanName;
   }
 
   function setToast(message, tone = "muted") {
@@ -282,6 +323,50 @@
       : tone === "success"
         ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-100"
         : "border-slate-700 bg-slate-900/70 text-slate-300");
+  }
+
+  function validateRelativePath(raw, label) {
+    if (!raw) return `${label} is required`;
+    if (raw.startsWith("/") || raw.startsWith("~")) return `${label} must be relative to the repo root`;
+    if (raw.includes("..")) return `${label} cannot include '..'`;
+    if (raw.length > 300) return `${label} is too long`;
+    return "";
+  }
+
+  function validateCreateInputs() {
+    const templatePath = templateInput.value.trim();
+    const docName = docNameInput ? docNameInput.value.trim() : "";
+    let docPath = getDocPath();
+
+    if (!docPath && docName) {
+      const suggested = suggestedDocPath(docName);
+      if (suggested) {
+        setDocPath(suggested);
+        docPath = suggested;
+      }
+    }
+
+    const errors = [];
+    if (repoRootInput && !repoRootInput.value.trim()) {
+      errors.push("Repo root is missing; reload the page.");
+    }
+    const templateError = validateRelativePath(templatePath, "Template path");
+    if (templateError) errors.push(templateError);
+    if (docNameInput && !docName) errors.push("Document name is required");
+    if (docName && /[\\/]/.test(docName)) {
+      errors.push("Document name should not include directory separators");
+    }
+    const docError = validateRelativePath(docPath, "Document path");
+    if (docError) errors.push(docError);
+    if (docPath && !docPath.endsWith(".md")) {
+      errors.push("Document path must end with .md");
+    }
+
+    if (errors.length) {
+      setToast(errors[0], "error");
+      return null;
+    }
+    return {templatePath, docPath};
   }
 
   function renderLog() {
@@ -372,7 +457,13 @@
     refreshCsrfTokenFromResponse(resp);
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
-      const msg = data.error || data.message || "Request failed";
+      const parts = [];
+      if (data && typeof data === "object") {
+        if (data.error) parts.push(data.error);
+        if (!data.error && data.message) parts.push(data.message);
+        if (data.details) parts.push(data.details);
+      }
+      const msg = parts.filter(Boolean).join(": ") || "Request failed";
       throw new Error(msg);
     }
     return data;
@@ -513,25 +604,32 @@
   }
 
   function wireEvents() {
+    docNameInput?.addEventListener("input", () => {
+      if (docPathTouched) return;
+      const suggestion = suggestedDocPath(docNameInput.value.trim());
+      if (suggestion) {
+        setDocPath(suggestion);
+      }
+    });
+
     document.getElementById("create-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const templatePath = templateInput.value.trim();
-      const docPath = getDocPath();
-      if (!templatePath || !docPath) {
-        setToast("Template and document paths are required", "error");
-        return;
-      }
+      const validated = validateCreateInputs();
+      if (!validated) return;
+      const {templatePath, docPath} = validated;
       setToast("Creating document …");
       try {
         const data = await fetchJson("/api/document/create", {
           method: "POST",
           body: JSON.stringify({template_path: templatePath, document_path: docPath}),
         });
-        setToast("Document created", "success");
-        setDocPath(data.document.path);
+        const createdPath = data && data.document ? data.document.path : docPath;
+        setToast(`Created ${createdPath} from template`, "success");
+        setDocPath(createdPath);
         loadDocument();
+        documentList = documentList.filter((doc) => doc.name !== createdPath);
         documentList.unshift({
-          name: data.document.path,
+          name: createdPath,
           status: "ready",
           updated_at_iso: new Date().toISOString(),
         });
