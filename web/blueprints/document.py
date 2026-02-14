@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, MutableMapping
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 
@@ -20,6 +20,10 @@ from web.session_state import ensure_workflow_state, update_workflow_state
 
 document_bp = Blueprint("document", __name__, url_prefix="/documents")
 document_api_bp = Blueprint("document_api", __name__, url_prefix="/api/document")
+
+ACTIVE_STATUSES = {"running", "queued"}
+FINAL_STATUSES = {"completed", "failed", "canceled"}
+VALID_STATUSES = ACTIVE_STATUSES | FINAL_STATUSES | {"blocked"}
 
 
 @document_bp.route("/")
@@ -73,17 +77,69 @@ def _ensure_payload() -> dict[str, Any]:
     return payload
 
 
-def _append_history(record: dict[str, Any]) -> dict[str, Any]:
-    state = ensure_workflow_state()
-    history: list[dict[str, Any]] = (
-        state["execution_history"] if isinstance(state.get("execution_history"), list) else []
-    )
-    history.append(record)
-    return update_workflow_state({"execution_history": history})
-
-
 def _serialize_checks(checks: Iterable) -> list[dict[str, Any]]:
     return [asdict(check) for check in checks]
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _execution_state():
+    state = ensure_workflow_state()
+    history = state["execution_history"] if isinstance(state.get("execution_history"), list) else []
+    log = state["execution_log"] if isinstance(state.get("execution_log"), list) else []
+    active = state["active_execution"] if isinstance(state.get("active_execution"), MutableMapping) else None
+    return state, history, log, active
+
+
+def _persist_execution_state(
+    history: list[dict[str, Any]],
+    log: list[dict[str, Any]],
+    active: MutableMapping | None,
+    *,
+    current_doc: str | None = None,
+    workflow_params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    updates: dict[str, Any] = {
+        "execution_history": history,
+        "execution_log": log,
+        "active_execution": active,
+    }
+    if current_doc is not None:
+        updates["current_doc"] = current_doc
+    if isinstance(workflow_params, MutableMapping):
+        updates["workflow_params"] = workflow_params
+    return update_workflow_state(updates)
+
+
+def _append_execution_event(
+    history: list[dict[str, Any]],
+    log: list[dict[str, Any]],
+    *,
+    doc: str | None,
+    status: str,
+    message: str,
+    blocked_reason: str | None = None,
+) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "doc": doc,
+        "status": status,
+        "message": message,
+        "timestamp": _timestamp(),
+    }
+    if blocked_reason:
+        entry["blocked_reason"] = blocked_reason
+    history.append(entry)
+    log.append(entry)
+    return entry
+
+
+def _is_execution_active(active: MutableMapping | None) -> bool:
+    if not isinstance(active, MutableMapping):
+        return False
+    status = str(active.get("status") or "").lower()
+    return status in ACTIVE_STATUSES
 
 
 @document_api_bp.post("/create")
@@ -135,26 +191,154 @@ def execute_document():
     if not document_path.exists():
         return _json_error("Document not found", 404)
 
-    record = {
-        "doc": _relative_path(document_path, repo_root),
-        "status": "queued",
-        "message": "Workflow execution requested",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-    }
-    state = _append_history(record)
-    update_workflow_state({"current_doc": record["doc"]})
+    state, history, log, active = _execution_state()
+    doc_rel = _relative_path(document_path, repo_root)
+    if _is_execution_active(active):
+        blocked_reason = f"Execution already in progress for {active.get('doc') or doc_rel}"
+        if isinstance(active, MutableMapping):
+            active = dict(active)
+            active["blocked_reason"] = blocked_reason
+            active["updated_at"] = _timestamp()
+        _append_execution_event(
+            history,
+            log,
+            doc=doc_rel,
+            status="blocked",
+            message="Execution blocked",
+            blocked_reason=blocked_reason,
+        )
+        updated = _persist_execution_state(history, log, active)
+        return (
+            jsonify(
+                {
+                    "status": "blocked",
+                    "blocked_reason": blocked_reason,
+                    "active_execution": updated.get("active_execution"),
+                    "execution_history": updated.get("execution_history"),
+                    "execution_log": updated.get("execution_log"),
+                }
+            ),
+            409,
+        )
 
-    return jsonify({"status": "queued", "execution_history": state["execution_history"]}), 202
+    params = state.get("workflow_params", {})
+    incoming_params = payload.get("workflow_params")
+    if isinstance(incoming_params, MutableMapping):
+        merged_params = dict(params) if isinstance(params, MutableMapping) else {}
+        merged_params.update(incoming_params)
+    else:
+        merged_params = params if isinstance(params, MutableMapping) else {}
+
+    timestamp = _timestamp()
+    active_execution: dict[str, Any] = {
+        "doc": doc_rel,
+        "status": "running",
+        "message": "Workflow execution started",
+        "blocked_reason": None,
+        "started_at": timestamp,
+        "updated_at": timestamp,
+    }
+    _append_execution_event(
+        history, log, doc=doc_rel, status="running", message="Workflow execution started"
+    )
+
+    updated = _persist_execution_state(
+        history, log, active_execution, current_doc=doc_rel, workflow_params=merged_params
+    )
+
+    return jsonify(
+        {
+            "status": "running",
+            "active_execution": updated.get("active_execution"),
+            "execution_history": updated.get("execution_history"),
+            "execution_log": updated.get("execution_log"),
+        }
+    ), 202
 
 
 @document_api_bp.get("/status")
 def document_status():
-    state = ensure_workflow_state()
+    state, history, log, active = _execution_state()
+    since = request.args.get("since")
+    filtered_log = log
+    if since is not None:
+        try:
+            start_idx = max(int(since), 0)
+        except ValueError:
+            start_idx = 0
+        filtered_log = log[start_idx:]
     return jsonify(
         {
             "current_doc": state.get("current_doc"),
             "workflow_params": state.get("workflow_params", {}),
-            "execution_history": state.get("execution_history", []),
+            "execution_history": history,
+            "execution_log": filtered_log,
+            "log_cursor": len(log),
+            "active_execution": active,
+        }
+    )
+
+
+@document_api_bp.post("/execute/status")
+def update_execution_status():
+    repo_root = _repo_root()
+    try:
+        payload = _ensure_payload()
+    except ValueError as e:
+        return _json_error("Invalid input", 400, str(e))
+
+    raw_status = payload.get("status")
+    if not isinstance(raw_status, str) or not raw_status.strip():
+        return _json_error("Invalid input", 400, "Execution status is required")
+    status = raw_status.strip().lower()
+    if status not in VALID_STATUSES:
+        return _json_error("Invalid input", 400, "Unsupported execution status")
+
+    message = payload.get("message") or "Status updated"
+    blocked_reason = payload.get("blocked_reason")
+    raw_doc = payload.get("document_path")
+    state, history, log, active = _execution_state()
+
+    resolved_doc: str | None = None
+    doc_source = raw_doc or state.get("current_doc")
+    if doc_source:
+        try:
+            resolved_doc = _relative_path(
+                _resolve_path(doc_source, repo_root, "document_path"), repo_root
+            )
+        except ValueError as e:
+            return _json_error("Invalid input", 400, str(e))
+
+    timestamp = _timestamp()
+    _append_execution_event(
+        history,
+        log,
+        doc=resolved_doc,
+        status=status,
+        message=message,
+        blocked_reason=blocked_reason,
+    )
+
+    next_active = dict(active) if isinstance(active, MutableMapping) else {}
+    if resolved_doc:
+        next_active["doc"] = resolved_doc
+    next_active["status"] = status
+    next_active["message"] = message
+    next_active["blocked_reason"] = blocked_reason
+    next_active["updated_at"] = timestamp
+    next_active.setdefault("started_at", timestamp)
+
+    updated = _persist_execution_state(
+        history, log, next_active, current_doc=resolved_doc or state.get("current_doc")
+    )
+
+    return jsonify(
+        {
+            "status": status,
+            "active_execution": updated.get("active_execution"),
+            "execution_log": updated.get("execution_log"),
+            "execution_history": updated.get("execution_history"),
+            "log_cursor": len(updated.get("execution_log", [])),
         }
     )
 
