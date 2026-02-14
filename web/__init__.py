@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from flask import Flask
 
 from web.blueprints.core import core_bp
-from web.blueprints.document import document_bp
+from web.blueprints.document import document_api_bp, document_bp
 from web.blueprints.health import health_bp
 from web.blueprints.session_api import session_api_bp
 from web.config import BaseConfig, DevelopmentConfig, ProductionConfig, _session_ttl_seconds
@@ -74,5 +74,6 @@ def _configure_logging(app: Flask) -> None:
 def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(core_bp)
     app.register_blueprint(document_bp)
+    app.register_blueprint(document_api_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(session_api_bp)

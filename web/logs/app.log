@@ -1,0 +1,2 @@
+2026-02-14 15:37:20,659 | INFO | root | Loaded handler registry from: /tmp/pytest-of-runner/pytest-0/test_validate_document_uses_ha0/repo/tools/config/handler_registry.yaml
+2026-02-14 15:37:20,659 | DEBUG | root | Global open_questions table not found (expected): Open Questions table not found (missing <!-- table:open_questions --> or table).
