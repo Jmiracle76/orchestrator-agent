@@ -1,14 +1,1 @@
-jobs:
-  auto-merge:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate Epic branch
-        run: echo "Validating..."
-      - name: Auto-approve PR
-        run: |
-          if [[ "$GITHUB_ACTOR" == "github-actions[bot]" || "$GITHUB_ACTOR" == "actions[bot]" ]]; then
-            echo "Auto-approving PR";
-            gh pr review ${{ github.event.pull_request.number }} --approve --body "✅ **Auto-approved by automation**\n\nReview skipped for trusted GitHub Actions bot";
-          fi
-      - name: Wait for status checks
-        run: echo "Waiting..."
+name: Auto Merge Coding Agent\n\non:\n  pull_request:\n    types: [ opened, synchronize ]\n\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v2\n\n      - name: Validate epic branch target\n        run: |\n          # Your validation logic here\n          echo 'Validating epic branch target'\n\n      - name: Check auto-approval\n        run: |\n          if [[ "${{ github.actor }}" == "github-actions[bot]" ]]; then\n            echo 'Auto-approving PR from GitHub Actions bot.'\n            gh pr review ${{ github.event.pull_request.number }} --approve --body 'This PR was auto-approved because it was created by the GitHub Actions bot.'\n          else\n            echo 'Not a GitHub Actions bot.'\n          fi\n\n      - name: Wait for status checks\n        run: |\n          # Your logic for waiting on status checks\n          echo 'Waiting for status checks'\n
