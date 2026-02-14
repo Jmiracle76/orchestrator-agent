@@ -65,18 +65,67 @@ def test_execute_and_status_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     exec_resp = client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
     assert exec_resp.status_code == 202
     exec_data = exec_resp.get_json()
-    assert exec_data["status"] == "queued"
+    assert exec_data["status"] == "running"
     assert exec_data["execution_history"]
+    assert exec_data["execution_log"]
+    assert exec_data["active_execution"]["doc"] == "docs/doc.md"
 
     status_resp = client.get("/api/document/status")
     assert status_resp.status_code == 200
     status_data = status_resp.get_json()
     assert status_data["current_doc"] == "docs/doc.md"
     assert status_data["execution_history"]
+    assert status_data["execution_log"]
+    assert status_data["log_cursor"] == len(status_data["execution_log"])
 
     content_resp = client.get("/api/document/content", query_string={"path": "docs/doc.md"})
     assert content_resp.status_code == 200
     assert content_resp.get_json()["content"] == "hello"
+
+
+def test_blocks_concurrent_execution_in_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    repo_root = tmp_path / "repo"
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "doc.md").write_text("hello", encoding="utf-8")
+
+    client = _build_client(tmp_path, repo_root, monkeypatch)
+
+    first = client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    assert first.status_code == 202
+
+    second = client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    assert second.status_code == 409
+    data = second.get_json()
+    assert data["status"] == "blocked"
+    assert data["blocked_reason"]
+    assert data["active_execution"]["doc"] == "docs/doc.md"
+    assert any(entry["status"] == "blocked" for entry in data["execution_log"])
+
+
+def test_execution_status_updates_and_log_cursor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    repo_root = tmp_path / "repo"
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "doc.md").write_text("hello", encoding="utf-8")
+
+    client = _build_client(tmp_path, repo_root, monkeypatch)
+
+    client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    update_resp = client.post(
+        "/api/document/execute/status",
+        json={"status": "completed", "message": "finished run"},
+    )
+    assert update_resp.status_code == 200
+    update_data = update_resp.get_json()
+    assert update_data["active_execution"]["status"] == "completed"
+
+    status_resp = client.get("/api/document/status")
+    status_data = status_resp.get_json()
+    cursor = status_data["log_cursor"]
+    incremental = client.get("/api/document/status", query_string={"since": cursor})
+    assert incremental.status_code == 200
+    assert incremental.get_json()["execution_log"] == []
 
 
 def test_validate_document_uses_handler_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
