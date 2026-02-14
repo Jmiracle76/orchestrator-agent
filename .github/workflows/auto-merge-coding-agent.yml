@@ -1,26 +1,55 @@
 name: Auto Merge Coding Agent
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - "copilot/**"
 
 permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: automerge-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   automerge:
-    if: startsWith(github.event.pull_request.head.ref, 'codex/')
     runs-on: ubuntu-latest
     steps:
-      - name: Enable auto-merge
+      - name: Enable auto-merge only after review is requested
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          ME: ${{ github.repository_owner }} # change if your reviewer isn't the owner username
         run: |
-          gh pr merge "$PR" --auto --squash
+          set -euo pipefail
 
-      - name: Wait for status checks
-        run: |
-          # Your logic for waiting on status checks
-          echo 'Waiting for status checks'
+          # Find the open PR for this branch
+          PR=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number -q '.[0].number')
+          if [[ -z "${PR:-}" ]]; then
+            echo "No open PR for branch $BRANCH"
+            exit 0
+          fi
+
+          # Read PR state: is review requested? is auto-merge already enabled?
+          AUTO=$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest -q '.autoMergeRequest != null')
+          REQ=$(gh pr view "$PR" --repo "$REPO" --json reviewRequests -q '.reviewRequests[].login' || true)
+
+          echo "PR #$PR autoMergeEnabled=$AUTO reviewRequests=[$REQ]"
+
+          if [[ "$AUTO" == "true" ]]; then
+            echo "Auto-merge already enabled. Done."
+            exit 0
+          fi
+
+          # Gate: only proceed once SOMEONE is requested as reviewer (or tighten this to your username)
+          if [[ -z "${REQ:-}" ]]; then
+            echo "No review requested yet. Assuming Copilot still working."
+            exit 0
+          fi
+
+          echo "Review requested detected. Enabling auto-merge for PR #$PR"
+          gh pr merge "$PR" --repo "$REPO" --auto --squash
+
