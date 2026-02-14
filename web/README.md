@@ -19,10 +19,19 @@ Point your browser at `http://127.0.0.1:8000`.
 - `WEB_SECRET_KEY`: Flask secret key override
 - `WEB_SESSION_DIR`: server-side session directory (defaults to `/tmp/orchestrator_sessions`, create with `700` perms)
 - `WEB_SESSION_TTL_SECONDS`: session lifetime and cleanup horizon in seconds (defaults to 7 days)
+- `WEB_SESSION_COOKIE_SECURE`: set to `true` to mark the session cookie as `Secure`
+- `WEB_BIND_ADDRESS`: address to bind the development server (defaults to `127.0.0.1`)
+- `WEB_ALLOWED_IPS`: comma-separated IP allowlist (always includes `127.0.0.1`/`::1`); non-allowlisted clients receive `403`
 
 ## Logging
 
 Logs write to both console and a rotating file with the format `%Y-%m-%d %H:%M:%S | LEVEL | logger | message`. Ensure the log directory is writable by the service user.
+
+## Security
+
+- CSRF protection is enforced on all mutating routes. The UI reads the `csrf_token` cookie (also injected into a `meta` tag) and sends it as `X-CSRFToken`. API clients should do the same.
+- IP allowlisting restricts access to local callers by default. Extend via `WEB_ALLOWED_IPS` when you need additional trusted addresses.
+- Sessions use signed, HTTP-only cookies with configurable Secure and TTL settings; expired server-side sessions are cleaned up at startup.
 
 ## CLI Wrapper
 
