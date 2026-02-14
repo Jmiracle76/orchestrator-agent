@@ -19,7 +19,9 @@ def get_workflow_state():
 
 @session_api_bp.post("/workflow")
 def set_workflow_state():
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Invalid input"}), 400
     state = update_workflow_state(payload)
     return jsonify(state)
 

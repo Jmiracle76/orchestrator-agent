@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from web import create_app
+from .utils import csrf_headers
 
 
 def _build_client(tmp_path: Path, repo_root: Path, monkeypatch: pytest.MonkeyPatch):
@@ -25,9 +26,11 @@ def test_create_document_from_template(tmp_path: Path, monkeypatch: pytest.Monke
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
+    headers = csrf_headers(client)
     resp = client.post(
         "/api/document/create",
         json={"template_path": "docs/templates/base.md", "document_path": "docs/output.md"},
+        headers=headers,
     )
     assert resp.status_code == 201
     data = resp.get_json()
@@ -45,12 +48,29 @@ def test_rejects_path_escape_attempt(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
+    headers = csrf_headers(client)
     resp = client.post(
         "/api/document/create",
         json={"template_path": "../secret.tpl", "document_path": "docs/out.md"},
+        headers=headers,
     )
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "Invalid input"
+
+
+def test_rejects_missing_csrf_token(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    repo_root = tmp_path / "repo"
+    template_dir = repo_root / "docs" / "templates"
+    template_dir.mkdir(parents=True, exist_ok=True)
+    (template_dir / "base.md").write_text("template content", encoding="utf-8")
+
+    client = _build_client(tmp_path, repo_root, monkeypatch)
+
+    resp = client.post(
+        "/api/document/create",
+        json={"template_path": "docs/templates/base.md", "document_path": "docs/output.md"},
+    )
+    assert resp.status_code == 400
 
 
 def test_execute_and_status_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -62,7 +82,9 @@ def test_execute_and_status_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
-    exec_resp = client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    headers = csrf_headers(client)
+
+    exec_resp = client.post("/api/document/execute", json={"document_path": "docs/doc.md"}, headers=headers)
     assert exec_resp.status_code == 202
     exec_data = exec_resp.get_json()
     assert exec_data["status"] == "running"
@@ -91,10 +113,12 @@ def test_blocks_concurrent_execution_in_session(tmp_path: Path, monkeypatch: pyt
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
-    first = client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    headers = csrf_headers(client)
+
+    first = client.post("/api/document/execute", json={"document_path": "docs/doc.md"}, headers=headers)
     assert first.status_code == 202
 
-    second = client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    second = client.post("/api/document/execute", json={"document_path": "docs/doc.md"}, headers=headers)
     assert second.status_code == 409
     data = second.get_json()
     assert data["status"] == "blocked"
@@ -111,10 +135,13 @@ def test_execution_status_updates_and_log_cursor(tmp_path: Path, monkeypatch: py
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
-    client.post("/api/document/execute", json={"document_path": "docs/doc.md"})
+    headers = csrf_headers(client)
+
+    client.post("/api/document/execute", json={"document_path": "docs/doc.md"}, headers=headers)
     update_resp = client.post(
         "/api/document/execute/status",
         json={"status": "completed", "message": "finished run"},
+        headers=headers,
     )
     assert update_resp.status_code == 200
     update_data = update_resp.get_json()
@@ -137,9 +164,12 @@ def test_update_document_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
+    headers = csrf_headers(client)
+
     resp = client.post(
         "/api/document/content",
         json={"document_path": "docs/doc.md", "content": "updated content"},
+        headers=headers,
     )
     assert resp.status_code == 200
     data = resp.get_json()
@@ -170,7 +200,11 @@ def test_validate_document_uses_handler_registry(tmp_path: Path, monkeypatch: py
 
     client = _build_client(tmp_path, repo_root, monkeypatch)
 
-    resp = client.post("/api/document/validate", json={"document_path": "docs/requirements.md"})
+    headers = csrf_headers(client)
+
+    resp = client.post(
+        "/api/document/validate", json={"document_path": "docs/requirements.md"}, headers=headers
+    )
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["document_path"] == "docs/requirements.md"

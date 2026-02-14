@@ -6,6 +6,7 @@ import pytest
 
 from web import create_app
 from web.session_store import cleanup_expired_sessions
+from .utils import csrf_headers
 
 
 def _build_app(tmp_path, monkeypatch, ttl_seconds: str = "120"):
@@ -28,6 +29,7 @@ def test_session_configuration_uses_filesystem_dir_and_secure_key(tmp_path, monk
 def test_workflow_session_persists_across_requests(tmp_path, monkeypatch):
     app = _build_app(tmp_path, monkeypatch)
     client = app.test_client()
+    headers = csrf_headers(client)
 
     payload = {
         "current_doc": "docs/requirements.md",
@@ -35,7 +37,7 @@ def test_workflow_session_persists_across_requests(tmp_path, monkeypatch):
         "execution_history": ["queued", "ran step"],
     }
 
-    first = client.post("/api/session/workflow", json=payload)
+    first = client.post("/api/session/workflow", json=payload, headers=headers)
     assert first.status_code == 200
 
     second = client.get("/api/session/workflow")
@@ -48,8 +50,9 @@ def test_workflow_session_persists_across_requests(tmp_path, monkeypatch):
 def test_cleanup_removes_expired_session_files(tmp_path, monkeypatch):
     app = _build_app(tmp_path, monkeypatch, ttl_seconds="1")
     client = app.test_client()
+    headers = csrf_headers(client)
 
-    client.post("/api/session/workflow", json={"current_doc": "docs/requirements.md"})
+    client.post("/api/session/workflow", json={"current_doc": "docs/requirements.md"}, headers=headers)
     session_files = list(tmp_path.iterdir())
     assert session_files
 

@@ -240,6 +240,29 @@
   let logCursor = executionLog.length;
   let documentList = Array.isArray(initialDocuments) ? [...initialDocuments] : [];
 
+  function readCookie(name) {
+    const match = document.cookie.split("; ").find((row) => row.startsWith(name + "="));
+    return match ? decodeURIComponent(match.split("=").slice(1).join("=")) : "";
+  }
+
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) {
+      return meta.content;
+    }
+    return readCookie("csrf_token");
+  }
+
+  function refreshCsrfTokenFromResponse(resp) {
+    const nextToken = resp.headers.get("X-CSRFToken");
+    if (!nextToken) return;
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) {
+      meta.setAttribute("content", nextToken);
+    }
+    document.cookie = `csrf_token=${encodeURIComponent(nextToken)}; SameSite=Lax; Path=/`;
+  }
+
   function setDocPath(value) {
     docInputs.forEach((input) => {
       input.value = value;
@@ -337,10 +360,16 @@
   }
 
   async function fetchJson(url, options = {}) {
+    const headers = {"Content-Type": "application/json", ...(options.headers || {})};
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers["X-CSRFToken"] = csrfToken;
+    }
     const resp = await fetch(url, {
-      headers: {"Content-Type": "application/json"},
+      headers,
       ...options,
     });
+    refreshCsrfTokenFromResponse(resp);
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
       const msg = data.error || data.message || "Request failed";
