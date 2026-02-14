@@ -1,35 +1,24 @@
 name: Auto Merge Coding Agent
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  validate:
+  automerge:
+    if: startsWith(github.event.pull_request.head.ref, 'copilot/')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate epic branch target
-        run: |
-          # Your validation logic here
-          echo 'Validating epic branch target'
-
-      - name: Check auto-approval
+      - name: Enable auto-merge
         env:
           GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
-          if [[ "${{ github.actor }}" == "github-actions[bot]" ]]; then
-            echo 'Auto-approving PR from GitHub Actions bot.'
-            gh pr review "${{ github.event.pull_request.number }}" --approve --body 'This PR was auto-approved because it was created by the GitHub Actions bot.'
-          else
-            echo 'Not a GitHub Actions bot.'
-          fi
+          gh pr merge "$PR" --auto --squash
 
       - name: Wait for status checks
         run: |
