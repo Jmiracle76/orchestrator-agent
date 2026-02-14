@@ -17,6 +17,8 @@ Point your browser at `http://127.0.0.1:8000`.
 - `WEB_CONFIG` / `FLASK_ENV`: `development` (debug, template reload) or `production`
 - `WEB_LOG_FILE`: override log path (defaults to `web/logs/app.log`)
 - `WEB_SECRET_KEY`: Flask secret key override
+- `WEB_SESSION_DIR`: server-side session directory (defaults to `/tmp/orchestrator_sessions`, create with `700` perms)
+- `WEB_SESSION_TTL_SECONDS`: session lifetime and cleanup horizon in seconds (defaults to 7 days)
 
 ## Logging
 
@@ -29,6 +31,8 @@ Logs write to both console and a rotating file with the format `%Y-%m-%d %H:%M:%
 ## Layout
 
 - `web/__init__.py`: app factory, blueprint registration, logging
+- `web/session_store.py`: Flask-Session setup, file-based storage, cleanup helpers
+- `web/blueprints/session_api.py`: workflow session API (`/api/session/workflow`) backed by server-side session storage
 - `web/config.py`: dev/prod config classes
 - `web/blueprints/`: core, document, and health blueprints
 - `web/templates/` and `web/static/`: Tailwind-backed UI shell
