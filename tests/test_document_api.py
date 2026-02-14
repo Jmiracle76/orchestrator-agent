@@ -128,6 +128,26 @@ def test_execution_status_updates_and_log_cursor(tmp_path: Path, monkeypatch: py
     assert incremental.get_json()["execution_log"] == []
 
 
+def test_update_document_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    repo_root = tmp_path / "repo"
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    target = docs_dir / "doc.md"
+    target.write_text("hello", encoding="utf-8")
+
+    client = _build_client(tmp_path, repo_root, monkeypatch)
+
+    resp = client.post(
+        "/api/document/content",
+        json={"document_path": "docs/doc.md", "content": "updated content"},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "updated"
+    assert data["document_path"] == "docs/doc.md"
+    assert target.read_text(encoding="utf-8") == "updated content"
+
+
 def test_validate_document_uses_handler_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     repo_root = tmp_path / "repo"
     docs_dir = repo_root / "docs"

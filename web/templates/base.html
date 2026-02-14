@@ -10,12 +10,12 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans">
+<body class="bg-slate-950 text-slate-100 font-sans antialiased">
   <div class="relative min-h-screen overflow-hidden">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(14,165,233,0.18),transparent_30%),radial-gradient(circle_at_50%_80%,rgba(34,197,94,0.14),transparent_30%)]"></div>
     <div class="relative z-10">
       <header class="backdrop-blur bg-slate-900/70 border-b border-slate-800">
-        <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div class="flex items-center gap-3">
             <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-400 text-slate-950 font-mono text-lg font-semibold shadow-lg shadow-sky-500/30">
               OA
@@ -32,7 +32,7 @@
           </nav>
         </div>
       </header>
-      <main class="mx-auto max-w-6xl px-6 py-10">
+      <main class="mx-auto max-w-7xl px-4 pb-12 pt-10 sm:px-6 lg:px-8">
         {% block content %}{% endblock %}
       </main>
     </div>

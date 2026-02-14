@@ -23,3 +23,8 @@ code, pre {
   border-color: rgba(226, 232, 240, 0.25);
   background-color: rgba(30, 41, 59, 0.7);
 }
+
+textarea#document-editor {
+  font-family: var(--font-mono);
+  line-height: 1.45;
+}
