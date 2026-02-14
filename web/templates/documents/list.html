@@ -105,18 +105,53 @@
         <div class="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs text-slate-300">
           <p>Active status: <span id="active-status" class="font-semibold text-emerald-300">{{ workflow_state.active_execution.status if workflow_state.active_execution else "idle" }}</span></p>
           <p>Workflow params: <span id="workflow-params-chip" class="text-sky-200">{{ workflow_state.workflow_params or {} }}</span></p>
+          <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-2">
+            <span id="blocked-chip" class="hidden rounded-full border border-amber-500/50 bg-amber-500/10 px-2 py-0.5 font-semibold uppercase tracking-[0.12em] text-amber-100">Blocked</span>
+            <span id="active-message" class="text-slate-300">{{ workflow_state.active_execution.message if workflow_state.active_execution else "" }}</span>
+          </p>
         </div>
       </div>
       <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        <form id="execute-form" class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-          <p class="text-sm font-semibold text-slate-100">Start / resume workflow</p>
-          <label class="block text-sm text-slate-200">
-            Workflow params (JSON, optional)
-            <textarea id="workflow-params" class="mt-1 h-20 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder='{"max_steps": 3, "dry_run": false}'></textarea>
-          </label>
+        <form id="execute-form" class="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-semibold text-slate-100">Start / resume workflow</p>
+            <span class="rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300">Polls every 2s while running</span>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <label class="block text-sm text-slate-200">
+              Step count
+              <input id="max-steps" type="number" min="1" value="{{ (workflow_state.workflow_params.max_steps if workflow_state.workflow_params else 1) or 1 }}" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" />
+            </label>
+            <label class="block text-sm text-slate-200">
+              Log level
+              {% set current_log = (workflow_state.workflow_params.log_level if workflow_state.workflow_params else "INFO") | upper %}
+              <select id="log-level" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring">
+                <option value="DEBUG" {% if current_log == "DEBUG" %}selected{% endif %}>DEBUG</option>
+                <option value="INFO" {% if current_log == "INFO" %}selected{% endif %}>INFO</option>
+                <option value="WARNING" {% if current_log == "WARNING" %}selected{% endif %}>WARNING</option>
+                <option value="ERROR" {% if current_log == "ERROR" %}selected{% endif %}>ERROR</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
+              <input type="checkbox" id="dry-run" class="h-4 w-4 rounded border-slate-700 bg-slate-900/70 text-emerald-400 focus:ring-emerald-500" {% if workflow_state.workflow_params and workflow_state.workflow_params.get('dry_run') %}checked{% endif %} />
+              <span>Dry-run (no writes)</span>
+            </label>
+            <label class="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
+              <input type="checkbox" id="no-commit" class="h-4 w-4 rounded border-slate-700 bg-slate-900/70 text-emerald-400 focus:ring-emerald-500" {% if workflow_state.workflow_params and workflow_state.workflow_params.get('no_commit') %}checked{% endif %} />
+              <span>No commit</span>
+            </label>
+            <label class="block text-sm text-slate-200">
+              Template path
+              <input id="execute-template" value="{{ workflow_state.workflow_params.template_path if workflow_state.workflow_params else defaults.template_path }}" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder="docs/templates/requirements-template.md" />
+            </label>
+            <label class="block text-sm text-slate-200">
+              Handler config (optional)
+              <input id="handler-config" value="{{ workflow_state.workflow_params.handler_config if workflow_state.workflow_params else '' }}" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder="tools/config/handler_registry.yaml" />
+            </label>
+          </div>
           <div class="flex flex-wrap gap-3">
-            <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-sky-500/30 transition hover:translate-y-[-1px] hover:shadow-sky-400/40">
-              Execute workflow
+            <button type="submit" id="execute-button" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-sky-500/30 transition hover:translate-y-[-1px] hover:shadow-sky-400/40">
+              Start execution
             </button>
             <button type="button" id="refresh-status" class="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800/60">
               Refresh status
@@ -124,31 +159,41 @@
           </div>
         </form>
 
-        <form id="status-update-form" class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-          <p class="text-sm font-semibold text-slate-100">Iteration status update</p>
-          <label class="block text-sm text-slate-200">
-            Status
-            <select id="status-select" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring">
-              <option value="running">running</option>
-              <option value="queued">queued</option>
-              <option value="blocked">blocked</option>
-              <option value="completed">completed</option>
-              <option value="failed">failed</option>
-              <option value="canceled">canceled</option>
-            </select>
-          </label>
-          <label class="block text-sm text-slate-200">
-            Message
-            <input id="status-message" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder="Iteration note or status update" />
-          </label>
-          <label class="block text-sm text-slate-200">
-            Blocked reason (optional)
-            <input id="blocked-reason" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder="If blocked, specify why" />
-          </label>
-          <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800/60">
-            Append update
-          </button>
-        </form>
+        <div class="space-y-3">
+          <div class="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold text-slate-100">Live output</p>
+              <span id="output-count" class="text-xs text-slate-400">0 lines</span>
+            </div>
+            <pre id="live-output" class="mt-2 h-44 w-full overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100">Waiting for execution output…</pre>
+          </div>
+
+          <form id="status-update-form" class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+            <p class="text-sm font-semibold text-slate-100">Iteration status update</p>
+            <label class="block text-sm text-slate-200">
+              Status
+              <select id="status-select" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring">
+                <option value="running">running</option>
+                <option value="queued">queued</option>
+                <option value="blocked">blocked</option>
+                <option value="completed">completed</option>
+                <option value="failed">failed</option>
+                <option value="canceled">canceled</option>
+              </select>
+            </label>
+            <label class="block text-sm text-slate-200">
+              Message
+              <input id="status-message" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder="Iteration note or status update" />
+            </label>
+            <label class="block text-sm text-slate-200">
+              Blocked reason (optional)
+              <input id="blocked-reason" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring" placeholder="If blocked, specify why" />
+            </label>
+            <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800/60">
+              Append update
+            </button>
+          </form>
+        </div>
       </div>
     </section>
   </div>
@@ -246,11 +291,25 @@
   const executionLogEl = document.getElementById("execution-log");
   const logCountEl = document.getElementById("log-count");
   const validationOutput = document.getElementById("validation-output");
+  const executeTemplateInput = document.getElementById("execute-template");
+  const handlerConfigInput = document.getElementById("handler-config");
+  const maxStepsInput = document.getElementById("max-steps");
+  const logLevelSelect = document.getElementById("log-level");
+  const dryRunCheckbox = document.getElementById("dry-run");
+  const noCommitCheckbox = document.getElementById("no-commit");
+  const outputEl = document.getElementById("live-output");
+  const outputCountEl = document.getElementById("output-count");
+  const activeMessage = document.getElementById("active-message");
+  const blockedChip = document.getElementById("blocked-chip");
+  const executeButton = document.getElementById("execute-button");
 
   let executionLog = Array.isArray(workflowState.execution_log) ? [...workflowState.execution_log] : [];
   let logCursor = executionLog.length;
+  let executionOutput = [];
+  let outputCursor = 0;
   let documentList = Array.isArray(initialDocuments) ? [...initialDocuments] : [];
   let docPathTouched = false;
+  let pollTimer = null;
 
   docInputs.forEach((input) => {
     input.addEventListener("input", () => {
@@ -323,6 +382,56 @@
       : tone === "success"
         ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-100"
         : "border-slate-700 bg-slate-900/70 text-slate-300");
+  }
+
+  function setControlsDisabled(disabled) {
+    const controls = [
+      executeButton,
+      maxStepsInput,
+      logLevelSelect,
+      dryRunCheckbox,
+      noCommitCheckbox,
+      executeTemplateInput,
+      handlerConfigInput,
+    ];
+    controls.forEach((el) => {
+      if (!el) return;
+      el.disabled = disabled;
+      if (el !== executeButton) {
+        el.classList.toggle("opacity-60", disabled);
+      }
+    });
+    if (executeButton) {
+      executeButton.textContent = disabled ? "Running…" : "Start execution";
+    }
+  }
+
+  function renderOutput() {
+    if (!outputEl) return;
+    if (!executionOutput.length) {
+      outputEl.textContent = "Waiting for execution output…";
+      if (outputCountEl) outputCountEl.textContent = "0 lines";
+      return;
+    }
+    outputEl.textContent = executionOutput
+      .map((entry) => {
+        const prefix = entry.stream ? `[${entry.stream}] ` : "";
+        return prefix + (entry.line || "");
+      })
+      .join("\n");
+    if (outputCountEl) outputCountEl.textContent = `${executionOutput.length} lines`;
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(() => refreshStatus(true), 2000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
   }
 
   function validateRelativePath(raw, label) {
@@ -436,11 +545,45 @@
     if (active && active.doc) {
       setDocPath(active.doc);
     }
+    if (activeMessage) activeMessage.textContent = (active && active.message) || "";
+    if (blockedChip) {
+      const reason = active && active.blocked_reason;
+      blockedChip.classList.toggle("hidden", !reason);
+      if (reason) blockedChip.textContent = `Blocked: ${reason}`;
+    }
+    const running = status === "running" || status === "queued";
+    if (running) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+    setControlsDisabled(running);
   }
 
   function hydrateFromState() {
     setDocPath(workflowState.current_doc || defaults.document_path || "");
+    const params = workflowState.workflow_params || {};
+    if (typeof params.max_steps === "number" && maxStepsInput) {
+      maxStepsInput.value = params.max_steps;
+    }
+    if (typeof params.log_level === "string" && logLevelSelect) {
+      logLevelSelect.value = params.log_level.toUpperCase();
+    }
+    if (dryRunCheckbox) {
+      dryRunCheckbox.checked = Boolean(params.dry_run);
+    }
+    if (noCommitCheckbox) {
+      noCommitCheckbox.checked = Boolean(params.no_commit);
+    }
+    if (executeTemplateInput && params.template_path) {
+      executeTemplateInput.value = params.template_path;
+    }
+    if (handlerConfigInput && params.handler_config) {
+      handlerConfigInput.value = params.handler_config;
+    }
+    updateActiveExecution(workflowState.active_execution);
     renderLog();
+    renderOutput();
     updateDocumentList(documentList);
   }
 
@@ -534,46 +677,77 @@
       setToast("Set a document path before executing", "error");
       return;
     }
-    let params = {};
-    const rawParams = document.getElementById("workflow-params").value.trim();
-    if (rawParams) {
-      try {
-        params = JSON.parse(rawParams);
-      } catch (err) {
-        setToast("Workflow params must be valid JSON", "error");
-        return;
+    const payload = {document_path: path};
+    if (maxStepsInput) {
+      const rawSteps = maxStepsInput.value.trim();
+      if (rawSteps) {
+        const parsed = Number.parseInt(rawSteps, 10);
+        if (Number.isNaN(parsed) || parsed < 1) {
+          setToast("Step count must be at least 1", "error");
+          return;
+        }
+        payload.max_steps = parsed;
       }
     }
+    if (logLevelSelect && logLevelSelect.value) payload.log_level = logLevelSelect.value;
+    if (dryRunCheckbox) payload.dry_run = !!dryRunCheckbox.checked;
+    if (noCommitCheckbox) payload.no_commit = !!noCommitCheckbox.checked;
+    if (executeTemplateInput && executeTemplateInput.value.trim()) {
+      payload.template_path = executeTemplateInput.value.trim();
+    }
+    if (handlerConfigInput && handlerConfigInput.value.trim()) {
+      payload.handler_config = handlerConfigInput.value.trim();
+    }
     setToast("Starting execution …");
+    setControlsDisabled(true);
+    executionOutput = [];
+    outputCursor = 0;
+    renderOutput();
     try {
       const data = await fetchJson("/api/document/execute", {
         method: "POST",
-        body: JSON.stringify({document_path: path, workflow_params: params}),
+        body: JSON.stringify(payload),
       });
       executionLog = data.execution_log || executionLog;
       logCursor = executionLog.length;
+      if (Array.isArray(data.execution_output)) {
+        executionOutput = data.execution_output;
+        outputCursor = data.output_cursor || executionOutput.length;
+      }
       renderLog();
+      renderOutput();
       updateActiveExecution(data.active_execution);
-      workflowParamsChip.textContent = JSON.stringify(data.workflow_params || params || {});
+      workflowParamsChip.textContent = JSON.stringify(data.workflow_params || payload || {});
+      startPolling();
       setToast("Execution marked as running", "success");
     } catch (err) {
+      setControlsDisabled(false);
       setToast(err.message, "error");
     }
   }
 
-  async function refreshStatus() {
+  async function refreshStatus(silent = false) {
     try {
-      const data = await fetchJson(`/api/document/status?since=${logCursor}`);
+      const data = await fetchJson(`/api/document/status?since=${logCursor}&output_since=${outputCursor}`);
       if (Array.isArray(data.execution_log) && data.execution_log.length) {
         executionLog = executionLog.concat(data.execution_log);
         logCursor = data.log_cursor || executionLog.length;
         renderLog();
+      } else if (typeof data.log_cursor === "number") {
+        logCursor = data.log_cursor;
       }
+      if (Array.isArray(data.execution_output) && data.execution_output.length) {
+        executionOutput = executionOutput.concat(data.execution_output);
+      }
+      if (typeof data.output_cursor === "number") {
+        outputCursor = data.output_cursor;
+      }
+      renderOutput();
       updateActiveExecution(data.active_execution);
       workflowParamsChip.textContent = JSON.stringify(data.workflow_params || {});
-      setToast("Status refreshed", "success");
+      if (!silent) setToast("Status refreshed", "success");
     } catch (err) {
-      setToast(err.message, "error");
+      if (!silent) setToast(err.message, "error");
     }
   }
 

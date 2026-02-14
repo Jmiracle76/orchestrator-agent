@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import threading
 from dataclasses import dataclass
-from typing import Any, List, Literal, Optional
+from typing import Any, Callable, List, Literal, Optional
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 StreamName = Literal["stdout", "stderr"]
@@ -108,9 +109,124 @@ def run_requirements_cli(
             stderr=str(exc),
             logs=[],
             json_blocks=[],
+        command=command,
+        error=str(exc),
+    )
+
+
+def stream_requirements_cli(
+    *,
+    repo_root: str,
+    template: str,
+    doc: str,
+    dry_run: bool = False,
+    no_commit: bool = False,
+    log_level: str = "INFO",
+    max_steps: Optional[int] = None,
+    handler_config: Optional[str] = None,
+    validate: bool = False,
+    strict: bool = False,
+    timeout: Optional[float] = 300,
+    on_output_line: Optional[Callable[[str, StreamName], None]] = None,
+    on_log: Optional[Callable[[LogEntry], None]] = None,
+) -> CLIWrapperResult:
+    """
+    Run the requirements automation CLI while streaming output lines to callbacks.
+
+    Captures stdout/stderr incrementally to keep callers updated during long-lived runs.
+    """
+    command = _build_command(
+        repo_root=repo_root,
+        template=template,
+        doc=doc,
+        dry_run=dry_run,
+        no_commit=no_commit,
+        log_level=log_level,
+        max_steps=max_steps,
+        handler_config=handler_config,
+        validate=validate,
+        strict=strict,
+    )
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+    except Exception as exc:  # pragma: no cover - defensive guard
+        return CLIWrapperResult(
+            status="error",
+            exit_code=None,
+            stdout="",
+            stderr=str(exc),
+            logs=[],
+            json_blocks=[],
             command=command,
             error=str(exc),
         )
+
+    assert process.stdout is not None
+    assert process.stderr is not None
+
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+    parsed_logs: list[LogEntry] = []
+
+    def _pump_stream(stream, collector: list[str], stream_name: StreamName):
+        for raw in iter(stream.readline, ""):
+            collector.append(raw)
+            if on_output_line:
+                on_output_line(raw.rstrip("\n"), stream_name)
+            entry = _log_entry_from_line(raw, stream_name)
+            if entry:
+                parsed_logs.append(entry)
+                if on_log:
+                    on_log(entry)
+        stream.close()
+
+    stdout_thread = threading.Thread(
+        target=_pump_stream, args=(process.stdout, stdout_lines, "stdout"), daemon=True
+    )
+    stderr_thread = threading.Thread(
+        target=_pump_stream, args=(process.stderr, stderr_lines, "stderr"), daemon=True
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+
+    status: Literal["success", "error", "timeout"]
+    error: Optional[str] = None
+    exit_code: Optional[int]
+    try:
+        process.wait(timeout=timeout)
+        exit_code = process.returncode
+        status = "success" if exit_code == 0 else "error"
+        if status == "error":
+            error = f"Process exited with code {exit_code}"
+    except subprocess.TimeoutExpired:
+        process.kill()
+        status = "timeout"
+        exit_code = None
+        error = f"Process timed out after {timeout} seconds"
+
+    stdout_thread.join()
+    stderr_thread.join()
+
+    stdout = "".join(stdout_lines)
+    stderr = "".join(stderr_lines)
+
+    return CLIWrapperResult(
+        status=status,
+        exit_code=exit_code,
+        stdout=stdout,
+        stderr=stderr,
+        logs=parsed_logs,
+        json_blocks=_collect_json(stdout, stderr),
+        command=command,
+        error=error,
+    )
 
 
 def _build_command(
@@ -174,6 +290,13 @@ def _parse_logs(text: str, stream: StreamName) -> List[LogEntry]:
             continue
         entries.append(LogEntry(level=level, message=message, stream=stream))
     return entries
+
+
+def _log_entry_from_line(line: str, stream: StreamName) -> Optional[LogEntry]:
+    level, message = _split_log_line(line.strip())
+    if level is None:
+        return None
+    return LogEntry(level=level, message=message, stream=stream)
 
 
 def _split_log_line(line: str) -> tuple[Optional[LogLevel], str]:
