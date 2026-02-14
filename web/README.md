@@ -2,6 +2,10 @@
 
 Thin Flask shell for the Orchestrator Agent UI with blueprints for core, documents, and health routes. Tailwind CSS powers the Codex-inspired layout.
 
+## Style guide
+
+Visit `/style-guide` in the running app for a live component library (buttons, controls, cards, dialogs) plus color tokens, layout guardrails, and accessibility/responsiveness notes.
+
 ## Running locally
 
 ```bash
