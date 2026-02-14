@@ -22,6 +22,10 @@ Point your browser at `http://127.0.0.1:8000`.
 
 Logs write to both console and a rotating file with the format `%Y-%m-%d %H:%M:%S | LEVEL | logger | message`. Ensure the log directory is writable by the service user.
 
+## CLI Wrapper
+
+`web.cli_wrapper.run_requirements_cli` runs the requirements automation CLI as a subprocess, accepting the full set of CLI options (`--repo-root`, `--template`, `--doc`, `--dry-run`, `--no-commit`, `--log-level`, `--max-steps`, `--handler-config`, `--validate`, `--strict`). It captures stdout/stderr logs and any JSON payloads, returning a structured result with `status` (`success`, `error`, or `timeout`), exit code, parsed JSON blocks, and raw streams. Timeouts surface partial output with `status="timeout"` so API routes can relay what happened.
+
 ## Layout
 
 - `web/__init__.py`: app factory, blueprint registration, logging
