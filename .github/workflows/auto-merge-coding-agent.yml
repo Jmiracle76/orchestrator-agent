@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   automerge:
-    if: startsWith(github.event.pull_request.head.ref, 'copilot/')
+    if: startsWith(github.event.pull_request.head.ref, 'codex/')
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge
