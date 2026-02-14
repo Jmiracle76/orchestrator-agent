@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask
@@ -7,7 +8,9 @@ from flask import Flask
 from web.blueprints.core import core_bp
 from web.blueprints.document import document_bp
 from web.blueprints.health import health_bp
-from web.config import BaseConfig, DevelopmentConfig, ProductionConfig
+from web.blueprints.session_api import session_api_bp
+from web.config import BaseConfig, DevelopmentConfig, ProductionConfig, _session_ttl_seconds
+from web.session_store import configure_session
 
 CONFIG_MAP = {
     "development": DevelopmentConfig,
@@ -21,6 +24,11 @@ def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     selected_config = _resolve_config(config_name)
     app.config.from_object(selected_config)
+    app.config["SESSION_FILE_DIR"] = os.getenv("WEB_SESSION_DIR", app.config["SESSION_FILE_DIR"])
+    ttl_seconds = _session_ttl_seconds()
+    app.permanent_session_lifetime = timedelta(seconds=ttl_seconds)
+    app.config["PERMANENT_SESSION_LIFETIME"] = app.permanent_session_lifetime
+    configure_session(app)
     _configure_logging(app)
     _register_blueprints(app)
     return app
@@ -67,3 +75,4 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(core_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(session_api_bp)
