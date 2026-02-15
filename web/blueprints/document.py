@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import shutil
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, MutableMapping
+from threading import Lock, Thread
+from typing import Any, Callable, Iterable, MutableMapping, Optional
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request, session
 
 from tools.requirements_automation.cli_config import load_handler_registry
 from tools.requirements_automation.cli_validators import (
@@ -16,6 +17,7 @@ from tools.requirements_automation.cli_validators import (
 )
 from tools.requirements_automation.document_validator import DocumentValidator
 from tools.requirements_automation.utils_io import read_text, split_lines
+from web.cli_wrapper import LogEntry, stream_requirements_cli
 from web.session_state import WorkflowState, ensure_workflow_state, update_workflow_state
 
 document_bp = Blueprint("document", __name__, url_prefix="/documents")
@@ -91,6 +93,231 @@ def _serialize_checks(checks: Iterable) -> list[dict[str, Any]]:
 
 def _timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+_STREAM_LOCK = Lock()
+_ACTIVE_JOBS: dict[str, "ExecutionJob"] = {}
+
+
+def _session_id() -> str | None:
+    sid = getattr(session, "sid", None)
+    if isinstance(sid, str):
+        return sid
+    fallback = session.get("_id")
+    return fallback if isinstance(fallback, str) else None
+
+
+@dataclass
+class ExecutionJob:
+    session_id: str
+    doc: str
+    doc_path: str
+    template_path: str
+    handler_config: str | None
+    params: dict[str, Any]
+    started_at: str
+    updated_at: str = field(default_factory=_timestamp)
+    status: str = "running"
+    exit_code: Optional[int] = None
+    error: str | None = None
+    blocked_reason: str | None = None
+    output: list[dict[str, Any]] = field(default_factory=list)
+    logs: list[dict[str, Any]] = field(default_factory=list)
+    json_blocks: list[Any] = field(default_factory=list)
+    command: list[str] | None = None
+    finished_at: str | None = None
+    status_message: str = "Workflow execution started"
+    persisted: bool = False
+    thread: Thread | None = field(default=None, repr=False, compare=False)
+
+
+def _clear_job(session_id: str | None) -> None:
+    if not session_id:
+        return
+    with _STREAM_LOCK:
+        _ACTIVE_JOBS.pop(session_id, None)
+
+
+def _get_job(session_id: str | None) -> Optional[ExecutionJob]:
+    if not session_id:
+        return None
+    with _STREAM_LOCK:
+        return _ACTIVE_JOBS.get(session_id)
+
+
+def _append_output_line(job: ExecutionJob, line: str, stream_name: str) -> None:
+    entry = {"line": line, "stream": stream_name, "timestamp": _timestamp()}
+    job.output.append(entry)
+    job.updated_at = entry["timestamp"]
+
+
+def _append_job_log(job: ExecutionJob, log_entry: LogEntry) -> None:
+    entry = {
+        "level": log_entry.level,
+        "message": log_entry.message,
+        "stream": log_entry.stream,
+        "timestamp": _timestamp(),
+    }
+    job.logs.append(entry)
+    job.updated_at = entry["timestamp"]
+
+
+def _run_job_for_session(
+    job: ExecutionJob,
+    repo_root: Path,
+    template_path: Path,
+    handler_config: Path | None,
+) -> None:
+    def on_output(line: str, stream_name: str):
+        with _STREAM_LOCK:
+            _append_output_line(job, line, stream_name)
+
+    def on_log(log_entry: LogEntry):
+        with _STREAM_LOCK:
+            _append_job_log(job, log_entry)
+
+    result = stream_requirements_cli(
+        repo_root=str(repo_root),
+        template=str(template_path),
+        doc=job.doc_path,
+        dry_run=bool(job.params.get("dry_run")),
+        no_commit=bool(job.params.get("no_commit")),
+        log_level=str(job.params.get("log_level") or "INFO"),
+        max_steps=job.params.get("max_steps"),
+        handler_config=str(handler_config) if handler_config else None,
+        validate=bool(job.params.get("validate")),
+        strict=bool(job.params.get("strict")),
+        on_output_line=on_output,
+        on_log=on_log,
+    )
+
+    with _STREAM_LOCK:
+        job.exit_code = result.exit_code
+        job.error = result.error
+        job.json_blocks = result.json_blocks
+        job.command = result.command
+        job.finished_at = _timestamp()
+        job.updated_at = job.finished_at
+        if result.status == "success":
+            job.status = "completed"
+            job.status_message = "Workflow execution finished"
+        elif result.status == "timeout":
+            job.status = "blocked"
+            job.blocked_reason = result.error or "Execution timed out"
+            job.status_message = job.blocked_reason
+        else:
+            job.status = "failed"
+            job.status_message = result.error or "Workflow execution failed"
+
+
+def _launch_execution_job(
+    session_id: str | None,
+    repo_root: Path,
+    doc_rel: str,
+    document_path: Path,
+    template_path: Path,
+    handler_config: Path | None,
+    params: dict[str, Any],
+) -> ExecutionJob:
+    started_at = _timestamp()
+    job = ExecutionJob(
+        session_id=session_id or "anonymous",
+        doc=doc_rel,
+        doc_path=str(document_path),
+        template_path=str(template_path),
+        handler_config=str(handler_config) if handler_config else None,
+        params=params,
+        started_at=started_at,
+        updated_at=started_at,
+    )
+    _clear_job(session_id)
+    with _STREAM_LOCK:
+        _ACTIVE_JOBS[job.session_id] = job
+    thread = Thread(
+        target=_run_job_for_session,
+        args=(job, repo_root, template_path, handler_config),
+        daemon=True,
+    )
+    job.thread = thread
+    thread.start()
+    return job
+
+
+def _job_output_slice(job: ExecutionJob, since: int) -> tuple[list[dict[str, Any]], int]:
+    start = max(since, 0)
+    return list(job.output[start:]), len(job.output)
+
+
+def _merge_job_active(job: ExecutionJob | None, active: MutableMapping | None) -> MutableMapping | None:
+    if not job:
+        return active
+    base = dict(active) if isinstance(active, MutableMapping) else {}
+    base.setdefault("started_at", job.started_at)
+    base.update(
+        {
+            "doc": job.doc,
+            "status": job.status,
+            "message": job.status_message,
+            "blocked_reason": job.blocked_reason,
+            "updated_at": job.updated_at,
+            "finished_at": job.finished_at,
+        }
+    )
+    return base
+
+
+def _persist_job_completion(
+    job: ExecutionJob | None,
+    state: WorkflowState,
+    history: list[dict[str, Any]],
+    log: list[dict[str, Any]],
+    active: MutableMapping | None,
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], MutableMapping | None]:
+    with _STREAM_LOCK:
+        if not job or job.persisted or job.status == "running":
+            return state, history, log, active
+        job.persisted = True
+        doc = job.doc
+        status = job.status
+        message = job.status_message
+        blocked_reason = job.blocked_reason
+        updated_at = job.updated_at
+        finished_at = job.finished_at
+
+    active_payload: MutableMapping = dict(active) if isinstance(active, MutableMapping) else {}
+    active_payload.update(
+        {
+            "doc": doc,
+            "status": status,
+            "message": message,
+            "blocked_reason": blocked_reason,
+            "updated_at": updated_at,
+            "finished_at": finished_at,
+        }
+    )
+
+    _append_execution_event(
+        history,
+        log,
+        doc=doc,
+        status=status,
+        message=message,
+        blocked_reason=blocked_reason,
+    )
+
+    updated = _persist_execution_state(
+        history,
+        log,
+        active_payload,
+        current_doc=doc,
+        workflow_params=state.get("workflow_params"),
+    )
+    return (
+        updated,
+        updated.get("execution_history", history),
+        updated.get("execution_log", log),
+        updated.get("active_execution"),
+    )
 
 
 def _execution_state():
@@ -199,10 +426,12 @@ def execute_document():
     if not document_path.exists():
         return _json_error("Document not found", 404)
 
+    session_id = _session_id()
     state, history, log, active = _execution_state()
     doc_rel = _relative_path(document_path, repo_root)
-    if _is_execution_active(active):
-        blocked_reason = f"Execution already in progress for {active.get('doc') or doc_rel}"
+    running_job = _get_job(session_id)
+    if _is_execution_active(active) or (running_job and running_job.status == "running"):
+        blocked_reason = f"Execution already in progress for {active.get('doc') or doc_rel}" if isinstance(active, MutableMapping) else "Execution already in progress"
         if isinstance(active, MutableMapping):
             active = dict(active)
             active["blocked_reason"] = blocked_reason
@@ -230,12 +459,62 @@ def execute_document():
         )
 
     params = state.get("workflow_params", {})
+    merged_params = dict(params) if isinstance(params, MutableMapping) else {}
     incoming_params = payload.get("workflow_params")
     if isinstance(incoming_params, MutableMapping):
-        merged_params = dict(params) if isinstance(params, MutableMapping) else {}
         merged_params.update(incoming_params)
+
+    # Explicit config inputs take precedence over stored workflow params.
+    if "dry_run" in payload:
+        merged_params["dry_run"] = bool(payload.get("dry_run"))
     else:
-        merged_params = params if isinstance(params, MutableMapping) else {}
+        merged_params["dry_run"] = bool(merged_params.get("dry_run"))
+
+    if "no_commit" in payload:
+        merged_params["no_commit"] = bool(payload.get("no_commit"))
+    else:
+        merged_params["no_commit"] = bool(merged_params.get("no_commit"))
+
+    if "validate" in payload:
+        merged_params["validate"] = bool(payload.get("validate"))
+    if "strict" in payload:
+        merged_params["strict"] = bool(payload.get("strict"))
+
+    max_steps_val: Optional[int] = None
+    if "max_steps" in payload or "max_steps" in merged_params:
+        raw_steps = payload.get("max_steps", merged_params.get("max_steps"))
+        try:
+            max_steps_val = int(raw_steps)
+        except (TypeError, ValueError):
+            return _json_error("Invalid input", 400, "max_steps must be an integer")
+        if max_steps_val < 1:
+            return _json_error("Invalid input", 400, "max_steps must be at least 1")
+        merged_params["max_steps"] = max_steps_val
+
+    log_level_raw = payload.get("log_level") or merged_params.get("log_level") or "INFO"
+    merged_params["log_level"] = str(log_level_raw).upper()
+
+    handler_raw = payload.get("handler_config") or merged_params.get("handler_config")
+    handler_config: Path | None = None
+    if handler_raw:
+        try:
+            handler_config = _resolve_path(handler_raw, repo_root, "handler_config")
+        except ValueError as e:
+            return _json_error("Invalid input", 400, str(e))
+        if not handler_config.exists():
+            return _json_error("Invalid input", 400, f"{handler_config} is missing")
+        merged_params["handler_config"] = _relative_path(handler_config, repo_root)
+    else:
+        merged_params.pop("handler_config", None)
+
+    template_raw = (
+        payload.get("template_path") or merged_params.get("template_path") or "docs/templates/requirements-template.md"
+    )
+    try:
+        template_path = _resolve_path(template_raw, repo_root, "template_path")
+    except ValueError as e:
+        return _json_error("Invalid input", 400, str(e))
+    merged_params["template_path"] = _relative_path(template_path, repo_root)
 
     timestamp = _timestamp()
     active_execution: dict[str, Any] = {
@@ -254,12 +533,25 @@ def execute_document():
         history, log, active_execution, current_doc=doc_rel, workflow_params=merged_params
     )
 
+    job = _launch_execution_job(
+        session_id,
+        repo_root,
+        doc_rel,
+        document_path,
+        template_path,
+        handler_config,
+        merged_params,
+    )
+
     return jsonify(
         {
             "status": "running",
-            "active_execution": updated.get("active_execution"),
+            "active_execution": _merge_job_active(job, updated.get("active_execution")),
             "execution_history": updated.get("execution_history"),
             "execution_log": updated.get("execution_log"),
+            "workflow_params": updated.get("workflow_params"),
+            "execution_output": [],
+            "output_cursor": 0,
         }
     ), 202
 
@@ -267,6 +559,23 @@ def execute_document():
 @document_api_bp.get("/status")
 def document_status():
     state, history, log, active = _execution_state()
+    session_id = _session_id()
+    job = _get_job(session_id)
+
+    try:
+        output_since = max(int(request.args.get("output_since", 0)), 0)
+    except ValueError:
+        output_since = 0
+
+    output_slice: list[dict[str, Any]] = []
+    output_cursor = 0
+
+    if job:
+        with _STREAM_LOCK:
+            output_slice, output_cursor = _job_output_slice(job, output_since)
+            active = _merge_job_active(job, active)
+        state, history, log, active = _persist_job_completion(job, state, history, log, active)
+
     since = request.args.get("since")
     filtered_log = log
     if since is not None:
@@ -283,6 +592,8 @@ def document_status():
             "execution_log": filtered_log,
             "log_cursor": len(log),
             "active_execution": active,
+            "execution_output": output_slice,
+            "output_cursor": output_cursor,
         }
     )
 

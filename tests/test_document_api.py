@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import shutil
+import time
 from pathlib import Path
 
 import pytest
 
 from web import create_app
+from web.cli_wrapper import CLIWrapperResult, LogEntry
 from .utils import csrf_headers
 
 
@@ -154,6 +156,65 @@ def test_execution_status_updates_and_log_cursor(tmp_path: Path, monkeypatch: py
     assert incremental.status_code == 200
     assert incremental.get_json()["execution_log"] == []
 
+
+def test_execution_streams_logs_and_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    repo_root = tmp_path / "repo"
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "doc.md").write_text("hello", encoding="utf-8")
+    (repo_root / "docs" / "templates").mkdir(parents=True, exist_ok=True)
+    (repo_root / "docs" / "templates" / "base.md").write_text("tmpl", encoding="utf-8")
+
+    client = _build_client(tmp_path, repo_root, monkeypatch)
+    headers = csrf_headers(client)
+
+    def fake_stream_requirements_cli(**kwargs):
+        on_output = kwargs.get("on_output_line")
+        on_log = kwargs.get("on_log")
+        if on_output:
+            on_output("Starting workflow", "stdout")
+            on_output("Finishing workflow", "stdout")
+        if on_log:
+            on_log(LogEntry(level="INFO", message="starting", stream="stdout"))
+        return CLIWrapperResult(
+            status="success",
+            exit_code=0,
+            stdout="Starting workflow\nFinishing workflow\n",
+            stderr="",
+            logs=[],
+            json_blocks=[],
+            command=["python"],
+            error=None,
+        )
+
+    monkeypatch.setattr("web.blueprints.document.stream_requirements_cli", fake_stream_requirements_cli)
+
+    resp = client.post(
+        "/api/document/execute",
+        json={
+            "document_path": "docs/doc.md",
+            "template_path": "docs/templates/base.md",
+            "max_steps": 2,
+            "dry_run": True,
+            "log_level": "debug",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 202
+
+    data = {}
+    for _ in range(5):
+        status_resp = client.get("/api/document/status", query_string={"since": 0, "output_since": 0})
+        assert status_resp.status_code == 200
+        data = status_resp.get_json()
+        if data.get("output_cursor", 0) >= 2:
+            break
+        time.sleep(0.05)
+
+    assert data.get("output_cursor", 0) >= 2
+    assert any(entry["line"].startswith("Starting") for entry in data.get("execution_output", []))
+    assert data["workflow_params"]["max_steps"] == 2
+    assert data["active_execution"]["status"] in {"completed", "running"}
 
 def test_update_document_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     repo_root = tmp_path / "repo"
